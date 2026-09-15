@@ -23,3 +23,6 @@ cli/evidence/undeployed-*.json
 web/dist/
 web/public/zk/
 web/.vite/
+
+# generated sourcemaps point at compiler internals
+contract/src/managed/**/*.js.map
