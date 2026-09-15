@@ -194,8 +194,8 @@ same three commands produce the same artifacts under `preprod` with no code chan
 | Suite | Files | Tests | Notes |
 |---|---|---|---|
 | `contract/test/*` | 7 | **110** | lifecycle, one scenario per refusal code, fast-check model test, 2-of-3 disclosure with negative controls, deploy-time ceremony validation, public-transcript assertions, documented-limit reproductions |
-| `sdk/test/*` (default) | 5 | **61** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks |
-| **Total, `npm test`** | **12** | **171** | no Docker, no node, no proof server |
+| `sdk/test/*` (default) | 6 | **67** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks, sandbox snapshot codec |
+| **Total, `npm test`** | **13** | **177** | no Docker, no node, no proof server |
 | `sdk/test/network.devnet.test.ts` | 1 | 4 | opt-in (`DEVNET=1`): staged deploy and a real lifecycle with real proofs against a local node; 276.6 s |
 
 ## Reproduce
@@ -205,7 +205,7 @@ Everything below needs Node >= 22. The scenario additionally needs a proof serve
 
 ```bash
 npm install
-npm test                               # 171 tests, no Docker needed
+npm test                               # 177 tests, no Docker needed
 npm run -w contract compile            # rebuild circuits and proving keys (needs Docker)
 ```
 
