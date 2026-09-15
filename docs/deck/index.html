@@ -1,0 +1,1272 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock &amp; Foil — deck</title>
+<meta name="description" content="Stock &amp; Foil: a privacy-preserving collateral registry for receivables finance on Midnight. Fourteen slides.">
+<style>
+/* ── the press: fonts ─────────────────────────────────────────────── */
+@font-face{font-family:"Bricolage Grotesque";src:url("assets/fonts/bricolage-var-latin.woff2") format("woff2-variations"),url("assets/fonts/bricolage-var-latin.woff2") format("woff2");font-weight:400 800;font-stretch:75% 100%;font-style:normal;font-display:block}
+@font-face{font-family:"Work Sans";src:url("assets/fonts/worksans-var-latin.woff2") format("woff2-variations"),url("assets/fonts/worksans-var-latin.woff2") format("woff2");font-weight:400 600;font-style:normal;font-display:block}
+@font-face{font-family:"Space Mono";src:url("assets/fonts/spacemono-400-latin.woff2") format("woff2");font-weight:400;font-style:normal;font-display:block}
+@font-face{font-family:"Space Mono";src:url("assets/fonts/spacemono-700-latin.woff2") format("woff2");font-weight:700;font-style:normal;font-display:block}
+
+:root{
+  --paper:#F1EFE8; --paper-2:#E9E7DE; --white:#FFFFFF; --rule:#CFCBBC;
+  --ink:#0000FE; --ink-2:#0000AF; --ink-3:#00007C;
+  --pink:#FF48B0; --pink-2:#FFB8DD;
+  --hair:rgba(0,0,175,.20); --hair-2:rgba(0,0,175,.12);
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --text:"Work Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Space Mono",ui-monospace,Menlo,Consolas,monospace;
+  --m:96px;            /* sheet margin */
+  --col:calc((1920px - 2*var(--m) - 11*40px) / 12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;background:#D9D6CC;overflow:hidden}
+body{font-family:var(--text);color:var(--ink-2);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);color:var(--ink);margin:0;text-wrap:balance}
+p,ul,ol,dl{margin:0;padding:0}
+li{list-style:none}
+b,strong{font-weight:600;color:var(--ink)}
+.blue b,.blue strong{color:var(--paper)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+/* ── stage ────────────────────────────────────────────────────────── */
+#frame{position:fixed;inset:0;display:grid;place-items:center}
+#deck{width:1920px;height:1080px;position:relative;transform-origin:center center;flex:none}
+.slide{
+  position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;
+  background-color:var(--paper);
+  background-image:url("assets/paper-noise.png");   /* the same fractal-noise tile, rasterised once */
+  opacity:0;visibility:hidden;
+}
+.slide.on{opacity:1;visibility:visible}
+.slide.blue{background-color:var(--ink);color:#D4D4FF}
+.slide.blue h2,.slide.blue h3{color:var(--paper)}
+
+.sheet{position:absolute;inset:78px var(--m) 74px;display:flex;flex-direction:column}
+
+/* ── chrome ───────────────────────────────────────────────────────── */
+.rh{
+  position:absolute;top:34px;left:var(--m);right:var(--m);
+  font-family:var(--mono);font-size:15px;letter-spacing:.005em;color:var(--ink);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.blue .rh{color:#9B9BFF}
+.pf{
+  position:absolute;left:var(--m);right:var(--m);bottom:30px;
+  display:flex;align-items:center;gap:26px;
+  font-family:var(--mono);font-size:14px;color:var(--ink-2);
+}
+.blue .pf{color:#9B9BFF}
+.pf .wm{font-family:var(--display);font-weight:800;font-stretch:84%;font-size:16px;color:var(--ink);letter-spacing:-.01em}
+.blue .pf .wm{color:var(--paper)}
+.ticks{display:flex;gap:5px;margin-right:auto}
+.ticks i{display:block;width:22px;height:3px;background:var(--hair)}
+.blue .ticks i{background:rgba(212,212,255,.30)}
+.ticks i.done{background:var(--ink-2)}
+.blue .ticks i.done{background:#8F8FFF}
+.ticks i.now{background:var(--ink);box-shadow:0 3px 0 var(--pink);height:5px;margin-top:-1px}
+.blue .ticks i.now{background:var(--paper)}
+
+/* ── headings ─────────────────────────────────────────────────────── */
+.opener{margin-bottom:22px}
+h2.title{
+  position:relative;display:inline-block;font-weight:800;font-stretch:80%;
+  font-variation-settings:"opsz" 72;font-size:62px;line-height:.95;letter-spacing:-.026em;
+}
+h2.title::before{
+  content:attr(data-ghost);position:absolute;inset:0;color:var(--pink);
+  transform:translate(-5px,4px);mix-blend-mode:multiply;z-index:-1;pointer-events:none;
+}
+.blue h2.title::before{mix-blend-mode:normal;opacity:.9}
+.dek{margin-top:16px;font-size:23px;line-height:1.45;max-width:78ch;color:var(--ink-2)}
+.blue .dek{color:#C3C3FF}
+.dotrule{
+  border:0;height:11px;margin:0 0 30px;
+  background:radial-gradient(circle at 50% 50%, var(--pink) 0 1.7px, transparent 2.2px) 0 0/6px 6px;
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 34%,transparent 90%);
+  mask-image:linear-gradient(90deg,#000 0%,#000 34%,transparent 90%);
+  mix-blend-mode:multiply;
+}
+.blue .dotrule{mix-blend-mode:normal}
+
+/* ── plates ───────────────────────────────────────────────────────── */
+.card{background:var(--white);border:1px solid var(--hair);padding:26px 28px}
+.blue .card{background:transparent;border-color:rgba(212,212,255,.38)}
+.card h3{font-weight:700;font-stretch:92%;font-variation-settings:"opsz" 24;font-size:25px;line-height:1.14;letter-spacing:-.014em}
+.card .body{font-size:18.5px;line-height:1.5;margin-top:10px}
+.lbl{font-family:var(--mono);font-size:13.5px;color:var(--ink);line-height:1.3}
+.blue .lbl{color:#9B9BFF}
+.chip{
+  display:inline-block;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--ink);
+  background:var(--pink-2);padding:4px 9px;mix-blend-mode:multiply;letter-spacing:.01em;
+}
+.grid{display:grid;gap:30px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fill{flex:1;min-height:0}
+.stretch{grid-auto-rows:1fr}
+
+/* dotted list, the ledger idiom */
+ul.dots{display:grid;gap:13px}
+ul.dots li{display:grid;grid-template-columns:18px 1fr;gap:12px;font-size:18px;line-height:1.44}
+ul.dots li::before{
+  content:"";width:15px;height:15px;margin-top:5px;
+  background:radial-gradient(circle at 50% 50%, var(--ink) 0 1.5px, transparent 2px) 0 0/4px 4px;
+}
+ul.dots.faint li::before{opacity:.26}
+
+/* numbered sequence */
+.seq .n{font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.seq .n::after{content:"";flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply}
+
+/* figures */
+.figs{display:grid;gap:22px}
+.figs div{border-top:2px solid var(--pink);padding-top:12px;display:flex;align-items:baseline;gap:20px}
+.figs strong{font-family:var(--display);font-weight:800;font-stretch:80%;font-size:54px;line-height:1;color:var(--paper);flex:none;min-width:3.1em}
+.figs span{font-size:17px;line-height:1.35;color:#C3C3FF;font-weight:400}
+
+/* screenshots, cropped in place */
+.shot{position:relative;overflow:hidden;border:1px solid var(--hair);background:var(--paper-2)}
+.shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cap{font-family:var(--mono);font-size:13px;color:var(--ink);margin-top:9px;line-height:1.4}
+
+/* halftone plates */
+.plate{position:relative;margin:0;outline:2px solid var(--ink);overflow:hidden;background:transparent}
+.plate .lay{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multiply;display:block}
+.plate .anno{position:absolute;inset:0;width:100%;height:100%}
+.plate-ghost{position:absolute;inset:0;border:2px solid var(--pink);transform:translate(8px,8px);mix-blend-mode:multiply;pointer-events:none}
+.stage{position:relative;overflow:hidden;background:var(--paper);outline:1px solid var(--hair)}
+.stage .lay{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:multiply;display:block}
+.stage .anno{position:absolute;inset:0;width:100%;height:100%}
+
+/* mono data tables */
+dl.data{display:grid;grid-template-columns:auto 1fr;font-size:16px}
+dl.data dt{grid-column:1;color:var(--ink);padding:9px 24px 9px 0;border-top:1px solid var(--hair);white-space:nowrap}
+dl.data dd{grid-column:2;margin:0;text-align:right;padding:9px 0;border-top:1px solid var(--hair);font-family:var(--mono);font-size:14.5px;word-break:break-all}
+dl.data dt:first-of-type,dl.data dd:first-of-type{border-top:0}
+
+pre.cmd{
+  font-family:var(--mono);font-size:15px;line-height:1.75;margin:0;color:var(--ink);
+  white-space:pre-wrap;word-break:break-word;
+}
+/* the proof sheet carries the most data of any slide, so it runs tighter */
+#s11 .card{padding:22px 24px}
+#s11 pre.cmd{line-height:1.62}
+pre.cmd i{color:var(--ink-2);font-style:normal}
+
+.pending{border:2px dashed var(--pink);background:rgba(255,72,176,.05);padding:22px 24px}
+.pending h3{color:var(--ink-3)}
+
+.note{font-size:17px;line-height:1.45;color:var(--ink-2)}
+.src{font-family:var(--mono);font-size:13.5px;color:var(--ink);line-height:1.45}
+.blue .src{color:#9B9BFF}
+
+/* title slide */
+.hero-mark{display:flex;align-items:center;gap:11px;font-family:var(--display);font-weight:800;font-stretch:82%;font-size:24px;color:var(--ink);letter-spacing:-.012em}
+h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font-size:112px;line-height:.9;letter-spacing:-.032em;margin-left:-.035em}
+.method{font-family:var(--display);font-weight:500;font-stretch:90%;font-variation-settings:"opsz" 40;font-size:44px;line-height:1.05;letter-spacing:-.018em;color:var(--ink-2);margin-top:18px}
+.reg{width:44px;height:44px}
+
+/* bar chart */
+.bars{display:grid;gap:7px}
+.bars .row{display:grid;grid-template-columns:186px 1fr 64px;align-items:center;gap:14px;font-size:15.5px}
+.bars .k{font-family:var(--mono);font-size:14px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .t{height:15px;background:var(--ink);min-width:2px}
+.bars .t.alt{background:var(--pink);mix-blend-mode:multiply}
+.bars .v{font-family:var(--mono);font-size:14px;color:var(--ink);text-align:right}
+
+/* ── print: every sheet, one page ─────────────────────────────────── */
+@page{size:1920px 1080px;margin:0}
+@media print{
+  html,body{overflow:visible;background:#fff;height:auto}
+  #frame{position:static;display:block}
+  #deck{width:1920px;height:auto;transform:none!important}
+  .slide{position:relative;inset:auto;opacity:1!important;visibility:visible!important;break-after:page;page-break-after:always;break-inside:avoid}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="frame">
+<div id="deck">
+
+<!-- ═══ 01 · title ═══════════════════════════════════════════════ -->
+<section class="slide" data-rh="" data-rh2="Midnight Buildathon · Wave 1">
+  <div class="sheet">
+    <div style="display:flex;align-items:flex-start;gap:40px">
+      <div style="flex:1">
+        <p class="hero-mark">
+          <svg width="26" height="26" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3h14v4.2l-2 .9-2-.9-2 .9-2-.9-2 .9-2-.9L1 7.2z" fill="#FF48B0"/><path d="M1 9.4l2 .9 2-.9 2 .9 2-.9 2 .9 2-.9 2 .9V13H1z" fill="#0000FE"/></svg>
+          Stock &amp; Foil</p>
+        <p class="lbl" style="margin:10px 0 30px 37px">Private collateral registry for receivables finance · built on Midnight</p>
+        <h1 class="claim">Every invoice can<br>be pledged once.</h1>
+        <p class="method">Prove it without revealing it.</p>
+      </div>
+      <div style="width:calc(4*var(--col) + 3*40px);padding-top:92px">
+        <p style="font-size:21px;line-height:1.5">A collateral registry that proves things it cannot read. Suppliers pledge invoices, financiers check them, and the register refuses a forged, an inflated or a second pledge of the same receivable.</p>
+        <p style="font-size:21px;line-height:1.5;margin-top:16px">The public ledger holds nothing but commitments, one-time markers and sealed records.</p>
+      </div>
+    </div>
+
+    <figure class="plate fill" id="heroPlate" style="margin-top:38px">
+      <span class="plate-ghost" aria-hidden="true"></span>
+      <canvas class="lay" id="heroPink" role="img" aria-label="Halftone print of a split exchequer tally: one hand holds the stock half, another the foil half, and the notched edges meet in the middle."></canvas>
+      <canvas class="lay" id="heroBlue" aria-hidden="true"></canvas>
+    </figure>
+    <p class="cap" style="display:flex;justify-content:space-between">
+      <span>Stock, kept by the lender · Foil, kept by the buyer · notches cut from 0x31e5…46f7</span>
+      <span>Compact 0.31.1 · 12 circuits · 171 tests</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 02 · the loss ════════════════════════════════════════════ -->
+<section class="slide blue" data-rh="02 · the loss">
+  <div class="sheet">
+    <div class="opener" style="display:grid;grid-template-columns:calc(6*var(--col) + 5*40px) 1fr;gap:70px;align-items:end">
+      <h2 class="title" data-ghost="Two lenders, one invoice,&#10;nobody able to check.">Two lenders, one invoice,<br>nobody able to check.</h2>
+      <p class="src" style="padding-bottom:8px">September 2025 · First Brands Group · Chapter 11<br>Source: Global Trade Review, on the receivables and<br>inventory finance fraud alleged against the founder.</p>
+    </div>
+    <hr class="dotrule">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:70px;font-size:22px;line-height:1.52">
+      <p>First Brands filed for Chapter 11 carrying roughly <b>$2.3 billion</b> of receivables-finance liabilities. The invoices behind them are alleged to have been forged, inflated tenfold, and presented to more than one financier.</p>
+      <p>Three frauds, one shape: a receivable that is not what the lender was told it was, or is not the lender's to hold. On paper, each is indistinguishable from an honest one — and <b>none of the financiers could have caught it by comparing notes,</b> because there was no way to compare notes that cost less than the fraud.</p>
+    </div>
+    <div class="fill" style="display:flex;align-items:center">
+      <div class="figs" style="grid-template-columns:repeat(3,minmax(0,1fr));display:grid;gap:56px;width:100%">
+        <div style="display:block"><strong style="display:block;font-size:136px;margin-bottom:14px">$2.3B</strong><span style="font-size:20px;display:block;max-width:26ch">of receivables-finance liabilities at filing</span></div>
+        <div style="display:block"><strong style="display:block;font-size:136px;margin-bottom:14px">10×</strong><span style="font-size:20px;display:block;max-width:26ch">the multiple some invoice values were inflated by</span></div>
+        <div style="display:block"><strong style="display:block;font-size:136px;margin-bottom:14px">&gt;1</strong><span style="font-size:20px;display:block;max-width:26ch">financiers shown the same invoice</span></div>
+      </div>
+    </div>
+    <p style="font-family:var(--display);font-weight:700;font-stretch:88%;font-size:34px;line-height:1.16;letter-spacing:-.018em;color:var(--paper);max-width:46ch">Stock &amp; Foil lets them check without showing each other anything.</p>
+  </div>
+</section>
+
+<!-- ═══ 03 · why it isn't fixed ══════════════════════════════════ -->
+<section class="slide" data-rh="03 · why it isn't fixed today">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Both fixes cost more&#10;than the fraud.">Both fixes cost more<br>than the fraud.</h2>
+      <p class="dek">There are exactly two ways to check whether a receivable is already financed, and receivables finance has rejected both for the same reason.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="grid g2 fill stretch" style="gap:40px">
+      <article class="card" style="display:flex;flex-direction:column">
+        <p class="lbl">Option one</p>
+        <h3 style="margin-top:8px">Show the other lender your invoices</h3>
+        <div style="flex:1;display:grid;place-items:center;padding:14px 0">
+          <svg viewBox="0 0 700 250" width="100%" aria-label="An invoice file passing from one lender to another, shedding a client list, a price list and volumes on the way.">
+            <g fill="none" stroke="#0000FE" stroke-width="2">
+              <rect x="14" y="66" width="168" height="118"/>
+              <rect x="518" y="66" width="168" height="118"/>
+              <rect x="296" y="86" width="108" height="78" fill="#FFFFFF"/>
+            </g>
+            <g font-family="Space Mono, monospace" font-size="15" fill="#0000FE">
+              <text x="98" y="122" text-anchor="middle">Lender A</text>
+              <text x="98" y="146" text-anchor="middle" fill="#0000AF">its book</text>
+              <text x="602" y="122" text-anchor="middle">Lender B</text>
+              <text x="602" y="146" text-anchor="middle" fill="#0000AF">its book</text>
+              <text x="350" y="76" text-anchor="middle" font-size="14">invoice file</text>
+            </g>
+            <g stroke="#0000FE" stroke-width="2" fill="none">
+              <path d="M190 125 H286"/><path d="M276 116 l12 9 -12 9"/>
+              <path d="M414 125 H510"/><path d="M500 116 l12 9 -12 9"/>
+            </g>
+            <g stroke="#FF48B0" stroke-width="2.4" fill="none" opacity=".95">
+              <path d="M316 166 C300 194 250 206 208 218"/>
+              <path d="M350 166 V218"/>
+              <path d="M384 166 C400 194 450 206 492 218"/>
+            </g>
+            <g font-family="Work Sans, sans-serif" font-size="16" fill="#0000AF" text-anchor="middle">
+              <text x="188" y="242">client list</text>
+              <text x="350" y="242">prices</text>
+              <text x="512" y="242">volumes</text>
+            </g>
+          </svg>
+        </div>
+        <p class="body">An invoice file is a client list and a price list. Handing it to a rival costs more than the fraud does, so every financier keeps its book to itself — and the same receivable gets funded twice.</p>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column">
+        <p class="lbl">Option two</p>
+        <h3 style="margin-top:8px">Put every fingerprint in one registry</h3>
+        <div style="flex:1;display:grid;place-items:center;padding:14px 0">
+          <svg viewBox="0 0 700 250" width="100%" aria-label="Five financiers feeding fingerprints into a single central operator that holds all of them.">
+            <g fill="none" stroke="#0000FE" stroke-width="2">
+              <rect x="20" y="30" width="122" height="40"/><rect x="20" y="86" width="122" height="40"/>
+              <rect x="20" y="142" width="122" height="40"/><rect x="20" y="198" width="122" height="40"/>
+            </g>
+            <g font-family="Space Mono, monospace" font-size="14" fill="#0000AF">
+              <text x="81" y="55" text-anchor="middle">financier</text><text x="81" y="111" text-anchor="middle">financier</text>
+              <text x="81" y="167" text-anchor="middle">financier</text><text x="81" y="223" text-anchor="middle">financier</text>
+            </g>
+            <g stroke="#0000FE" stroke-width="2" fill="none">
+              <path d="M150 50 H392"/><path d="M150 106 H392"/><path d="M150 162 H392"/><path d="M150 218 H392"/>
+              <path d="M382 41 l12 9 -12 9"/><path d="M382 97 l12 9 -12 9"/><path d="M382 153 l12 9 -12 9"/><path d="M382 209 l12 9 -12 9"/>
+            </g>
+            <rect x="400" y="30" width="278" height="208" fill="#FF48B0" opacity=".14"/>
+            <rect x="400" y="30" width="278" height="208" fill="none" stroke="#0000FE" stroke-width="2.6"/>
+            <g font-family="Space Mono, monospace" fill="#0000FE">
+              <text x="539" y="118" text-anchor="middle" font-size="17">one operator</text>
+              <text x="539" y="146" text-anchor="middle" font-size="14" fill="#0000AF">holds every fingerprint</text>
+            </g>
+          </svg>
+        </div>
+        <p class="body">Central fingerprint registries do work, and they ask every financier to trust one operator with the shape of its whole book — who its clients are, how much it lends, and when.</p>
+      </article>
+    </div>
+    <p class="note" style="margin-top:26px;font-size:20px"><b>Midnight's dual ledger removes the trade-off.</b> The checks run in zero knowledge against private state, and the public ledger holds only what uniqueness needs: a commitment, a one-time marker, a sealed record.</p>
+  </div>
+</section>
+
+<!-- ═══ 04 · the mechanism ═══════════════════════════════════════ -->
+<section class="slide" data-rh="04 · the mechanism">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Four parties, one record.">Four parties, one record.</h2>
+      <p class="dek">A receivable passes through four hands. Each hand proves something, and leaves a mark nobody else can read.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;place-items:center">
+      <svg viewBox="0 0 1728 546" width="100%" aria-label="Flow diagram: the buyer acknowledges into the acknowledgment tree; the supplier offers, writing a pledge marker and a sealed record; the financier accepts and the marker flips to pledged; the buyer pays through the contract and the pledge holder claims. The ledger band below holds commitments, markers and sealed records only.">
+        <defs>
+          <marker id="ar" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#0000FE" stroke-width="2"/></marker>
+          <marker id="arp" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#FF48B0" stroke-width="2"/></marker>
+        </defs>
+
+        <!-- actors -->
+        <g stroke="#0000FE" stroke-width="2.4" fill="#FFFFFF">
+          <rect x="0" y="18" width="292" height="98"/>
+          <rect x="478" y="18" width="292" height="98"/>
+          <rect x="956" y="18" width="292" height="98"/>
+          <rect x="1436" y="18" width="292" height="98"/>
+        </g>
+        <g font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="25" fill="#0000FE">
+          <text x="24" y="58">The buyer</text><text x="502" y="58">The supplier</text>
+          <text x="980" y="58">The financier</text><text x="1460" y="58">Settlement</text>
+        </g>
+        <g font-family="Space Mono, monospace" font-size="14.5" fill="#0000AF">
+          <text x="24" y="86">acknowledge()</text><text x="502" y="86">offer(holderTag, expiry)</text>
+          <text x="980" y="86">accept(n)</text><text x="1460" y="86">payInvoice() · claim…()</text>
+          <text x="24" y="106">debtor</text><text x="502" y="106">seller</text>
+          <text x="980" y="106">factor or lender</text><text x="1460" y="106">through the contract</text>
+        </g>
+
+        <!-- what each proves -->
+        <g font-family="Work Sans, sans-serif" font-size="17.5" fill="#0000AF">
+          <text x="24" y="168">Proves membership anonymously and</text>
+          <text x="24" y="192">that the invoice is owed by it. Writes</text>
+          <text x="24" y="216">one leaf: a commitment to buyer,</text>
+          <text x="24" y="240">supplier, number, amount, due date</text>
+          <text x="24" y="264">and a secret salt.</text>
+
+          <text x="502" y="168">In one proof: the invoice is theirs, this</text>
+          <text x="502" y="192">exact invoice was acknowledged, its</text>
+          <text x="502" y="216">one-time marker is unused, and the</text>
+          <text x="502" y="240">offer expires before the invoice is due.</text>
+          <text x="502" y="264">The same circuit seals the record.</text>
+
+          <text x="980" y="168">Proves membership anonymously and</text>
+          <text x="980" y="192">that the offer was addressed to it,</text>
+          <text x="980" y="216">using a fresh per-pledge tag that</text>
+          <text x="980" y="240">cannot be linked to its other pledges.</text>
+
+          <text x="1436" y="168">The buyer pays the registry.</text>
+          <text x="1436" y="192">The money is claimable by the</text>
+          <text x="1436" y="216">pledge holder, not the supplier.</text>
+          <text x="1436" y="240">A settled invoice can never be</text>
+          <text x="1436" y="264">pledged again.</text>
+        </g>
+
+        <!-- spine -->
+        <g stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar)">
+          <path d="M292 67 H466"/><path d="M770 67 H944"/><path d="M1248 67 H1424"/>
+        </g>
+
+        <!-- drops to the ledger -->
+        <g stroke="#FF48B0" stroke-width="2.4" fill="none" marker-end="url(#arp)" opacity=".95">
+          <path d="M120 292 V404"/><path d="M598 292 V404"/><path d="M1076 268 V404"/><path d="M1556 292 V404"/>
+        </g>
+
+        <!-- ledger band -->
+        <rect x="0" y="412" width="1728" height="134" fill="#0000FE"/>
+        <g font-family="Space Mono, monospace" font-size="14.5" fill="#9B9BFF"><text x="24" y="444">on the public ledger</text></g>
+        <g font-family="Work Sans, sans-serif" font-size="19" fill="#F1EFE8">
+          <text x="24" y="482">one acknowledgment leaf</text>
+          <text x="502" y="482">a pledge marker, set to offered</text>
+          <text x="980" y="482">the marker flips to pledged</text>
+          <text x="1436" y="482">an amount, and two addresses</text>
+          <text x="24" y="514" fill="#C3C3FF">+ a marker against acknowledging it twice</text>
+          <text x="502" y="514" fill="#C3C3FF">+ a sealed record nobody can open yet</text>
+          <text x="980" y="514" fill="#C3C3FF">no name, no amount, no link to its book</text>
+          <text x="1436" y="514" fill="#C3C3FF">see Honest limits</text>
+        </g>
+      </svg>
+    </div>
+    <p class="note" style="margin-top:22px;font-size:20px"><b>Every check runs while the transaction is being built.</b> A fraudulent pledge cannot be proved, so it never reaches the chain at all — there is no bad state to roll back and no failed transaction to read.</p>
+  </div>
+</section>
+
+<!-- ═══ 05 · three refusals ══════════════════════════════════════ -->
+<section class="slide" data-rh="05 · the refusals">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Three refusals.">Three refusals.</h2>
+      <p class="dek">A tally stick was split so that one half could not be forged against the other. These are the same idea, proved rather than whittled. The assert message in the contract is the product's refusal code, and the SDK and the interface carry it through unchanged.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="grid g3 fill stretch">
+      <article class="card" style="display:flex;flex-direction:column;gap:14px">
+        <h3>A forged invoice</h3>
+        <p class="body" style="margin:0">Financing raised against an invoice the buyer never owed.</p>
+        <figure class="stage" style="flex:1;min-height:180px;margin:0">
+          <svg class="anno" viewBox="-330 -104 660 224" aria-hidden="true">
+            <path d="M-223,0 H222 V-32 H302 Q311,-32 311,-20 V20 Q311,32 302,32 H-223 Z" fill="none" stroke="#0000FE" stroke-width="1.6" stroke-dasharray="8 6" vector-effect="non-scaling-stroke" opacity=".85"/>
+            <text x="-320" y="98" font-family="Space Mono, monospace" font-size="15" fill="#0000FE">no acknowledgment to match</text>
+          </svg>
+          <canvas class="lay" id="forgedStock" role="img" aria-label="A pink notched half above a dashed empty outline where the buyer's half should be."></canvas>
+        </figure>
+        <p><span class="chip">NOT_ACKNOWLEDGED</span></p>
+        <p class="body" style="margin:0">No acknowledgment leaf exists for this invoice, so the offer has no membership proof to make. There is no second half for it to match.</p>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column;gap:14px">
+        <h3>An inflated invoice</h3>
+        <p class="body" style="margin:0">The buyer owes $2,300. The financier is shown $23,000.</p>
+        <figure class="stage" style="flex:1;min-height:180px;margin:0">
+          <canvas class="lay" id="inflatedFoil" aria-hidden="true"></canvas>
+          <canvas class="lay" id="inflatedStock" role="img" aria-label="A pink notched half carrying four more notches than the blue half beneath it."></canvas>
+          <svg class="anno" id="inflatedAnno" viewBox="-330 -104 660 224" aria-hidden="true">
+            <text x="-320" y="98" font-family="Space Mono, monospace" font-size="15" fill="#0000FE">four notches cut after signing</text>
+          </svg>
+        </figure>
+        <p><span class="chip">NOT_ACKNOWLEDGED</span></p>
+        <p class="body" style="margin:0">The amount is inside what the buyer signed. A $23,000 invoice is a different commitment from the $2,300 on record, and nothing acknowledges it.</p>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column;gap:14px">
+        <h3>A double pledge</h3>
+        <p class="body" style="margin:0">One receivable financed by several financiers at once.</p>
+        <figure class="stage" style="flex:1;min-height:180px;margin:0">
+          <canvas class="lay" id="doubleFoil" aria-hidden="true"></canvas>
+          <canvas class="lay" id="doubleStock" role="img" aria-label="A pink half and a blue half in register, with a second pink half cut from a different record pushed in above them; its notches do not line up."></canvas>
+          <canvas class="lay" id="doubleRogue" aria-hidden="true"></canvas>
+          <svg class="anno" viewBox="-330 -104 660 224" aria-hidden="true">
+            <text x="-320" y="-74" font-family="Space Mono, monospace" font-size="15" fill="#0000FE">a second offer</text>
+            <text x="-320" y="98" font-family="Space Mono, monospace" font-size="15" fill="#0000FE">pledge 1, already in register</text>
+          </svg>
+        </figure>
+        <p><span class="chip">ALREADY_ENCUMBERED</span></p>
+        <p class="body" style="margin:0">The one-time marker for this receivable is already spent. A stick that has been split cannot be split again.</p>
+      </article>
+    </div>
+    <p class="note" style="margin-top:26px;font-size:20px"><b>The refused lender learns exactly one bit:</b> this receivable is already encumbered. Not by whom, not for how much, not since when — and the existing pledge is neither touched nor disclosed.</p>
+  </div>
+</section>
+
+<!-- ═══ 06 · the ledger ══════════════════════════════════════════ -->
+<section class="slide" data-rh="06 · the public ledger">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="What the ledger shows,&#10;and what it never shows.">What the ledger shows,<br>and what it never shows.</h2>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr auto;gap:26px 40px">
+      <div class="card" style="display:flex;flex-direction:column">
+        <h3>Printed on the ledger <span class="lbl" style="font-family:var(--mono);font-weight:400">public</span></h3>
+        <ul class="dots" style="margin-top:20px">
+          <li><span><b>Acknowledgment leaves.</b> One per acknowledged invoice. The leaf does not say which.</span></li>
+          <li><span><b>Pledge markers and their status.</b> Offered, pledged, released or settled.</span></li>
+          <li><span><b>Per-pledge holder tags.</b> A fresh tag for every pledge.</span></li>
+          <li><span><b>Sealed records and their ephemeral keys.</b></span></li>
+          <li><span><b>Certificate floors, pool size and validity.</b></span></li>
+          <li><span><b>Disclosure requests and approvals.</b></span></li>
+          <li><span><b>Settlement amounts and addresses,</b> unshielded.</span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:16px;border-top:1px solid var(--hair);font-size:16px">Settlement is the one exception, and it is published under <b>Honest limits</b> rather than hidden.</p>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <h3>Never printed <span class="lbl" style="font-family:var(--mono);font-weight:400">stays with the parties</span></h3>
+        <ul class="dots faint" style="margin-top:20px">
+          <li><span><b>The invoice.</b> Buyer, supplier, number, amount, due date.</span></li>
+          <li><span><b>Which invoice a marker belongs to.</b></span></li>
+          <li><span><b>Which financier holds which pledge,</b> or how big its book is.</span></li>
+          <li><span><b>The record contents,</b> without 2 of 3 keyholders.</span></li>
+          <li><span><b>The receivables inside a borrowing base.</b></span></li>
+          <li><span><b>Anything the auditor learns,</b> to anyone else.</span></li>
+          <li><span><b>Who was refused,</b> and what they were trying to pledge.</span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:16px;border-top:1px solid var(--hair);font-size:16px">The supplier salts the invoice before the buyer acknowledges it, so a financier who guesses an invoice still cannot test whether it is encumbered.</p>
+      </div>
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:calc(3*var(--col) + 2*40px) 1fr;gap:40px;align-items:center">
+        <p class="note" style="font-size:17px">The explorer in the app reads the same projection an indexer does — and this band is the whole of it. Counts, markers, statuses, ciphertexts. There is nothing underneath to be careless with.</p>
+        <div class="shot" style="height:150px">
+          <img src="assets/shots/app-ledger.png" alt="The ledger explorer in the app: counts of debtors, financiers, acknowledgments, pledge markers, sealed records, certificates, disclosure requests and sealed shares." style="object-position:50% 61%">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 07 · disclosure ══════════════════════════════════════════ -->
+<section class="slide" data-rh="07 · selective disclosure">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Disclosure nobody&#10;can do alone.">Disclosure nobody<br>can do alone.</h2>
+      <p class="dek">An insolvency practitioner has to be able to open a specific pledge. One party being able to do that would undo everything else.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:calc(8*var(--col) + 7*40px) 1fr;gap:40px;align-items:start">
+      <svg viewBox="0 0 1130 460" width="100%" aria-label="The auditor posts a disclosure request naming one record. Keyholders one and three each publish a decryption share sealed to the auditor and proved correct in circuit. The auditor combines two shares, opens the record, and the opened record recomputes the ledger's own pledge marker.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#0000FE" stroke-width="2"/></marker>
+          <marker id="ar2p" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#FF48B0" stroke-width="2"/></marker>
+        </defs>
+
+        <!-- auditor -->
+        <rect x="0" y="176" width="184" height="96" fill="#FFFFFF" stroke="#0000FE" stroke-width="2.4"/>
+        <text x="18" y="212" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="23" fill="#0000FE">Auditor</text>
+        <text x="18" y="238" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF">trustee, court-</text>
+        <text x="18" y="256" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF">appointed</text>
+
+        <!-- request -->
+        <path d="M184 224 H286" stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar2)"/>
+        <rect x="292" y="168" width="242" height="112" fill="#0000FE"/>
+        <text x="308" y="198" font-family="Space Mono, monospace" font-size="13" fill="#9B9BFF">public, on the ledger</text>
+        <text x="308" y="226" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="20" fill="#F1EFE8">requestDisclosure</text>
+        <text x="308" y="250" font-family="Work Sans, sans-serif" font-size="15" fill="#C3C3FF">one record id,</text>
+        <text x="308" y="270" font-family="Work Sans, sans-serif" font-size="15" fill="#C3C3FF">one case reference</text>
+
+        <!-- keyholders -->
+        <g fill="#FFFFFF" stroke="#0000FE" stroke-width="2.4">
+          <rect x="574" y="6" width="238" height="86"/>
+          <rect x="574" y="182" width="238" height="86"/>
+          <rect x="574" y="358" width="238" height="86"/>
+        </g>
+        <g font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="20" fill="#0000FE">
+          <text x="592" y="42">Keyholder 1</text><text x="592" y="218">Keyholder 2</text><text x="592" y="394">Keyholder 3</text>
+        </g>
+        <g font-family="Work Sans, sans-serif" font-size="15.5" fill="#0000AF">
+          <text x="592" y="68">operator · approved</text>
+          <text x="592" y="244" fill="#8A8AB8">regulator · did not approve</text>
+          <text x="592" y="420">court · approved</text>
+        </g>
+        <g font-family="Space Mono, monospace" font-size="20" font-weight="700">
+          <text x="782" y="44" text-anchor="end" fill="#0000FE">✓</text>
+          <text x="782" y="220" text-anchor="end" fill="#8A8AB8">—</text>
+          <text x="782" y="396" text-anchor="end" fill="#0000FE">✓</text>
+        </g>
+        <g stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar2)">
+          <path d="M534 200 C556 200 546 49 568 49"/>
+          <path d="M534 248 C556 248 546 401 568 401"/>
+        </g>
+        <path d="M534 224 H568" stroke="#8A8AB8" stroke-width="2" stroke-dasharray="6 6" fill="none"/>
+
+        <!-- shares -->
+        <g stroke="#FF48B0" stroke-width="2.4" fill="none" marker-end="url(#ar2p)">
+          <path d="M812 49 C880 49 880 190 926 200"/>
+          <path d="M812 401 C880 401 880 260 926 250"/>
+        </g>
+        <text x="874" y="112" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF" text-anchor="middle">share sealed</text>
+        <text x="874" y="130" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF" text-anchor="middle">to the auditor</text>
+        <text x="874" y="316" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF" text-anchor="middle">proved correct</text>
+        <text x="874" y="334" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF" text-anchor="middle">in-circuit</text>
+
+        <!-- opened record -->
+        <rect x="922" y="168" width="200" height="112" fill="#FFFFFF" stroke="#0000FE" stroke-width="2.4"/>
+        <rect x="930" y="176" width="200" height="112" fill="none" stroke="#FF48B0" stroke-width="2" style="mix-blend-mode:multiply"/>
+        <text x="938" y="200" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="20" fill="#0000FE">Record opens</text>
+        <text x="938" y="226" font-family="Work Sans, sans-serif" font-size="15" fill="#0000AF">two shares combined</text>
+        <text x="938" y="246" font-family="Work Sans, sans-serif" font-size="15" fill="#0000AF">off-chain, by the</text>
+        <text x="938" y="266" font-family="Work Sans, sans-serif" font-size="15" fill="#0000AF">auditor alone</text>
+
+        <!-- self-verification -->
+        <path d="M1022 288 V354" stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar2)"/>
+        <rect x="922" y="360" width="208" height="84" fill="#FFB8DD" style="mix-blend-mode:multiply"/>
+        <text x="938" y="390" font-family="Space Mono, monospace" font-size="14" font-weight="700" fill="#0000FE">recomputes the</text>
+        <text x="938" y="410" font-family="Space Mono, monospace" font-size="14" font-weight="700" fill="#0000FE">ledger's own marker</text>
+        <text x="938" y="432" font-family="Work Sans, sans-serif" font-size="15" fill="#0000AF">— and it matches</text>
+      </svg>
+
+      <div style="display:grid;gap:18px;grid-template-rows:repeat(3,auto) 1fr;height:100%">
+        <article class="card" style="padding:20px 22px">
+          <p class="lbl">the key</p>
+          <p class="body" style="margin-top:6px;font-size:17.5px">A 2-of-3 Shamir sharing of the disclosure key over the Jubjub scalar field. The constructor checks the sharing itself, in point form, and refuses a deployment whose ceremony would let one party read everything or no two parties read anything.</p>
+        </article>
+        <article class="card" style="padding:20px 22px">
+          <p class="lbl">the share</p>
+          <p class="body" style="margin-top:6px;font-size:17.5px">A keyholder's share of the record key is computed inside the circuit and sealed to the auditor's key. No keyholder ever publishes anything another keyholder can use.</p>
+        </article>
+        <article class="card" style="padding:20px 22px">
+          <p class="lbl">the check</p>
+          <p class="body" style="margin-top:6px;font-size:17.5px">The opened record recomputes the invoice fingerprint, the acknowledgment leaf and the pledge marker, so a doctored disclosure fails against the ledger's own value. The request and both approvals stay on the ledger: no record can be read without the reading being public.</p>
+        </article>
+        <p class="src" style="line-height:1.5;align-self:end">Devnet run: approvals from keyholders 1 and 3 · the opened record recomputed marker 9450be64… and the ledger holds the same value.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08 · borrowing base ══════════════════════════════════════ -->
+<section class="slide" data-rh="08 · borrowing base">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Prove the pool clears the floor.">Prove the pool clears the floor.</h2>
+      <p class="dek">An asset-based lender advances against a borrowing base. Today it gets a spreadsheet of line items and takes the borrower's word for the rest.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;align-items:start">
+      <div style="display:flex;flex-direction:column;height:100%">
+        <svg viewBox="0 0 980 350" width="100%" style="flex:1;min-height:0" preserveAspectRatio="xMidYMid meet" aria-label="Four private receivables are summed inside the circuit; the total is compared with a public floor; the certificate publishes the floor, the count and the validity date, and locks the four markers to that lender.">
+          <defs><marker id="ar3" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#0000FE" stroke-width="2"/></marker></defs>
+          <text x="0" y="18" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF">private to the supplier</text>
+          <g fill="#FFFFFF" stroke="#0000FE" stroke-width="2.2">
+            <rect x="0" y="32" width="216" height="52"/><rect x="0" y="96" width="216" height="52"/>
+            <rect x="0" y="160" width="216" height="52"/><rect x="0" y="224" width="216" height="52"/>
+          </g>
+          <g font-family="Space Mono, monospace" font-size="14.5" fill="#0000FE">
+            <text x="16" y="63">receivable · ▮▮▮▮</text><text x="16" y="127">receivable · ▮▮▮</text>
+            <text x="16" y="191">receivable · ▮▮▮▮▮</text><text x="16" y="255">receivable · ▮▮</text>
+          </g>
+          <g stroke="#0000FE" stroke-width="2.2" fill="none">
+            <path d="M216 58 C268 58 268 140 300 148"/><path d="M216 122 C268 122 268 145 300 152"/>
+            <path d="M216 186 C268 186 268 165 300 158"/><path d="M216 250 C268 250 268 170 300 162"/>
+          </g>
+          <rect x="306" y="106" width="214" height="100" fill="#0000FE"/>
+          <text x="322" y="142" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="22" fill="#F1EFE8">Σ ≥ floor</text>
+          <text x="322" y="170" font-family="Work Sans, sans-serif" font-size="15" fill="#C3C3FF">proved in the circuit,</text>
+          <text x="322" y="190" font-family="Work Sans, sans-serif" font-size="15" fill="#C3C3FF">before any slot is locked</text>
+          <path d="M520 156 H586" stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar3)"/>
+
+          <text x="592" y="18" font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF">what the lender gets</text>
+          <rect x="592" y="32" width="388" height="128" fill="#FFFFFF" stroke="#0000FE" stroke-width="2.4"/>
+          <rect x="600" y="40" width="388" height="128" fill="none" stroke="#FF48B0" stroke-width="2" style="mix-blend-mode:multiply"/>
+          <g font-family="Work Sans, sans-serif" font-size="17" fill="#0000AF">
+            <text x="612" y="66" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="21" fill="#0000FE">Certificate</text>
+            <text x="612" y="94">floor · count · valid until</text>
+            <text x="612" y="120">a commitment to the borrower</text>
+            <text x="612" y="146">four markers, locked until validUntil</text>
+          </g>
+          <rect x="592" y="192" width="388" height="96" fill="#FFB8DD" style="mix-blend-mode:multiply"/>
+          <g font-family="Work Sans, sans-serif" font-size="17" fill="#0000AF">
+            <text x="612" y="222" font-family="Space Mono, monospace" font-size="13.5" fill="#0000FE">never leaves the supplier</text>
+            <text x="612" y="252">which receivables are in the pool,</text>
+            <text x="612" y="276">what each one is worth, who owes it</text>
+          </g>
+        </svg>
+        <p class="note" style="margin-top:22px;font-size:19px;flex:none">Each locked slot becomes an ordinary offer expiring with the certificate, which the lender takes up with the same <b style="font-family:var(--mono);font-size:17px">accept</b> it uses for a single invoice. Distinctness and the floor are proved before any slot is locked, so a pool that lists one invoice twice is refused for the duplicate rather than for an encumbrance it caused itself.</p>
+        <div class="card" style="margin-top:22px;flex:none;padding:18px 22px">
+          <p class="lbl">the certificate's own refusals, asserted in this order</p>
+          <p style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+            <span class="chip" style="font-size:13px">BAD_EXPIRY</span>
+            <span class="chip" style="font-size:13px">DUPLICATE_CERTIFICATE</span>
+            <span class="chip" style="font-size:13px">EMPTY_POOL</span>
+            <span class="chip" style="font-size:13px">NOT_INVOICE_OWNER</span>
+            <span class="chip" style="font-size:13px">NOT_ACKNOWLEDGED</span>
+            <span class="chip" style="font-size:13px">INVOICE_OVERDUE</span>
+            <span class="chip" style="font-size:13px">DUPLICATE_INVOICE</span>
+            <span class="chip" style="font-size:13px">BELOW_FLOOR</span>
+            <span class="chip" style="font-size:13px">ALREADY_SETTLED</span>
+            <span class="chip" style="font-size:13px">ALREADY_ENCUMBERED</span>
+            <span class="chip" style="font-size:13px">BAD_EPHEMERAL</span>
+          </p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-rows:auto auto 1fr auto;gap:18px;height:100%">
+        <article class="card" style="padding:20px 22px">
+          <h3 style="font-size:22px">Up to four receivables</h3>
+          <p class="body" style="font-size:17.5px">Each proved acknowledged, unencumbered, not yet settled and not overdue — the same four checks a single pledge passes.</p>
+        </article>
+        <article class="card" style="padding:20px 22px">
+          <h3 style="font-size:22px">The lock, and what it does not prove</h3>
+          <p class="body" style="font-size:17.5px">A certificate that only asserted a total would be a promise. This one writes four pledge markers in the same transaction. What no circuit can check is that those markers are addressed to the lender the certificate names: a holder tag is derived from the lender's own secret, so the contract has nothing to test the seller's claim against. The lender recomputes every tag from public state before money moves.</p>
+        </article>
+        <div class="shot" style="min-height:0">
+          <img src="assets/shots/app-seller.png" alt="The supplier workspace in the app: an invoice book with amounts, due dates, acknowledgment status and encumbrance." style="object-position:22% 100%">
+        </div>
+        <p class="cap" style="margin-top:-4px">The supplier's own book, in the app. The registry never holds an invoice — only a hash of the whole document.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 09 · engineering ═════════════════════════════════════════ -->
+<section class="slide" data-rh="09 · engineering">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Twelve circuits, one contract.">Twelve circuits, one contract.</h2>
+      <p class="dek">Compact 0.31.1, language 0.23. Authorisation is always knowledge of a secret whose hash is on the ledger or inside committed data — never the caller's public key.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:calc(5*var(--col) + 4*40px) 1fr;gap:40px;align-items:start">
+      <div class="card" style="height:100%">
+        <h3>The dual ledger</h3>
+        <p class="lbl" style="margin-top:18px">public state, readable by anyone</p>
+        <ul class="dots" style="margin-top:10px">
+          <li><span>Two membership trees, depth 10</span></li>
+          <li><span>The acknowledgment tree, depth 16, and its nullifier set</span></li>
+          <li><span>Pledge markers, keyed by nullifier</span></li>
+          <li><span>Sealed records, certificates, disclosure requests and shares</span></li>
+          <li><span>The ceremony: disclosure key, three keyholder keys, auditor key</span></li>
+        </ul>
+        <p class="lbl" style="margin-top:22px">private state, never leaves the party</p>
+        <ul class="dots faint" style="margin-top:10px">
+          <li><span>The invoice and its salt</span></li>
+          <li><span>Each party's secret, and the Merkle paths it proves with</span></li>
+          <li><span>Holder tags, sealing scalars, keyholder shares</span></li>
+        </ul>
+        <dl class="data" style="margin-top:auto;padding-top:20px">
+          <dt>Exported circuits</dt><dd>12</dd>
+          <dt>Refusal codes, asserted in order</dt><dd>34</dd>
+          <dt>Domain separators, one per purpose</dt><dd>15</dd>
+          <dt>Compile with proving keys</dt><dd>1 m 54 s</dd>
+        </dl>
+      </div>
+
+      <div style="display:grid;grid-template-rows:auto 1fr;gap:22px;height:100%">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">Prover keys</h3>
+            <span class="lbl">SHA-256 dominates key size and proof time</span>
+          </div>
+          <div class="bars" id="keyBars" style="margin-top:16px"></div>
+        </div>
+        <div class="grid g2" style="gap:22px">
+          <article class="card">
+            <h3 style="font-size:22px">The seal</h3>
+            <p class="body" style="font-size:17px">A fresh scalar <i style="font-family:var(--mono);font-style:normal">e</i> per record. <i style="font-family:var(--mono);font-style:normal">E = e·G</i> is published; the mask is <i style="font-family:var(--mono);font-style:normal">Poseidon(S.x, S.y, j)</i> over <i style="font-family:var(--mono);font-style:normal">S = e·disclosurePk</i>. Poseidon because a SHA-derived mask sits below 2<sup>248</sup> and would leak the high bits of the 248-bit identities it pads. Records carry a version for that reason.</p>
+          </article>
+          <article class="card">
+            <h3 style="font-size:22px">The deploy</h3>
+            <p class="body" style="font-size:17px">Twelve verifier keys total about 26 kB, and one transaction's byte budget takes six. The deploy carries six, then six <i style="font-family:var(--mono);font-style:normal">VerifierKeyInsert</i> maintenance transactions carry the rest. Seven transactions, and no address is published until every circuit has a key.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 10 · QA ══════════════════════════════════════════════════ -->
+<section class="slide" data-rh="10 · quality">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="171 tests, and the ones&#10;that are meant to fail.">171 tests, and the ones<br>that are meant to fail.</h2>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:calc(5*var(--col) + 4*40px) 1fr;gap:40px;align-items:start">
+      <div class="card" style="height:100%">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <h3 style="font-size:22px">On the simulator</h3>
+          <span class="lbl">no Docker, no chain</span>
+        </div>
+        <div class="bars" id="testBars" style="margin-top:16px"></div>
+        <p class="lbl" style="margin-top:22px">and beyond it</p>
+        <dl class="data" style="margin-top:8px">
+          <dt>Devnet integration, with real proofs</dt><dd>4</dd>
+          <dt>Playwright, the guided replay end to end</dt><dd>3</dd>
+        </dl>
+        <p class="note" style="margin-top:auto;padding-top:20px;font-size:16.5px">The simulator runs the compiled circuits without proving, so the whole suite finishes on a laptop with no Docker and no node. It is the same code path the browser sandbox uses, which is why the sandbox can refuse a fraud for real.</p>
+        <p class="note" style="padding-top:14px;font-size:16.5px">In the history, each behaviour is its own commit with the test that proves it — <span style="font-family:var(--mono);font-size:15px">test(contract): the public transcript, and the limits that are not enforced</span>.</p>
+      </div>
+      <div class="grid g2 stretch" style="gap:22px;height:100%">
+        <article class="card">
+          <h3 style="font-size:22px">The adversarial suite</h3>
+          <p class="body" style="font-size:17px">One scenario for every refusal code the contract can raise, plus the lying witness: when no real Merkle path exists the witness hands back a dummy one, so the refusal comes from the circuit's assert and not from a JavaScript exception. That distinction is the test.</p>
+        </article>
+        <article class="card">
+          <h3 style="font-size:22px">The property model</h3>
+          <p class="body" style="font-size:17px">fast-check drives random lifecycles against a reference model. The invariants: at most one active pledge per invoice, a settled invoice is never pledgeable again, and proceeds are paid exactly once to the correct payee.</p>
+        </article>
+        <article class="card">
+          <h3 style="font-size:22px">Negative controls</h3>
+          <p class="body" style="font-size:17px">Threshold decryption is tested with every pair of keyholders — and with one share alone, and with the wrong auditor key, both of which must fail. An opened record that does not recompute the ledger's marker is a failure, not a warning.</p>
+        </article>
+        <article class="card">
+          <h3 style="font-size:22px">The documented leaks</h3>
+          <p class="body" style="font-size:17px">A whole suite reproduces the leaks and griefing vectors the threat model admits, and another asserts value by value what each circuit publishes. "Not defended" is a measured statement rather than an assumption.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 11 · proof ═══════════════════════════════════════════════ -->
+<section class="slide" id="s11" data-rh="11 · proof">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Show your working.">Show your working.</h2>
+      <p class="dek">Nothing on this slide is typed by hand. It comes from the files the command-line tool wrote when it deployed the contract and ran the scenario against it.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:1fr 1fr calc(3*var(--col) + 2*40px);gap:30px;align-items:start">
+      <div style="display:grid;grid-template-rows:1fr auto;gap:22px;height:100%">
+        <article class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">Deployed</h3>
+            <span class="chip" style="font-size:13px">PREVIEW · PUBLIC TESTNET</span>
+          </div>
+          <dl class="data" style="margin-top:14px">
+            <dt>Contract</dt><dd>9be70aa1…33e8f7</dd>
+            <dt>Deploy tx</dt><dd>d8732da6…d13f68</dd>
+            <dt>Block</dt><dd>879363</dd>
+            <dt>Verifier keys</dt><dd>+6 maintenance txs</dd>
+            <dt>Deployed</dt><dd>15 Sept 2026, 17:40 UTC</dd>
+            <dt>Explorer</dt><dd>preview.midnightexplorer.com</dd>
+          </dl>
+          <p class="note" style="margin-top:14px;font-size:16px">A public Midnight testnet anyone can query without asking us for anything. Seven transactions: a constructor carrying six verifier keys, then one maintenance transaction for each remaining circuit, because twelve keys do not fit in one.</p>
+        </article>
+        <article class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">And on a local devnet</h3>
+            <span class="lbl">the same 27 steps</span>
+          </div>
+          <p class="note" style="margin-top:10px;font-size:16.5px">A node, an indexer and a proof server in Docker on one laptop. It shows the code runs but proves nothing to a stranger, and <b style="font-family:var(--mono);font-size:15px">PROOF.md</b> labels it that way.</p>
+        </article>
+      </div>
+
+      <div style="display:grid;grid-template-rows:auto 1fr;gap:22px;height:100%">
+        <article class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">The run</h3>
+            <span class="chip" style="font-size:13px">PREVIEW</span>
+          </div>
+          <dl class="data" style="margin-top:14px">
+            <dt>Steps</dt><dd>27</dd>
+            <dt>Transactions</dt><dd>20</dd>
+            <dt>Blocks</dt><dd>879534 → 879615</dd>
+            <dt>Refusals recorded</dt><dd>5</dd>
+            <dt>Disclosure</dt><dd>2 of 3, verified</dd>
+          </dl>
+          <p class="note" style="margin-top:14px;font-size:16.5px">Two <span class="chip" style="font-size:12.5px">NOT_ACKNOWLEDGED</span>, then <span class="chip" style="font-size:12.5px">ALREADY_ENCUMBERED</span>, <span class="chip" style="font-size:12.5px">NOT_PAYEE</span> for a supplier reaching for pledged proceeds, and <span class="chip" style="font-size:12.5px">BELOW_FLOOR</span> for an overstated pool. Each recorded as a refusal with no transaction to show for it, because there was none.</p>
+        </article>
+        <article class="card">
+          <h3 style="font-size:22px">What a judge runs</h3>
+          <pre class="cmd" style="margin-top:12px">npm test
+<i>171 tests, no Docker, no node</i>
+
+npm run verify:onchain
+<i>reads the deployed contract through
+the public indexer and compares it
+with the evidence, field by field.
+No wallet, no proof server, and a
+non-zero exit on any mismatch.</i></pre>
+        </article>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;height:100%">
+        <article class="card">
+          <h3 style="font-size:22px">Zero-install sandbox</h3>
+          <p class="body" style="font-size:17px">The web app runs the real compiled circuits in the browser tab. No wallet, no install, no chain. Every refusal on screen is the contract's own assert, not a message the page invented.</p>
+        </article>
+        <div class="shot" style="flex:1;min-height:0">
+          <img src="assets/shots/replay-refusal.png" alt="The guided replay in the app: the double-pledge step is marked refused, and the panel reads &quot;On the ledger: nothing. The existing pledge is not touched and not disclosed.&quot;" style="object-position:52% 74%">
+        </div>
+        <p class="cap" style="margin-top:0">The double pledge, refused in the browser tab.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 12 · market ══════════════════════════════════════════════ -->
+<section class="slide" data-rh="12 · market and adoption">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Who buys a refusal.">Who buys a refusal.</h2>
+      <p class="dek">The product is not the ledger and not the proof. It is the moment a financier is told <i>no</i>, by a register that could not have told it anything else.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="grid g4 stretch" style="gap:26px">
+      <article class="card">
+        <p class="lbl">buys the refusal</p>
+        <h3 style="font-size:22px;margin-top:8px">Factoring companies</h3>
+        <p class="body" style="font-size:17px">Buy invoices outright. The double pledge is their loss, and today they carry it as a credit-control cost.</p>
+      </article>
+      <article class="card">
+        <p class="lbl">buys the certificate</p>
+        <h3 style="font-size:22px;margin-top:8px">Asset-based lenders</h3>
+        <p class="body" style="font-size:17px">Advance against a borrowing base they cannot verify. A floor they can check is worth more than a spreadsheet they cannot.</p>
+      </article>
+      <article class="card">
+        <p class="lbl">carries the acknowledgment</p>
+        <h3 style="font-size:22px;margin-top:8px">Supply-chain finance platforms</h3>
+        <p class="body" style="font-size:17px">Already sit between buyer and supplier, and already hold the buyer's approval. They are where the acknowledgment comes from.</p>
+      </article>
+      <article class="card">
+        <p class="lbl">buys the disclosure</p>
+        <h3 style="font-size:22px;margin-top:8px">Insolvency practitioners</h3>
+        <p class="body" style="font-size:17px">Arrive after the failure and need to open specific records, with an opening nobody can dispute and everybody can see happened.</p>
+      </article>
+    </div>
+
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;margin-top:30px;align-items:stretch">
+      <div class="card" style="display:flex;flex-direction:column">
+        <h3 style="font-size:24px">The adoption path runs through one platform, not fifty banks</h3>
+        <ol class="grid g3" style="gap:26px;margin-top:20px">
+          <li class="seq"><p class="n">01</p><p class="body" style="margin:0;font-size:17px">A supply-chain finance platform integrates the SDK. Its own book becomes the first registry — useful on day one, with no counterparty needed to start, because it already double-finances itself by accident.</p></li>
+          <li class="seq"><p class="n">02</p><p class="body" style="margin:0;font-size:17px">A second financier joins because the first one can now refuse what it cannot see. Neither has to show the other anything, which is the only reason the second one can join at all.</p></li>
+          <li class="seq"><p class="n">03</p><p class="body" style="margin:0;font-size:17px">The consortium operator admits members after off-chain KYB. The contract gives that operator no power to read a record, take a pledge, settle one or open a disclosure.</p></li>
+        </ol>
+        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:18px">Nothing in the design needs a second member on day one — which is the only way a registry like this ever gets a second member.</p>
+      </div>
+      <div style="display:grid;gap:18px;height:100%">
+        <article class="card" style="display:flex;flex-direction:column">
+          <h3 style="font-size:22px">How it is paid for</h3>
+          <ul class="dots" style="margin-top:14px">
+            <li><span>The consortium licenses the registry and runs the admission.</span></li>
+            <li><span>The financier pays per receivable checked. The refusal is the unit.</span></li>
+            <li><span>Disclosure is sold to the practitioners who need it, separately from the register.</span></li>
+          </ul>
+          <p class="note" style="margin-top:auto;padding-top:16px;font-size:16.5px">Priced against the loss it prevents rather than the data it stores — because it stores none.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 13 · honest limits ═══════════════════════════════════════ -->
+<section class="slide" data-rh="13 · honest limits">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Honest limits.">Honest limits.</h2>
+      <p class="dek">Every item below has a test that reproduces it, so "not defended" is a measured statement rather than an assumption.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill grid g2" style="gap:0 60px">
+      <ul class="dots" style="gap:19px;align-content:start;font-size:17.5px">
+        <li><span><b>Collusion still works.</b> A buyer who colludes with a supplier can acknowledge an invoice that does not exist. The registry makes that acknowledgment non-repudiable; it does not prevent it.</span></li>
+        <li><span><b>Settlement is public.</b> The settlement token is unshielded, so amounts and payer and payee addresses are visible at payment time. Contract custody of shielded coins is blocked upstream.</span></li>
+        <li><span><b>The operator is trusted twice.</b> It decides who is admitted, and as the deployer it holds the contract's maintenance authority — a strictly larger power. Production should move that authority to a multi-party key, or burn it.</span></li>
+        <li><span><b>The keys are dealt, not generated.</b> A ceremony splits the disclosure key rather than a distributed protocol, and two colluding keyholders reconstruct it off-chain with no public request at all.</span></li>
+        <li><span><b>Approvals are per record, not per case.</b> A keyholder's share is bound to the record, so two requests naming one record with one approval each open it. The threshold holds; the per-request trail does not.</span></li>
+        <li><span><b>A certificate names a lender it cannot bind.</b> The holder tags on its locked slots come from the seller, and no circuit can tie them to that lender. The lender recomputes every tag from public state before it advances.</span></li>
+        <li><span><b>A certificate shows its markers.</b> A borrowing base publishes the markers of the invoices it locks. That is exactly what makes the lock verifiable.</span></li>
+      </ul>
+      <ul class="dots" style="gap:19px;align-content:start;font-size:17.5px">
+        <li><span><b>A seller can leak its own records.</b> Reusing a sealing scalar makes two records comparable to anyone, and re-offering with the same scalar overwrites the earlier record. The SDK draws a fresh one every time and can spot a repeat in public state — the discipline is still the caller's.</span></li>
+        <li><span><b>A settled, unfinanced book is linkable.</b> An opened record reveals the supplier's id, and the seller payee tag is derived from it, so every settled-but-unfinanced receivable of that supplier becomes recognisable without any further approval.</span></li>
+        <li><span><b>Timing correlates.</b> An observer can link an acknowledgment to a later offer by when each happened.</span></li>
+        <li><span><b>Sealing rests on Poseidon.</b> The platform does not promise the hash stays stable across upgrades, which is why every record carries a version.</span></li>
+        <li><span><b>Test networks only.</b> Mainnet contract deployment on Midnight is gated by the Foundation's review process.</span></li>
+        <li><span><b>Not audited.</b> There has been an internal security review, with findings accepted on the record. There has been no external audit.</span></li>
+      </ul>
+    </div>
+    <p class="note" style="display:flex;justify-content:space-between;gap:40px;align-items:baseline;font-size:18px">
+      <span>The threat model names the attacker behind each of these, the property it breaks and the test that reproduces it. Both documents ship with the repository.</span>
+      <span class="lbl" style="flex:none;text-align:right">docs/THREAT-MODEL.md · docs/PRIVACY-BOUNDARY.md<br>contract/test/limits.test.ts · contract/test/transcript.test.ts</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 14 · roadmap ═════════════════════════════════════════════ -->
+<section class="slide" data-rh="14 · roadmap">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Three waves, then a consortium.">Three waves, then a consortium.</h2>
+      <p class="dek">The contract is close to finished. What is not finished is the part that makes a registry worth joining: the other members.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="grid g3 fill stretch">
+      <article class="card" style="display:flex;flex-direction:column">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 1 · shipped<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+        <h3>The register, and the three refusals</h3>
+        <ul class="dots" style="margin-top:18px;font-size:17px">
+          <li><span>Twelve circuits, one contract</span></li>
+          <li><span>171 tests, 49 of them adversarial</span></li>
+          <li><span>2-of-3 disclosure that self-verifies</span></li>
+          <li><span>Borrowing base that locks what it certifies</span></li>
+          <li><span>Settlement through the contract</span></li>
+          <li><span>A sandbox that needs no wallet</span></li>
+          <li><span>A deployment on a public testnet</span></li>
+          <li><span>A full lifecycle run with real proofs</span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">Everything a first member needs to get value out of the registry on its own.</p>
+      </article>
+      <article class="card" style="display:flex;flex-direction:column">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 2 · next<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+        <h3>Nobody should need to hold a token to be checked</h3>
+        <ul class="dots" style="margin-top:18px;font-size:17px">
+          <li><span>Fee sponsorship, so participants need no DUST</span></li>
+          <li><span>In-browser proving through 1AM</span></li>
+          <li><span>Batch acceptance for a financier's book</span></li>
+          <li><span>Distributed key generation for the disclosure key</span></li>
+          <li><span>Bulk disclosure for an insolvency</span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">The friction that stops a real financier from trying it: a token to hold, a prover to install, one pledge at a time.</p>
+      </article>
+      <article class="card" style="display:flex;flex-direction:column">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 3 · after<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+        <h3>Where the invoices already are</h3>
+        <ul class="dots" style="margin-top:18px;font-size:17px">
+          <li><span>Ledger-9 migration for contract events</span></li>
+          <li><span>ECDSA-signed e-invoices straight from ERP systems</span></li>
+          <li><span>Shielded settlement, once contract custody lands</span></li>
+          <li><span>A mainnet deployment request</span></li>
+          <li><span>An adapter for existing factoring platforms</span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">The integrations that make the registry the place a pledge gets recorded, rather than a second system to remember.</p>
+      </article>
+    </div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin-top:26px">
+      <p class="note" style="font-size:20px;max-width:88ch">A register with one member is a private database. The work after Wave 3 is the consortium — the operator, the admission rules and the second financier — not the contract.</p>
+      <p style="font-family:var(--display);font-weight:800;font-stretch:80%;font-size:30px;color:var(--ink);letter-spacing:-.02em;text-align:right;line-height:1.1;flex:none">Every invoice can be pledged once.<br>Prove it without revealing it.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const D = document, deck = D.getElementById('deck');
+const slides = [...D.querySelectorAll('.slide')];
+const N = slides.length;
+
+/* ── chrome, written once ─────────────────────────────────────── */
+slides.forEach((s, i) => {
+  const rh = D.createElement('p');
+  rh.className = 'rh';
+  rh.innerHTML = `<span>${s.dataset.rh || ''}</span><span>${s.dataset.rh2 || ''}</span>`;
+  const pf = D.createElement('p');
+  pf.className = 'pf';
+  const ticks = slides.map((_, j) =>
+    `<i class="${j === i ? 'now' : (j < i ? 'done' : '')}"></i>`).join('');
+  pf.innerHTML = `<span class="wm">Stock &amp; Foil</span>`
+    + `<span class="ticks">${ticks}</span>`
+    + `<span>${String(i + 1).padStart(2, '0')} / ${N}</span>`;
+  s.append(rh, pf);
+});
+
+/* ── fit the sheet to the window ──────────────────────────────── */
+function fit(){
+  const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+  deck.style.transform = `scale(${k})`;
+}
+addEventListener('resize', fit); fit();
+
+/* ── navigation ───────────────────────────────────────────────── */
+let at = 0;
+function go(n){
+  at = Math.max(0, Math.min(N - 1, n));
+  slides.forEach((s, i) => {
+    s.classList.toggle('on', i === at);
+    s.setAttribute('aria-hidden', i === at ? 'false' : 'true');
+  });
+  if (location.hash !== '#' + (at + 1)) history.replaceState(null, '', '#' + (at + 1));
+}
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  switch (e.key){
+    case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': case 'Enter':
+      e.preventDefault(); go(at + 1); break;
+    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+      e.preventDefault(); go(at - 1); break;
+    case 'Home': e.preventDefault(); go(0); break;
+    case 'End':  e.preventDefault(); go(N - 1); break;
+  }
+});
+addEventListener('click', e => { if (!e.target.closest('a')) go(at + (e.clientX < innerWidth * .22 ? -1 : 1)); });
+addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) || 1) - 1));
+go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+
+/* ── bar charts, drawn from the numbers themselves ────────────── */
+function bars(host, rows, unit, alt){
+  const max = Math.max(...rows.map(r => r[1]));
+  host.innerHTML = rows.map(([k, v, flag]) =>
+    `<div class="row"><span class="k">${k}</span>`
+    + `<span class="t${flag ? ' alt' : ''}" style="width:${(v / max * 100).toFixed(1)}%"></span>`
+    + `<span class="v">${typeof v === 'number' && unit === ' MB' ? v.toFixed(1) : v}${unit}</span></div>`).join('');
+}
+bars(D.getElementById('keyBars'), [
+  ['certifyBorrowingBase', 42.9], ['offer', 11.1], ['acknowledge', 10.0], ['payInvoice', 10.0],
+  ['accept', 5.2], ['claimAsSeller', 5.2], ['approveDisclosure', 3.1], ['requestDisclosure', 3.1],
+  ['admitDebtor', 2.8], ['admitFinancier', 2.8], ['claimAsHolder', 2.8], ['release', 2.8]
+], ' MB');
+bars(D.getElementById('testBars'), [
+  ['refusals', 49], ['lifecycle', 23], ['transcript', 10], ['disclosure', 10],
+  ['limits', 10], ['ceremony', 7], ['property model', 1],
+  ['sdk · simulator', 19, 1], ['sdk · keys', 14, 1], ['sdk · records', 12, 1],
+  ['sdk · audit', 9, 1], ['sdk · scalar', 7, 1]
+], '');
+
+/* ══ the halftone press ═══════════════════════════════════════════
+   The same press the product site uses: greyscale artwork is drawn
+   off-screen, then screened into one ink at one angle, so two
+   canvases multiplied give the overprint. Every notch position is
+   derived from a commitment hash, so the same record always draws
+   the same tally. */
+function xmur3(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return(h^=h>>>16)>>>0}}
+function mulberry32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rng = s => mulberry32(xmur3(s)());
+const grey = d => {const v = Math.round(255*(1 - Math.max(0,Math.min(1,d)))); return `rgb(${v},${v},${v})`;};
+
+const HASH = {
+  pledge: '0x31e5a8c07f4d2b96e10ac3587bd6f42e9a05c7d3148be6f20d9a7c51e38b46f7',
+  rogue : '0xa9d0e4175c3b86f2a14e09d7c68b35f1e2a70c94d5b186e3f07a42c9d1b5e860'
+};
+
+/* exchequer notch widths: palm, thumb, little finger, barleycorn, nick */
+function notches(hash){
+  const r = rng(hash), widths = [34,22,14,9,5], out = [];
+  let x = -270; const n = 7 + Math.floor(r()*2);
+  for (let i=0;i<n;i++){
+    const w = widths[Math.floor(r()*widths.length)];
+    x += 30 + r()*42;
+    if (x + w > 270) break;
+    out.push([x,w]); x += w;
+  }
+  return out;
+}
+/* notches cut into one half after the fact: they land in the gaps */
+function inflate(base, k, seed){
+  const r = rng(seed), all = base.map(n=>n.slice()), extra = [];
+  for (let i=0;i<k;i++){
+    all.sort((a,b)=>a[0]-b[0]);
+    let bi=-1, bg=0;
+    for (let j=0;j<all.length-1;j++){
+      const gap = all[j+1][0] - (all[j][0] + all[j][1]);
+      if (gap > bg){ bg = gap; bi = j; }
+    }
+    if (bi < 0 || bg < 36) break;
+    const w = [9,14,22][Math.floor(r()*3)];
+    const x = all[bi][0] + all[bi][1] + (bg - w)/2;
+    all.push([x,w]); extra.push([x,w]);
+  }
+  all.sort((a,b)=>a[0]-b[0]);
+  return {all, extra};
+}
+
+function press(canvas, opt){
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  if (!W || !H) return;
+  const {color, angle = 15, cell = 4.4, seed = 's', draw} = opt;
+  const view = typeof opt.view === 'function' ? opt.view() : opt.view;
+  const off = D.createElement('canvas'); off.width = W; off.height = H;
+  const o = off.getContext('2d');
+  o.fillStyle = '#fff'; o.fillRect(0,0,W,H);
+  const s = W / view.w;
+  o.setTransform(s,0,0,s, -view.x*s, H/2 - (view.y + view.h/2)*s);
+  draw(o);
+  const bl = D.createElement('canvas'); bl.width = W; bl.height = H;
+  const b = bl.getContext('2d'); b.filter = 'blur(.8px)'; b.drawImage(off,0,0);
+  const data = b.getImageData(0,0,W,H).data;
+  const dpr = 1.5;
+  canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+  const c = canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle = color; c.beginPath();
+  const r = rng(seed), a = angle*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
+  const R = Math.hypot(W,H)/2 + cell;
+  for (let v=-R; v<=R; v+=cell) for (let u=-R; u<=R; u+=cell){
+    const x = W/2 + u*ca - v*sa, y = H/2 + u*sa + v*ca;
+    const j = r();
+    if (x<0 || y<0 || x>=W || y>=H) continue;
+    const d = 1 - data[((y|0)*W + (x|0))*4]/255;
+    if (d < .06) continue;
+    const rad = cell*.5*Math.sqrt(d)*1.2*(.95 + j*.1);
+    c.moveTo(x+rad, y); c.arc(x, y, rad, 0, Math.PI*2);
+  }
+  c.fill();
+}
+
+const FIST = new Path2D("M-70,-232 C-76,-160 -84,-100 -80,-58 L-80,44 Q-80,70 -60,70 Q-44,70 -41,54 Q-38,72 -21,72 Q-4,72 -2,56 Q2,74 18,74 Q34,74 36,58 Q40,76 56,74 Q76,72 76,44 L78,-20 C96,-12 114,-16 112,-34 C110,-56 86,-74 64,-86 C58,-140 54,-190 50,-236 Z");
+const CREASES = new Path2D("M-41,-40 C-43,0 -42,30 -41,54 M-2,-44 C-3,0 -2,30 -2,56 M36,-44 C37,-4 36,30 36,58 M-78,-56 C-30,-72 20,-74 70,-66 M62,-62 C80,-44 92,-34 108,-32");
+function fist(o){
+  o.fillStyle = grey(.2); o.beginPath();
+  o.moveTo(-98,-262); o.lineTo(-150,-1100); o.lineTo(120,-1100); o.lineTo(78,-268); o.closePath(); o.fill();
+  o.strokeStyle = grey(.55); o.lineWidth = 3;
+  for (let i=1;i<6;i++){ o.beginPath(); o.moveTo(-98 - i*9, -262 - i*150); o.lineTo(78 + i*7, -268 - i*150); o.stroke(); }
+  o.fillStyle = grey(.92); o.beginPath();
+  o.moveTo(-86,-232); o.lineTo(-98,-268); o.lineTo(80,-274); o.lineTo(66,-236); o.closePath(); o.fill();
+  o.fillStyle = grey(.46); o.fill(FIST);
+  o.save(); o.clip(FIST);
+  o.fillStyle = grey(.66); o.beginPath(); o.ellipse(-86,-40,44,200,0,0,Math.PI*2); o.fill();
+  o.fillStyle = grey(.6); o.fillRect(-90,40,200,60);
+  o.fillStyle = grey(.24); o.beginPath(); o.ellipse(0,-150,26,64,.08,0,Math.PI*2); o.fill();
+  o.fillStyle = grey(.3); o.beginPath(); o.ellipse(70,-44,20,14,-.4,0,Math.PI*2); o.fill();
+  o.restore();
+  o.strokeStyle = grey(.95); o.lineWidth = 4; o.lineCap = 'round'; o.stroke(CREASES);
+}
+function stick(o, which, Nn, k){
+  k = k === undefined ? 1 : k;
+  const stock = which === 'stock';
+  o.fillStyle = grey(.44*k); o.beginPath();
+  if (stock){ o.roundRect(-420,-32,120,64,[8,0,0,8]); o.rect(-302,-32,604,32); }
+  else      { o.rect(-302,0,604,32); o.roundRect(300,-32,120,64,[0,8,8,0]); }
+  o.fill();
+  o.strokeStyle = grey(.8*k); o.lineWidth = 2.2;
+  for (const y of (stock ? [-23,-10] : [10,23])){
+    o.beginPath(); o.moveTo(stock ? -410 : -290, y);
+    o.bezierCurveTo(-120, y-3, 120, y+3, stock ? 290 : 410, y-1); o.stroke();
+  }
+  for (const [x,w] of Nn){
+    o.fillStyle = grey(1*k);
+    if (stock) o.fillRect(x-2,-26,w+4,44); else o.fillRect(x-2,-18,w+4,44);
+    o.fillStyle = '#fff'; o.beginPath();
+    if (stock){ o.moveTo(x-4,-33); o.lineTo(x+w+4,-33); o.lineTo(x+w/2,-19); }
+    else      { o.moveTo(x-4, 33); o.lineTo(x+w+4, 33); o.lineTo(x+w/2, 19); }
+    o.fill();
+  }
+}
+
+const N_PLEDGE = notches(HASH.pledge);
+const N_ROGUE  = notches(HASH.rogue);
+const INF      = inflate(N_PLEDGE, 4, HASH.pledge + 'inflate');
+
+const HERO_VIEW = {x:300, y:180, w:1400, h:340};
+function heroScene(half){
+  return o => {
+    const C = [1000,350], TH = -.2, HL = 362;
+    o.save(); o.translate(C[0],C[1]); o.rotate(TH); stick(o, half, N_PLEDGE); o.restore();
+    o.save(); o.translate(C[0],C[1]); o.rotate(TH);
+    if (half === 'stock') o.translate(-HL,0); else { o.translate(HL,0); o.rotate(Math.PI); }
+    fist(o); o.restore();
+  };
+}
+const SX = .74;
+const BAR_VIEW = {x:-330, y:-104, w:660, h:224};
+const barScene = (half, Nn) => o => { o.save(); o.scale(SX,1); stick(o, half, Nn, 1); o.restore(); };
+
+const jobs = [];
+const add = (id, opt) => { const el = D.getElementById(id); if (el) jobs.push([el, opt]); };
+add('heroPink', {color:'#FF48B0', angle:75, cell:4.2, seed:HASH.pledge+'p', view:HERO_VIEW, draw:heroScene('stock')});
+add('heroBlue', {color:'#0000FE', angle:15, cell:4.2, seed:HASH.pledge+'b', view:HERO_VIEW, draw:heroScene('foil')});
+add('forgedStock',  {color:'#FF48B0', angle:75, cell:2.9, seed:'f2', view:BAR_VIEW, draw:barScene('stock', N_PLEDGE)});
+add('inflatedFoil', {color:'#0000FE', angle:15, cell:2.9, seed:'i1', view:BAR_VIEW, draw:barScene('foil',  N_PLEDGE)});
+add('inflatedStock',{color:'#FF48B0', angle:75, cell:2.9, seed:'i2', view:BAR_VIEW, draw:barScene('stock', INF.all)});
+add('doubleFoil',   {color:'#0000FE', angle:15, cell:2.9, seed:'d1', view:BAR_VIEW, draw:barScene('foil',  N_PLEDGE)});
+add('doubleStock',  {color:'#FF48B0', angle:75, cell:2.9, seed:'d2', view:BAR_VIEW, draw:barScene('stock', N_PLEDGE)});
+add('doubleRogue',  {color:'#FF48B0', angle:45, cell:2.9, seed:'d3', view:BAR_VIEW, draw:barScene('stock', N_ROGUE)});
+
+/* ring the notches cut after the buyer signed */
+const anno = D.getElementById('inflatedAnno');
+if (anno) for (const [x,w] of INF.extra){
+  const c = D.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx', ((x + w/2)*SX).toFixed(1)); c.setAttribute('cy','-20');
+  c.setAttribute('r', Math.max(26, w*1.3).toFixed(1));
+  c.setAttribute('fill','none'); c.setAttribute('stroke','#0000FE');
+  c.setAttribute('stroke-width','2.2'); c.setAttribute('vector-effect','non-scaling-stroke');
+  anno.appendChild(c);
+}
+/* the rogue half, pushed in out of register */
+const rogue = D.getElementById('doubleRogue');
+if (rogue) rogue.style.transform = 'translate(2%, -26%) rotate(1.4deg)';
+
+function renderAll(){ for (const [el,opt] of jobs) press(el, opt); }
+(document.fonts ? document.fonts.ready : Promise.resolve())
+  .then(renderAll)
+  .then(() => { D.documentElement.dataset.ready = '1'; });
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderAll, 150); });
+})();
+</script>
+</body>
+</html>
