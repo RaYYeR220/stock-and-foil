@@ -4,8 +4,9 @@
 // derived from it. Nothing on this page is privileged — it is built from the same `publicState()`
 // any observer can read.
 import { encumbranceOf } from '../lib/sdk.js';
-import { KeyValues, SectionOpener, TallyStrip, useTitle } from '../components/ui.js';
+import { FirstRun, KeyValues, SectionOpener, TallyStrip, useTitle } from '../components/ui.js';
 import { day, money, shortField, shortHex } from '../lib/format.js';
+import { isEmptyRegistry } from '../lib/world.js';
 import { useRegistry } from '../state/registry.js';
 
 const STATUS_TAG: Record<string, string> = {
@@ -20,6 +21,7 @@ export function Ledger() {
   const { view, now } = useRegistry();
   if (!view) return null;
   const { counts } = view;
+  const admitted = counts.debtors + counts.financiers;
 
   return (
     <>
@@ -36,23 +38,33 @@ export function Ledger() {
         />
       </div>
 
-      <div className="counts" data-testid="counts">
-        {[
-          ['Debtors', counts.debtors],
-          ['Financiers', counts.financiers],
-          ['Acknowledgments', counts.acks],
-          ['Pledge markers', counts.pledges],
-          ['Sealed records', counts.records],
-          ['Certificates', counts.certificates],
-          ['Disclosure requests', counts.requests],
-          ['Sealed shares', counts.shares],
-        ].map(([label, value]) => (
-          <div key={String(label)}>
-            <strong>{String(value)}</strong>
-            <span>{String(label)}</span>
-          </div>
-        ))}
-      </div>
+      {isEmptyRegistry(view) ? (
+        <FirstRun
+          line={`${
+            admitted > 0
+              ? `The operator has admitted ${admitted} parties and nothing else has been recorded against this registry yet`
+              : 'Nothing has been recorded against this registry yet'
+          } — no acknowledgment, no pledge marker, no sealed record. Every value on this page is read from the ledger, so it is empty rather than seeded with something that never happened.`}
+        />
+      ) : (
+        <div className="counts" data-testid="counts">
+          {[
+            ['Debtors', counts.debtors],
+            ['Financiers', counts.financiers],
+            ['Acknowledgments', counts.acks],
+            ['Pledge markers', counts.pledges],
+            ['Sealed records', counts.records],
+            ['Certificates', counts.certificates],
+            ['Disclosure requests', counts.requests],
+            ['Sealed shares', counts.shares],
+          ].map(([label, value]) => (
+            <div key={String(label)}>
+              <strong>{String(value)}</strong>
+              <span>{String(label)}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <section className="sec sec--tight">
         <SectionOpener

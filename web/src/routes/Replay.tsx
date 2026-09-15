@@ -4,7 +4,7 @@
 // this tab: the three First Brands frauds are refused by the contract's own asserts, and the
 // sealed record at the end decrypts and checks itself against the ledger.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { findPledge, isRefusal, REFUSAL_MESSAGES, toHex, type Refusal } from '../lib/sdk.js';
 import { KeyValues, SectionOpener, TallyStrip, useTitle, type StripState } from '../components/ui.js';
 import { day, money, ms, shortField, shortHex } from '../lib/format.js';
@@ -202,6 +202,19 @@ export function Replay() {
     stop.current = true;
     await rewindTo(0);
   }, [rewindTo]);
+
+  // `/app/replay?run=1` is what an empty ledger or workspace links to: arriving here should run
+  // the replay, not leave a visitor looking at another button. The parameter is dropped on the
+  // way in, so a reload of this page does not start it over.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get('run') === '1';
+  const launched = useRef(false);
+  useEffect(() => {
+    if (!world || !asked || launched.current) return;
+    launched.current = true;
+    setParams({}, { replace: true });
+    void runAll();
+  }, [world, asked, runAll, setParams]);
 
   const actor = personaMeta(step.actor);
   const status = result?.status ?? 'pending';

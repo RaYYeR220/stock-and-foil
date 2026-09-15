@@ -587,6 +587,28 @@
   background: transparent;
 }
 
+/* An empty registry, said in a line and offered a way out of it, where a row of zeros was. */
+.firstrun {
+  display: grid;
+  justify-items: start;
+  gap: var(--s5);
+  border: 1.5px dashed var(--hair);
+  background: var(--white);
+  padding: var(--s6);
+}
+.firstrun p {
+  font-size: 15.5px;
+  line-height: 1.55;
+  max-width: 62ch;
+}
+/* Inside an aside plate it is already on its own ground, and the plate carries the border. */
+.panel .firstrun {
+  border: 0;
+  padding: 0;
+  gap: var(--s4);
+  background: transparent;
+}
+
 /* ── workspaces ─────────────────────────────────────────── */
 .personabar {
   display: flex;

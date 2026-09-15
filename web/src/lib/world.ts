@@ -333,5 +333,13 @@ export interface SandboxIdentities {
   financierB: StockAndFoilPrivateState;
 }
 
+/**
+ * Whether anything has been recorded against the registry beyond who was admitted. Membership is
+ * deliberately not counted: a world that has only admitted its parties is still a blank ledger.
+ */
+export const isEmptyRegistry = (view: PublicLedgerView | null): boolean =>
+  !view ||
+  view.counts.acks + view.counts.pledges + view.counts.records + view.counts.certificates + view.counts.requests === 0;
+
 /** Contract-derived label for a record, used to seed its tally artwork. */
 export const artSeed = (value: string | Uint8Array): string => (typeof value === 'string' ? value : toHex(value));

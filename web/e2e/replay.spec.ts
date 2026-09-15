@@ -93,10 +93,14 @@ test('resetting the replay puts the registry back to an empty ledger', async ({ 
   await expect(page.locator('.progress')).toContainText('0 of');
   await expect(page.getByTestId('run-step')).toBeEnabled();
 
-  // In-app navigation: a full reload would build a new registry and prove nothing about the reset.
+  // An empty registry says so and offers the replay, rather than showing a row of zeros.
   await page.getByRole('link', { name: 'Public ledger', exact: true }).click();
-  await expect(page.getByTestId('counts')).toContainText('Acknowledgments');
-  await expect(page.locator('.counts div').first()).toContainText('0Debtors');
+  await expect(page.getByTestId('first-run')).toBeVisible();
+  await expect(page.getByTestId('counts')).toHaveCount(0);
+
+  // Membership went with it: the reset returns the contract to the state it deployed in.
+  await page.getByRole('link', { name: 'Workspaces', exact: true }).click();
+  await expect(page.locator('.work .kv').last()).toContainText('Debtors admitted0');
 });
 
 test('the world survives a reload, and a page opened by its URL', async ({ page }) => {
@@ -121,13 +125,27 @@ test('the world survives a reload, and a page opened by its URL', async ({ page 
   await expect(page.locator('.rec').first()).toContainText('PLEDGED', { timeout: 60_000 });
   // The same marker, not merely a marker: the keys behind the world came back with the ledger.
   await expect(page.locator('.rec .id').first()).toHaveText(marker);
+  await expect(page.getByTestId('first-run')).toHaveCount(0);
 
   // And resetting clears what was stored, so a reload cannot bring it back.
   await page.getByRole('button', { name: 'Reset registry' }).click();
-  await expect(page.locator('.rec')).toHaveCount(0);
+  await expect(page.getByTestId('first-run')).toBeVisible();
   await page.reload();
-  await expect(page.getByTestId('counts')).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId('first-run')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.rec')).toHaveCount(0);
+});
+
+test('an empty ledger offers the replay, and the link runs it', async ({ page }) => {
+  await page.goto('/app/ledger');
+  const invitation = page.getByTestId('first-run');
+  await expect(invitation).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId('counts')).toHaveCount(0);
+  await expect(invitation).toContainText('no acknowledgment, no pledge marker, no sealed record');
+
+  await invitation.getByRole('link', { name: 'Run the guided replay' }).click();
+  await expect(page.getByRole('heading', { name: 'The First Brands replay.' })).toBeVisible();
+  // Arriving from that link runs the replay: nothing else is clicked here.
+  await expect(page.getByTestId('step-card')).toHaveAttribute('data-outcome', 'ok', { timeout: 60_000 });
 });
 
 test('the public explorer shows what the chain holds after a pledge', async ({ page }) => {

@@ -4,8 +4,8 @@
 // it actually has — the aside on every page says what this party can see and what it cannot, and
 // the actions are the circuits that party is allowed to call.
 import { NavLink, Navigate, useParams } from 'react-router-dom';
-import { KeyValues, SectionOpener, useTitle } from '../components/ui.js';
-import { PERSONAS, personaMeta, type PersonaId } from '../lib/world.js';
+import { FirstRun, KeyValues, SectionOpener, useTitle } from '../components/ui.js';
+import { PERSONAS, isEmptyRegistry, personaMeta, type PersonaId } from '../lib/world.js';
 import { useRegistry } from '../state/registry.js';
 import { DebtorWork, OperatorWork } from './work/parties.js';
 import { AuditorWork, KeyholderWork } from './work/disclosure.js';
@@ -85,17 +85,24 @@ function Workspace({
           </div>
           <div className="panel">
             <h3>The registry right now</h3>
-            <KeyValues
-              rows={[
-                { label: 'Debtors', value: String(view?.counts.debtors ?? 0) },
-                { label: 'Financiers', value: String(view?.counts.financiers ?? 0) },
-                { label: 'Acknowledgments', value: String(view?.counts.acks ?? 0) },
-                { label: 'Pledge markers', value: String(view?.counts.pledges ?? 0) },
-                { label: 'Sealed records', value: String(view?.counts.records ?? 0) },
-                { label: 'Certificates', value: String(view?.counts.certificates ?? 0) },
-                { label: 'Disclosure requests', value: String(view?.counts.requests ?? 0) },
-              ]}
-            />
+            {isEmptyRegistry(view) ? (
+              <FirstRun
+                small
+                line="Nothing has been recorded against the registry yet — no acknowledgment, no pledge marker, no sealed record. Take the first step yourself in the workspace, or let the replay walk one receivable through all seven parties."
+              />
+            ) : (
+              <KeyValues
+                rows={[
+                  { label: 'Debtors', value: String(view?.counts.debtors ?? 0) },
+                  { label: 'Financiers', value: String(view?.counts.financiers ?? 0) },
+                  { label: 'Acknowledgments', value: String(view?.counts.acks ?? 0) },
+                  { label: 'Pledge markers', value: String(view?.counts.pledges ?? 0) },
+                  { label: 'Sealed records', value: String(view?.counts.records ?? 0) },
+                  { label: 'Certificates', value: String(view?.counts.certificates ?? 0) },
+                  { label: 'Disclosure requests', value: String(view?.counts.requests ?? 0) },
+                ]}
+              />
+            )}
           </div>
         </aside>
       </div>

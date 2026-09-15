@@ -4,6 +4,7 @@
 // state, never a raw error), labelled fields, key/value record rows and the tally strip that draws
 // a record from its own commitment.
 import { useEffect, useId, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { REFUSAL_MESSAGES } from '../lib/sdk.js';
 import { ms } from '../lib/format.js';
 import { notches } from '../lib/press.js';
@@ -234,6 +235,22 @@ export function TallyStrip({ seed, state, label }: { seed: string; state: StripS
         </svg>
       ) : null}
     </Press>
+  );
+}
+
+/**
+ * A registry with nothing in it. Zeros are the truthful reading of an empty ledger, but a row of
+ * them is not what a first visit should be: this says what is actually there, in one line, and
+ * offers the thing that fills it. `?run=1` starts the replay on arrival.
+ */
+export function FirstRun({ line, small }: { line: ReactNode; small?: boolean }) {
+  return (
+    <div className="firstrun" data-testid="first-run">
+      <p>{line}</p>
+      <Link className={small ? 'btn btn--sm' : 'btn'} to="/app/replay?run=1">
+        Run the guided replay
+      </Link>
+    </div>
   );
 }
 
