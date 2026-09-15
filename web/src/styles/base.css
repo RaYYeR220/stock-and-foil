@@ -449,8 +449,32 @@ ol {
   body {
     font-size: 16.5px;
   }
+  /* Mark and the one action share the first row; the sections scroll along the second. */
+  .topbar .shell {
+    gap: var(--s3) var(--s4);
+    min-height: 0;
+  }
+  .mark {
+    order: 1;
+    margin-right: auto;
+  }
+  .topbar .btn {
+    order: 2;
+  }
+  .topnav {
+    order: 3;
+    flex-basis: 100%;
+    margin-right: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
   .topnav ul {
-    gap: var(--s4);
+    gap: var(--s5);
+    flex-wrap: nowrap;
+  }
+  .topnav a {
+    font-size: 14px;
+    padding-bottom: 4px;
   }
   .foot-grid {
     grid-template-columns: 1fr 1fr;

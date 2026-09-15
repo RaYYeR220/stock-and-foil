@@ -2,7 +2,7 @@
 //
 // Page chrome shared by every route: the mark, the sticky header, the instrument rail that carries
 // the mode switch and the Sandbox clock, and the footer.
-import { NavLink, Link } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { day } from '../lib/format.js';
 import { DAY, T0 } from '../lib/world.js';
 import { useRegistry } from '../state/registry.js';
@@ -26,7 +26,12 @@ const NAV = [
   { to: '/proof', label: 'Proof' },
 ];
 
+/** Every `/app/:persona` route belongs to the Workspaces item, not just the operator's. */
+const WORKSPACE_ROUTES = /^\/app\/(?!replay$|ledger$)[a-z-]+$/;
+
 export function Topbar({ cta }: { cta?: { to: string; label: string } }) {
+  const { pathname } = useLocation();
+  const inWorkspaces = WORKSPACE_ROUTES.test(pathname);
   return (
     <header className="topbar">
       <div className="shell shell--wide">
@@ -35,7 +40,9 @@ export function Topbar({ cta }: { cta?: { to: string; label: string } }) {
           <ul>
             {NAV.map((item) => (
               <li key={item.to}>
-                <NavLink to={item.to}>{item.label}</NavLink>
+                <NavLink to={item.to} aria-current={item.label === 'Workspaces' && inWorkspaces ? 'page' : undefined}>
+                  {item.label}
+                </NavLink>
               </li>
             ))}
           </ul>

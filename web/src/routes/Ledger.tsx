@@ -192,11 +192,13 @@ export function Ledger() {
                     { label: 'Case reference', value: shortHex(request.caseRef), mono: true },
                     {
                       label: 'Approvals',
-                      value: request.approvals.map((a, i) => `${i + 1}${a ? ' approved' : ' —'}`).join(' · '),
+                      value: request.approvals
+                        .map((a, i) => `keyholder ${i + 1} ${a ? 'approved' : 'pending'}`)
+                        .join(' · '),
                     },
                     {
                       label: 'Threshold',
-                      value: `${request.approvals.filter(Boolean).length} of ${view.config.threshold} needed`,
+                      value: `${request.approvals.filter(Boolean).length} of ${view.config.threshold} collected`,
                     },
                   ]}
                 />

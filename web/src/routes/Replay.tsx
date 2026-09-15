@@ -140,7 +140,11 @@ export function Replay() {
       if (!world) return 'error';
       const current = REPLAY_STEPS[target];
       if (!current) return 'error';
-      if (!snapshots.current[target]) snapshots.current[target] = world.snapshot();
+      // Step one admits the parties, so it has to start from the contract as deployed — otherwise
+      // it would admit them a second time on top of whatever a workspace has already done.
+      const baseline = snapshots.current[target];
+      if (target === 0 && baseline) world.restore(baseline);
+      else if (!baseline) snapshots.current[target] = world.snapshot();
       const started = Date.now();
       let outcome: StepResult;
       try {
@@ -357,7 +361,9 @@ export function Replay() {
       </div>
 
       <p className="note">
-        Every step above is reversible: pick any step in the list to rewind the whole world to just before it.{' '}
+        Every step above is reversible: pick any step in the list to rewind the whole world to just before it. Running
+        step one puts the registry back to the state it was deployed in, so the replay always starts from an empty
+        ledger.{' '}
         <Link to="/app/ledger">Open the public ledger</Link> to see exactly what these calls wrote, or take a role
         yourself in the <Link to="/app/seller">workspaces</Link>.
       </p>
