@@ -64,6 +64,13 @@ export type ImpureCircuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -76,6 +83,13 @@ export type ProvableCircuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type PureCircuits = {
@@ -169,6 +183,13 @@ export type Circuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
+  claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
+                n_0: Uint8Array,
+                to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type Ledger = {

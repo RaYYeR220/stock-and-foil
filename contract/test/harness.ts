@@ -55,6 +55,40 @@ export function expectRefusal(fn: () => unknown, code: string): void {
   expect(refusalOf(fn)).toBe(code);
 }
 
+/** Deterministic stand-in for a wallet address; settlement only ever moves unshielded funds. */
+export const userAddress = (fill: number): { bytes: Bytes } => ({ bytes: new Uint8Array(32).fill(fill) });
+
+type Token = { raw: string };
+type Recipient = { address: string };
+
+function effectsOf(res: CircuitResult): Record<string, Map<unknown, bigint>> {
+  return (res.context.currentQueryContext as unknown as { effects: Record<string, Map<unknown, bigint>> }).effects;
+}
+
+function sumEffects(res: CircuitResult, kind: string, color: Bytes, address?: Bytes): bigint {
+  const want = hex(color);
+  let total = 0n;
+  for (const [key, value] of effectsOf(res)[kind] ?? new Map()) {
+    const [token, to] = (Array.isArray(key) ? key : [key, undefined]) as [Token, Recipient | undefined];
+    if (token.raw !== want) continue;
+    if (address && to?.address !== hex(address)) continue;
+    total += value;
+  }
+  return total;
+}
+
+/** Unshielded value the circuit took into the contract, by token color. */
+export const received = (res: CircuitResult, color: Bytes = NATIVE_COLOR): bigint =>
+  sumEffects(res, 'unshieldedInputs', color);
+
+/** Unshielded value the circuit paid out, by token color. */
+export const sent = (res: CircuitResult, color: Bytes = NATIVE_COLOR): bigint =>
+  sumEffects(res, 'unshieldedOutputs', color);
+
+/** Unshielded value the circuit paid to one address (`claimedUnshieldedSpends`). */
+export const sentTo = (res: CircuitResult, to: { bytes: Bytes }, color: Bytes = NATIVE_COLOR): bigint =>
+  sumEffects(res, 'claimedUnshieldedSpends', color, to.bytes);
+
 export const MASK64 = (1n << 64n) - 1n;
 export const unpack = (packed: bigint) => ({
   invoiceNo: packed >> 128n,

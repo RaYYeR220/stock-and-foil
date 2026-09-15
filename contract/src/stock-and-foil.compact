@@ -196,3 +196,59 @@ export circuit release(n: Bytes<32>): [] {
   assert(p.holderTag == holderTagOf(localSecretKey(), k), "NOT_HOLDER");
   pledges.insert(k, PledgeState { ...p, status: PledgeStatus.RELEASED });
 }
+
+// ------------------------------------------------------------------------------------------
+// Settlement
+//
+// Paying through the contract is what stops diverted proceeds: the debtor's money lands in the
+// registry and only the party holding the payee tag can take it out. Settlement is unshielded,
+// so the amount and the claiming address are public (see the published honest limits).
+
+export circuit payInvoice(): [] {
+  const sk = localSecretKey();
+  const inv = callInvoice();
+  assert(debtorIdOf(sk) == inv.debtorId, "NOT_YOUR_INVOICE");
+  const n = acknowledgedNullifier(inv);
+  const amount = disclose(inv.amount);
+  const sellerPayee = disclose(sellerPayeeTagOf(inv.sellerId, n));
+  receiveUnshielded(settlementColor, amount);
+  if (pledges.member(n)) {
+    const p = pledges.lookup(n);
+    assert(p.status != PledgeStatus.SETTLED, "ALREADY_SETTLED");
+    // A live pledge redirects the proceeds to its holder; an offer nobody took up, or a
+    // released pledge, pays the seller.
+    pledges.insert(n, PledgeState { ...p,
+                                    status: PledgeStatus.SETTLED,
+                                    payeeTag: p.status == PledgeStatus.PLEDGED ? p.holderTag : sellerPayee,
+                                    amount: amount,
+                                    claimed: false });
+  } else {
+    pledges.insert(n, PledgeState { status: PledgeStatus.SETTLED,
+                                    holderTag: 0,
+                                    expiry: 0,
+                                    recordId: pad(32, ""),
+                                    payeeTag: sellerPayee,
+                                    amount: amount,
+                                    claimed: false });
+  }
+}
+
+/** Pays out a settled invoice once, to whoever proves knowledge of its payee tag. */
+circuit claim(n: Bytes<32>, payeeTag: Field, to: UserAddress): [] {
+  const k = disclose(n);
+  assert(pledges.member(k), "NOT_SETTLED");
+  const p = pledges.lookup(k);
+  assert(p.status == PledgeStatus.SETTLED, "NOT_SETTLED");
+  assert(p.payeeTag == payeeTag, "NOT_PAYEE");
+  assert(!p.claimed, "ALREADY_CLAIMED");
+  pledges.insert(k, PledgeState { ...p, claimed: true });
+  sendUnshielded(settlementColor, p.amount, right<ContractAddress, UserAddress>(disclose(to)));
+}
+
+export circuit claimAsHolder(n: Bytes<32>, to: UserAddress): [] {
+  claim(n, holderTagOf(localSecretKey(), disclose(n)), to);
+}
+
+export circuit claimAsSeller(n: Bytes<32>, to: UserAddress): [] {
+  claim(n, sellerPayeeTagOf(sellerIdOf(localSecretKey()), disclose(n)), to);
+}

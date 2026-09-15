@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, it } from 'vitest';
-import { acknowledged, DAY, deployRegistry, hex, MASK64, NATIVE_COLOR, openRecord, pure, setupRegistry, unpack } from './harness.js';
+import {
+  acknowledged,
+  DAY,
+  deployRegistry,
+  hex,
+  MASK64,
+  NATIVE_COLOR,
+  openRecord,
+  pure,
+  received,
+  sent,
+  sentTo,
+  setupRegistry,
+  unpack,
+  userAddress,
+} from './harness.js';
 import { PledgeStatus } from '../src/index.js';
 import { FIELD_MODULUS, randomBytes32 } from '../../sdk/src/crypto/scalar.js';
 
@@ -157,5 +172,76 @@ describe('offer, accept, release', () => {
     const n2 = randomBytes32();
     expect(r.financierA.holderTag(n1)).not.toBe(r.financierB.holderTag(n1));
     expect(r.financierA.holderTag(n1)).not.toBe(r.financierA.holderTag(n2));
+  });
+});
+
+describe('settlement', () => {
+  it('debtor pays a pledged invoice and the holder claims the proceeds, not the seller', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    const tag = r.financierA.holderTag(n);
+    r.seller.offer(inv, tag, r.now + 7n * DAY);
+    r.financierA.accept(n);
+
+    const paid = r.debtor.pay(inv);
+    expect(received(paid)).toBe(inv.amount);
+    const settled = r.ledger().pledges.lookup(n);
+    expect(settled.status).toBe(PledgeStatus.SETTLED);
+    expect(settled.payeeTag).toBe(tag);
+    expect(settled.amount).toBe(inv.amount);
+    expect(settled.claimed).toBe(false);
+
+    const to = userAddress(0xa1);
+    const claim = r.financierA.claim(n, to);
+    expect(sent(claim)).toBe(inv.amount);
+    expect(sentTo(claim, to)).toBe(inv.amount);
+    expect(sentTo(claim, userAddress(0x5e))).toBe(0n);
+    expect(r.ledger().pledges.lookup(n).claimed).toBe(true);
+  });
+
+  it('debtor pays an invoice nobody financed and the seller claims it', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    r.debtor.pay(inv);
+    const settled = r.ledger().pledges.lookup(n);
+    expect(settled.status).toBe(PledgeStatus.SETTLED);
+    expect(settled.payeeTag).toBe(pure.sellerPayeeTagOf(r.seller.id, n));
+    expect(settled.holderTag).toBe(0n);
+    const claim = r.seller.claim(n, userAddress(0x5e));
+    expect(sent(claim)).toBe(inv.amount);
+    expect(r.ledger().pledges.lookup(n).claimed).toBe(true);
+  });
+
+  it('a released pledge settles to the seller, not to the former holder', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    r.seller.offer(inv, r.financierA.holderTag(n), r.now + 7n * DAY);
+    r.financierA.accept(n);
+    r.financierA.release(n);
+    r.debtor.pay(inv);
+    expect(r.ledger().pledges.lookup(n).payeeTag).toBe(pure.sellerPayeeTagOf(r.seller.id, n));
+    r.seller.claim(n, userAddress(0x5e));
+    expect(r.ledger().pledges.lookup(n).claimed).toBe(true);
+  });
+
+  it('an expired offer settles to the seller', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    r.seller.offer(inv, r.financierA.holderTag(n), r.now + 7n * DAY);
+    r.advance(8n * DAY);
+    r.debtor.pay(inv);
+    const settled = r.ledger().pledges.lookup(n);
+    expect(settled.status).toBe(PledgeStatus.SETTLED);
+    expect(settled.payeeTag).toBe(pure.sellerPayeeTagOf(r.seller.id, n));
+  });
+
+  it('payee tags of the seller and of a financier never collide', () => {
+    const r = setupRegistry();
+    const n = randomBytes32();
+    expect(pure.sellerPayeeTagOf(r.seller.id, n)).not.toBe(r.financierA.holderTag(n));
   });
 });
