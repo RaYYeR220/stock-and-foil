@@ -16,7 +16,11 @@
   "scripts": {
     "compile": "npm run -w contract compile",
     "test": "npm run -w contract test && npm run -w sdk test",
-    "build": "npm run -w sdk build && npm run -w cli build && npm run -w web build"
+    "build": "npm run -w sdk build && npm run -w cli build && npm run -w web build",
+    "ceremony": "npm run -w cli ceremony --",
+    "deploy": "npm run -w cli deploy --",
+    "scenario": "npm run -w cli scenario --",
+    "verify": "npm run -w cli verify --"
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",

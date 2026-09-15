@@ -5,9 +5,25 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "ceremony": "tsx src/index.ts ceremony",
+    "deploy": "tsx src/index.ts deploy",
+    "scenario": "tsx src/index.ts scenario",
+    "verify": "tsx src/index.ts verify",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@stockandfoil/sdk": "0.1.0"
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@scure/bip39": "^2.4.0",
+    "@stockandfoil/contract": "0.1.0",
+    "@stockandfoil/sdk": "0.1.0",
+    "ws": "8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }
