@@ -20,7 +20,8 @@
     "ceremony": "npm run -w cli ceremony --",
     "deploy": "npm run -w cli deploy --",
     "scenario": "npm run -w cli scenario --",
-    "verify": "npm run -w cli verify --"
+    "verify": "npm run -w cli verify --",
+    "verify:onchain": "npm run -w cli verify -- --network preview"
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",

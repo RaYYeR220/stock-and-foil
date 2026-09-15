@@ -1,0 +1,705 @@
+{
+  "project": "Stock & Foil",
+  "network": "preview",
+  "contractAddress": "9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7",
+  "compactVersion": "0.31.1",
+  "startedAt": "2026-09-15T17:55:27.382Z",
+  "finishedAt": "2026-09-15T18:03:58.144Z",
+  "explorer": {
+    "tx": "https://preview.midnightexplorer.com/transactions/{txHash}",
+    "contract": "https://preview.midnightexplorer.com/contracts/{address}",
+    "block": "https://preview.midnightexplorer.com/blocks/{height}"
+  },
+  "deployment": {
+    "deployTx": {
+      "identifier": "00025599f194f88e6e2f50345c77d60ddf6ee991b22c32a0543ed03fb0dd172fe9",
+      "txHash": "d8732da6763ed09c52a7013ebef9d76534264c1e900ba3a8c6c25a7906d13f68",
+      "blockHeight": 879363,
+      "blockHash": "bf1912d86256eecb309a9f9fa89675c9e3d939f0e86174a785152316064c43aa",
+      "blockTimestamp": "2026-09-15T17:38:30.000Z"
+    },
+    "maintenanceTxs": [
+      {
+        "circuit": "certifyBorrowingBase",
+        "identifier": "002cd8251642498d421b80dd7ef3221a6bc18ab2fd3faf9563de4eeeb8430bf08c",
+        "txHash": "cef559b00c25d87a55ffb0dff632eaed3bf7cfc0198fc4a04caa4b6f5e72672d",
+        "blockHeight": 879366,
+        "blockHash": "87e9759b4fbc4b9610b9a7ff4742cd158f352977790f1df53b377e6e1d88e96c",
+        "blockTimestamp": "2026-09-15T17:38:48.000Z"
+      },
+      {
+        "circuit": "payInvoice",
+        "identifier": "009d36e3a47bb31263dfad67ee6b178ac234fdd45e65b876088ccf22ec2a3e9d48",
+        "txHash": "1fb3decc45ee01509369091e1046f8aebd64f7980616c0f3e0209cf04bf00850",
+        "blockHeight": 879369,
+        "blockHash": "97f66d1bcb7dc12cbd39d58043ca49215fe6655e627bd78fc4c7eecf83b20867",
+        "blockTimestamp": "2026-09-15T17:39:06.000Z"
+      },
+      {
+        "circuit": "claimAsHolder",
+        "identifier": "004777f5335fc5bbd013c3d437913a2c54dcf1d79a1408efa655696874db701816",
+        "txHash": "627cdb34c8e176826b67b4ff872f2d23237ae725f64eaf44f6ddfb31d2474046",
+        "blockHeight": 879372,
+        "blockHash": "6d119de8f281ef91664c2f9ce28d0609228011b5817522aace5dd4aa6393d69e",
+        "blockTimestamp": "2026-09-15T17:39:24.000Z"
+      },
+      {
+        "circuit": "claimAsSeller",
+        "identifier": "0099a92ab050e6e2b179a117a59ed712e204ce93fbf4bae0e08fe9f7c1e4861942",
+        "txHash": "82c84ce6838c626c457384505d71be43d38a4ad0734df2640fab58a1605ca0f8",
+        "blockHeight": 879375,
+        "blockHash": "5d8018b72e4aad63d864589f30e8861543c7f5c8ca42bb08b863d96d9095b964",
+        "blockTimestamp": "2026-09-15T17:39:42.000Z"
+      },
+      {
+        "circuit": "requestDisclosure",
+        "identifier": "00f6bc088a162f16484a9d02831fa4d3c8129e20df7e22ea50d4bd14a22496263b",
+        "txHash": "b8f3dd94100863fe16ce5ae554b7bb3077a10d5f698cf7e10f16490ffbaf9590",
+        "blockHeight": 879378,
+        "blockHash": "4a01c8132d64680d0c838b7cc36608347238a8d4f66ddbdeae8f335df8e6149e",
+        "blockTimestamp": "2026-09-15T17:40:00.000Z"
+      },
+      {
+        "circuit": "approveDisclosure",
+        "identifier": "0027bb48b0edda8a1fb31281cc7a1417d8eaa8297c35848ab79f4dccecc8ff9e72",
+        "txHash": "060fc88f792e7e71270c75cb1f138c3e22e832c6e482690d639696623d48f96d",
+        "blockHeight": 879381,
+        "blockHash": "22c9aeecf3a57a6dbb982f47db780e0a0777b08f82298272c59f3ca6b8fdf033",
+        "blockTimestamp": "2026-09-15T17:40:18.001Z"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "admit-debtor",
+      "label": "Operator admits the debtor after off-chain KYB",
+      "circuit": "admitDebtor",
+      "persona": "operator",
+      "txId": "00b66af7b04ce430dd4710e89e9d22c275ec5998f37df3fc2f52c45b1a6b13a34f",
+      "blockHeight": 879534,
+      "durationMs": 23136,
+      "at": "2026-09-15T17:55:50.527Z",
+      "txHash": "45779ecd8a418e3568fc56bc3fc8be96a370049527e28896ab60c42a7c24a67c",
+      "blockHash": "1cdffddaa05d3282cda19beb6f44aeefaf9086f6d8ac67e127ce2aa541485e10",
+      "blockTimestamp": "2026-09-15T17:55:36.000Z"
+    },
+    {
+      "id": "admit-financier-a",
+      "label": "Operator admits financier A",
+      "circuit": "admitFinancier",
+      "persona": "operator",
+      "txId": "0053fc677325cb1d9cf0da1e8b976a0985a34e584cd1b1aa2212d74b008b373566",
+      "blockHeight": 879538,
+      "durationMs": 23223,
+      "at": "2026-09-15T17:56:13.752Z",
+      "txHash": "24eea9097a83608b37d44f6d7cccda6fa925c19ae03899f1de9c437cbb3ce35b",
+      "blockHash": "73c58ad14d20cad935419706a8cb1ddcde5cb1157df1d4c67df26f10fbc69578",
+      "blockTimestamp": "2026-09-15T17:56:00.000Z"
+    },
+    {
+      "id": "admit-financier-b",
+      "label": "Operator admits financier B",
+      "circuit": "admitFinancier",
+      "persona": "operator",
+      "txId": "007d8f39754a4cc3e96c7e1b270f30be9cb862f02680dbb6f27f4e2ca37fc6bedb",
+      "blockHeight": 879542,
+      "durationMs": 25085,
+      "at": "2026-09-15T17:56:38.838Z",
+      "txHash": "cb9be4ab80c9a4a479a7a4cbac04cdd0ab044a7b063fa70f6f5a7053e7e3e7cd",
+      "blockHash": "68a64a9661a65a8d2f572b85e9f15bef417208570de0cf1fc1fd86daee0c9b95",
+      "blockTimestamp": "2026-09-15T17:56:24.000Z"
+    },
+    {
+      "id": "acknowledge-1001",
+      "label": "Debtor acknowledges invoice #1001 for $2,300.00",
+      "circuit": "acknowledge",
+      "persona": "debtor",
+      "txId": "0034e2a97795ff28e8a3f6e7cb4556a1968d59148db5ee75a8c6c5eebd59763bcc",
+      "blockHeight": 879546,
+      "durationMs": 22965,
+      "at": "2026-09-15T17:57:01.804Z",
+      "txHash": "18d538ce594c1304c2615ec60035867c89f5e650b40a2580c84010ad40a1eded",
+      "blockHash": "7c6bdc05b40106bf7aad90643077aa458fd42711f7c80523846e3d461b910e3e",
+      "blockTimestamp": "2026-09-15T17:56:48.000Z"
+    },
+    {
+      "id": "offer-1001-a",
+      "label": "Seller offers #1001 to financier A",
+      "circuit": "offer",
+      "persona": "seller",
+      "txId": "0016d9b00d26b473e4d7f59a9ef5f4c1eef7c299102de3a6867e1ec7351f9027ac",
+      "blockHeight": 879550,
+      "durationMs": 24576,
+      "at": "2026-09-15T17:57:26.381Z",
+      "txHash": "ec441d7521be955e41cc853038e43a15b067f8a5241dc873265bb7e74f6170df",
+      "blockHash": "c903ea4d503d749425c91d488a2e6966e2a524f847baff8e4be5492b088936b7",
+      "blockTimestamp": "2026-09-15T17:57:12.000Z"
+    },
+    {
+      "id": "accept-1001-a",
+      "label": "Financier A accepts: the receivable is pledged",
+      "circuit": "accept",
+      "persona": "financierA",
+      "txId": "0023f48f20dbc766828274a8ddc4fa51055c12f8be3d137cc5a730b9c514aa5365",
+      "blockHeight": 879554,
+      "durationMs": 23746,
+      "at": "2026-09-15T17:57:50.128Z",
+      "txHash": "b976bf1dff0da462dbb686803721494fe44c7b481b9f463b7b0397a5aa1c7574",
+      "blockHash": "21989ac50ee0e075d5762f6d3759525647238ba14e40b53d07a8738eba070f83",
+      "blockTimestamp": "2026-09-15T17:57:36.000Z"
+    },
+    {
+      "id": "fraud-forged",
+      "label": "Fraud 1, forged: an invoice the debtor never owed",
+      "circuit": "offer",
+      "persona": "seller",
+      "refused": "NOT_ACKNOWLEDGED",
+      "durationMs": 458,
+      "at": "2026-09-15T17:57:50.588Z",
+      "note": "The debtor never acknowledged this invoice, at this amount, with these terms."
+    },
+    {
+      "id": "fraud-inflated",
+      "label": "Fraud 2, inflated: #1001 re-priced tenfold to $23,000.00",
+      "circuit": "offer",
+      "persona": "seller",
+      "refused": "NOT_ACKNOWLEDGED",
+      "durationMs": 399,
+      "at": "2026-09-15T17:57:50.988Z",
+      "note": "The debtor never acknowledged this invoice, at this amount, with these terms."
+    },
+    {
+      "id": "fraud-double-pledge",
+      "label": "Fraud 3, double pledge: #1001 offered to financier B while A holds it",
+      "circuit": "offer",
+      "persona": "seller",
+      "refused": "ALREADY_ENCUMBERED",
+      "durationMs": 380,
+      "at": "2026-09-15T17:57:51.369Z",
+      "note": "This receivable is already pledged to a financier."
+    },
+    {
+      "id": "release-1001",
+      "label": "Financier A releases the pledge",
+      "circuit": "release",
+      "persona": "financierA",
+      "txId": "002c6e54cc30aa512a68ac314da7bdeecbd3540931b9450363fb7e981a05d7e996",
+      "blockHeight": 879558,
+      "durationMs": 22548,
+      "at": "2026-09-15T17:58:13.919Z",
+      "txHash": "5232bbabbfeed7b5fef8897cf3f4ed37c7540de8c2ed3cc674b21f3c13e77938",
+      "blockHash": "7f9dbc7d3cc7288d1d889900fde002a92f1237457303da879df6842b3cf902b9",
+      "blockTimestamp": "2026-09-15T17:58:00.000Z"
+    },
+    {
+      "id": "offer-1001-b",
+      "label": "Seller re-offers #1001, now legitimately, to financier B",
+      "circuit": "offer",
+      "persona": "seller",
+      "txId": "004d63bb01ee08a6fce2b3b01eb8001fec1f0b5be8ea05beb837547bf11986e3be",
+      "blockHeight": 879562,
+      "durationMs": 24074,
+      "at": "2026-09-15T17:58:37.994Z",
+      "txHash": "9ee89eaeb5abc88ab48108d6eaeafdb41cd143efd3a1d1f328af306a4c4b641e",
+      "blockHash": "7c8d2e280bdccc791378709c62356afc2ab2fe11e7967dd0a2ebbb65fe6a76f0",
+      "blockTimestamp": "2026-09-15T17:58:24.000Z"
+    },
+    {
+      "id": "accept-1001-b",
+      "label": "Financier B accepts and funds the receivable",
+      "circuit": "accept",
+      "persona": "financierB",
+      "txId": "00a65c15ef48a4b442b5a64242d1985a650898d584988eca81556943126fd220d2",
+      "blockHeight": 879566,
+      "durationMs": 24213,
+      "at": "2026-09-15T17:59:02.208Z",
+      "txHash": "861109c0acdc209b27fef7a719505a89cd700ac7fbcb2a71ebd8e8ccdac8fd75",
+      "blockHash": "11ad239699a41a5f2385e8824b5e1adf24f9976122ed97076831c538784985c8",
+      "blockTimestamp": "2026-09-15T17:58:48.000Z"
+    },
+    {
+      "id": "pay-1001",
+      "label": "Debtor pays $2,300.00 into the registry",
+      "circuit": "payInvoice",
+      "persona": "debtor",
+      "txId": "008a6c641605afed893330833a5c4cc59b21fc5ee1a3f2b4475de2b72c322c3a95",
+      "blockHeight": 879571,
+      "durationMs": 30441,
+      "at": "2026-09-15T17:59:32.650Z",
+      "txHash": "90e4757dec54795e57e848893d0a52831a63a2f8e156d12309ad85ee1f74aabb",
+      "blockHash": "795c1e21ee35e6d79ff16ed55a4a5fd586f4f7c27c89ee1f11ff8c8fd3f53ae7",
+      "blockTimestamp": "2026-09-15T17:59:18.001Z"
+    },
+    {
+      "id": "fraud-seller-claim",
+      "label": "Fraud 4, diversion: the seller tries to take proceeds that are pledged to financier B",
+      "circuit": "claimAsSeller",
+      "persona": "seller",
+      "refused": "NOT_PAYEE",
+      "durationMs": 479,
+      "at": "2026-09-15T17:59:33.130Z",
+      "note": "These proceeds belong to another party."
+    },
+    {
+      "id": "claim-1001-b",
+      "label": "Financier B claims the proceeds; the seller cannot divert them",
+      "circuit": "claimAsHolder",
+      "persona": "financierB",
+      "txId": "00ea74c15228fa1d53ebf786c03a5f7325501ddfca337afd6a52dece75b527b21a",
+      "blockHeight": 879575,
+      "durationMs": 22995,
+      "at": "2026-09-15T17:59:56.126Z",
+      "txHash": "a301f96bae090ab05d1b451076739f3eea009d1dd7205d9ad6fcc95a26396823",
+      "blockHash": "a3a24ddb91102eed231953d7a01e64e79e17f34d7c4bc53be2f1e46549901e85",
+      "blockTimestamp": "2026-09-15T17:59:42.001Z"
+    },
+    {
+      "id": "acknowledge-2001",
+      "label": "Debtor acknowledges invoice #2001 for $1,000.00",
+      "circuit": "acknowledge",
+      "persona": "debtor",
+      "txId": "00745df93d47f4ea2921e02eb2d65f8ec793d8d42dce81fc5d64534bbcb0207ca4",
+      "blockHeight": 879579,
+      "durationMs": 25607,
+      "at": "2026-09-15T18:00:21.734Z",
+      "txHash": "3b2433791b59c278c7ab227df8521dafd4a7b99fa0de6b0cd46c410f08ced528",
+      "blockHash": "0b4dd58a545eca3e867b6416f0693ce8a66c49c7e7fcc477a288d7b84397e74e",
+      "blockTimestamp": "2026-09-15T18:00:06.000Z"
+    },
+    {
+      "id": "acknowledge-2002",
+      "label": "Debtor acknowledges invoice #2002 for $2,000.00",
+      "circuit": "acknowledge",
+      "persona": "debtor",
+      "txId": "00f91f360fac922e109a8e88b72cde8cafa2aeed084d81483993606de092257606",
+      "blockHeight": 879583,
+      "durationMs": 23137,
+      "at": "2026-09-15T18:00:44.872Z",
+      "txHash": "3d708ea1d3d84c50ff0efeab70fd4a17e9226c2c568e013a1801cbdeac815b40",
+      "blockHash": "87d3cbc40037fe20d1c00a3ede856a6e7cbf5285088cdb265232abc0f3aa6003",
+      "blockTimestamp": "2026-09-15T18:00:30.000Z"
+    },
+    {
+      "id": "acknowledge-2003",
+      "label": "Debtor acknowledges invoice #2003 for $3,000.00",
+      "circuit": "acknowledge",
+      "persona": "debtor",
+      "txId": "0052e2163e91e694304226f078106257fe69534f43673e7507a2e5922bf655ed0f",
+      "blockHeight": 879587,
+      "durationMs": 31173,
+      "at": "2026-09-15T18:01:16.046Z",
+      "txHash": "324a2ecb71081546d67edc1ed800614115f5b92fb38705b06f725cdc461a25d0",
+      "blockHash": "4c4c0af18bbdab6be5e62447af9a744eea8113500df9286b9fdae73d9f14d33f",
+      "blockTimestamp": "2026-09-15T18:00:54.000Z"
+    },
+    {
+      "id": "acknowledge-2004",
+      "label": "Debtor acknowledges invoice #2004 for $4,000.00",
+      "circuit": "acknowledge",
+      "persona": "debtor",
+      "txId": "00bae56e85013b58e463cc1e3e8d19a942b8fab731a1b03c6637853efdc82030c1",
+      "blockHeight": 879592,
+      "durationMs": 22888,
+      "at": "2026-09-15T18:01:38.935Z",
+      "txHash": "d9360457133faacb1bdc57c1dd484609056d44c80c57b98289686a296b6f1a9b",
+      "blockHash": "9cc45c0853cd799d567e306d77421fc7438b94b9141ed48b831c8b6bd81b8866",
+      "blockTimestamp": "2026-09-15T18:01:24.001Z"
+    },
+    {
+      "id": "certify-below-floor",
+      "label": "Borrowing base overstated: $10,000.00 of collateral claimed as $15,000.00",
+      "circuit": "certifyBorrowingBase",
+      "persona": "seller",
+      "refused": "BELOW_FLOOR",
+      "durationMs": 532,
+      "at": "2026-09-15T18:01:39.468Z",
+      "note": "The pooled invoices are worth less than the floor the certificate claims."
+    },
+    {
+      "id": "certify-pool",
+      "label": "Borrowing base: 4 invoices locked to one lender over a $8,000.00 floor",
+      "circuit": "certifyBorrowingBase",
+      "persona": "seller",
+      "txId": "00f760f047cd6f2f03a054395828fe61d4467ee66d5d2c097e9ba376ca12977f95",
+      "blockHeight": 879599,
+      "durationMs": 40516,
+      "at": "2026-09-15T18:02:19.985Z",
+      "txHash": "aea54e4be0998f815c2ed1b1cf9d89dfe22db9160d506db7d31aeac79232b6dc",
+      "blockHash": "a82cffa19a470a9815b94677cd9086a750cc39fb8b43244c8250cb2e5c821d1c",
+      "blockTimestamp": "2026-09-15T18:02:06.000Z"
+    },
+    {
+      "id": "check-certificate",
+      "label": "The lender checks the certificate really locks its pool to it, and only to it",
+      "circuit": "checkCertificate (off chain)",
+      "persona": "financierA",
+      "durationMs": 233,
+      "at": "2026-09-15T18:02:20.218Z",
+      "note": "certificate 9ea4d53af375d8d527 floor $8,000.00, 4 slots, all live and addressed to the lender that asked for it; the same certificate checked by another financier reports ok=false (0 of 4 slots addressed to it)"
+    },
+    {
+      "id": "accept-pool-2001",
+      "label": "The pool lender takes up the first certified invoice",
+      "circuit": "accept",
+      "persona": "financierA",
+      "txId": "0020fb76e2610ec054f1d7dd8dfb67fed53d91fc0b0680cd7f477598f6fbc033ab",
+      "blockHeight": 879603,
+      "durationMs": 23786,
+      "at": "2026-09-15T18:02:44.005Z",
+      "txHash": "32b5ee1fc29a87be264821828b50301e241f6198100426ee90d628977a19a8d7",
+      "blockHash": "f881aefe486307d7f387f4d398b0c6dbddb8bb0843cd276f33b7c8b4f22045ba",
+      "blockTimestamp": "2026-09-15T18:02:30.000Z"
+    },
+    {
+      "id": "request-disclosure",
+      "label": "Auditor requests disclosure of invoice #1001's sealed record",
+      "circuit": "requestDisclosure",
+      "persona": "auditor",
+      "txId": "00d6b6ed8623258e8e68a152f6df2c71defd6af9695bf20f50219b6b916129c092",
+      "blockHeight": 879607,
+      "durationMs": 24860,
+      "at": "2026-09-15T18:03:09.034Z",
+      "txHash": "3fa5fcf37e41b911c50c0d17f9b6706f86531268b59f5a022124a609b94820b8",
+      "blockHash": "19f535503b789070f2da16e96c0934473b0d51dc44a5a86d02ceb496672699d9",
+      "blockTimestamp": "2026-09-15T18:02:54.001Z"
+    },
+    {
+      "id": "approve-keyholder-1",
+      "label": "Keyholder 1 approves the disclosure on the ledger",
+      "circuit": "approveDisclosure",
+      "persona": "keyholder1",
+      "txId": "0005f21c694562d1857b270c4d7549c8ff8a18bda333ae96e74f1909d0ddd51c96",
+      "blockHeight": 879611,
+      "durationMs": 22280,
+      "at": "2026-09-15T18:03:31.468Z",
+      "txHash": "a14927a909d6d1b24619b70552750027ae36c0500775cc313707623415860db9",
+      "blockHash": "87103cbdcb7ada1b29d130c0a5b60445aabfdf3eba9f84561fd727c7a4309ed9",
+      "blockTimestamp": "2026-09-15T18:03:18.000Z"
+    },
+    {
+      "id": "approve-keyholder-3",
+      "label": "Keyholder 3 approves: the 2-of-3 threshold is met",
+      "circuit": "approveDisclosure",
+      "persona": "keyholder3",
+      "txId": "00c238c16f6d819f3fd03b65ad6c4268b2b57d6d3518a3c70de4d21403817d4ad3",
+      "blockHeight": 879615,
+      "durationMs": 24381,
+      "at": "2026-09-15T18:03:56.902Z",
+      "txHash": "629a4e335dda85217ccd53adf6a2c6b89927108dd7f4073af7c7ab4c20c5eb77",
+      "blockHash": "688ed23d1d5961a3aecff45c3ab3dd46fa36ec4791f2165e31c71db8dd807db0",
+      "blockTimestamp": "2026-09-15T18:03:42.000Z"
+    },
+    {
+      "id": "open-disclosure",
+      "label": "Auditor opens the record and it proves itself against the ledger",
+      "circuit": "verifyDisclosure (off chain)",
+      "persona": "auditor",
+      "durationMs": 389,
+      "at": "2026-09-15T18:03:57.292Z",
+      "note": "shares 1 + 3 recombined; invoice #1001 $2,300.00 recomputes nullifier 6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a"
+    }
+  ],
+  "summary": {
+    "steps": 27,
+    "transactions": 20,
+    "refusals": [
+      {
+        "id": "fraud-forged",
+        "label": "Fraud 1, forged: an invoice the debtor never owed",
+        "circuit": "offer",
+        "code": "NOT_ACKNOWLEDGED"
+      },
+      {
+        "id": "fraud-inflated",
+        "label": "Fraud 2, inflated: #1001 re-priced tenfold to $23,000.00",
+        "circuit": "offer",
+        "code": "NOT_ACKNOWLEDGED"
+      },
+      {
+        "id": "fraud-double-pledge",
+        "label": "Fraud 3, double pledge: #1001 offered to financier B while A holds it",
+        "circuit": "offer",
+        "code": "ALREADY_ENCUMBERED"
+      },
+      {
+        "id": "fraud-seller-claim",
+        "label": "Fraud 4, diversion: the seller tries to take proceeds that are pledged to financier B",
+        "circuit": "claimAsSeller",
+        "code": "NOT_PAYEE"
+      },
+      {
+        "id": "certify-below-floor",
+        "label": "Borrowing base overstated: $10,000.00 of collateral claimed as $15,000.00",
+        "circuit": "certifyBorrowingBase",
+        "code": "BELOW_FLOOR"
+      }
+    ],
+    "firstBlockHeight": 879534,
+    "lastBlockHeight": 879615,
+    "totalDurationMs": 508500
+  },
+  "disclosure": {
+    "requestId": "2b34c738ee14778cdbeaf790f563963d1ff47e6f8f102f228f50d0cf8d11b657",
+    "recordId": "8babc1a26bfb193f416861066f8f880777a03744ae697a20aa0aa536a4f22608",
+    "caseRef": "582a082ee25aee4b47272b2ded3901b10d4f8ab4b2b3547f13aa4d97ff6b1d79",
+    "approvals": [
+      true,
+      false,
+      true
+    ],
+    "shamirIndices": [
+      1,
+      3
+    ],
+    "recomputedNullifier": "6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a",
+    "ledgerNullifier": "6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a",
+    "fingerprint": "c6c2f9d33b934a196df76f14f708f2a1fd2d7dec15eebd17175504a941b0b510",
+    "ackLeaf": "e05668e7b244a5f3fd3640b0112617ad65e7035d2894ffc066d121fd1e9088bf",
+    "recordIdMatches": true,
+    "verified": true,
+    "openedInvoice": {
+      "invoiceNo": "1001",
+      "amount": "230000",
+      "dueDate": "1797270912"
+    },
+    "holderTagMatchesLedger": true
+  },
+  "finalState": {
+    "counts": {
+      "debtors": 1,
+      "financiers": 2,
+      "acks": 5,
+      "ackNullifiers": 5,
+      "pledges": 5,
+      "records": 6,
+      "certificates": 1,
+      "requests": 1,
+      "shares": 2
+    },
+    "config": {
+      "operatorId": "79f27d5f98c126378f1a27a4c86bc5b932b04a902b5a7af0b41ce1ab0f8a41db",
+      "disclosurePk": {
+        "x": "3657246485560552769752970502018067199004380804256876973531063342575981998207",
+        "y": "5363713982910506546133422106965290404249646413633646514624734168545628210203"
+      },
+      "keyholderPks": [
+        {
+          "x": "16399305735512160948718228855070862199308278067720241121342997533178628253002",
+          "y": "27772949437476911026622044979903450187909367419697810563747273409116721928314"
+        },
+        {
+          "x": "41192020269215179706003852534234194579112874433608351493045730180319134675209",
+          "y": "37617996046000881469747341202872611973267452787146122415322447799747573760427"
+        },
+        {
+          "x": "49818931309485679019388634745870289834944221957150192004736848690301080277799",
+          "y": "50333899472125037245875935061251662353878012309596860325080519892651497448264"
+        }
+      ],
+      "auditorPk": {
+        "x": "12886323532585334120576188058020367665654655592382938743483897755299735329598",
+        "y": "2007452502308358049328098395046516577699628013349284035125764644379806782182"
+      },
+      "settlementColor": "0000000000000000000000000000000000000000000000000000000000000000",
+      "threshold": 2
+    },
+    "pledges": [
+      {
+        "nullifier": "30caef383b1b2fb6eccffb9a4e60e665beb0f27fbfa2e61480223252d7e43746",
+        "status": "PLEDGED",
+        "holderTag": "131445762281450075170253795304524210336653221375486089995048722440749340237",
+        "expiry": "1792086912",
+        "recordId": "ae39aa629a3bf91a2623eb81aae330a206fb1d3990eaf2a4b27b7221994342a4",
+        "payeeTag": "0",
+        "amount": "0",
+        "claimed": false
+      },
+      {
+        "nullifier": "480e2b12621e8e50028e3613b3c45e3cf0f50e7c273d6f019c4e9ffc6af8e6f0",
+        "status": "OFFERED",
+        "holderTag": "325188227395035713833790285483873400408778341918374067853525824748148114341",
+        "expiry": "1792086912",
+        "recordId": "68984fb8e90e8d4d5051e0aef0a525cd33313e0393b149eb87a11546000975f4",
+        "payeeTag": "0",
+        "amount": "0",
+        "claimed": false
+      },
+      {
+        "nullifier": "4b10989c3cfa2db84a83628bb46ba65ba73d7406f7ec956927fe42016f7d5fb7",
+        "status": "OFFERED",
+        "holderTag": "194944287642842280227433805036263772343253635176598352075686431124554065368",
+        "expiry": "1792086912",
+        "recordId": "c54c94294b68a10200490becd7da4e894b4bc2c5d7f9adbf2bd85a8b59ef7e7d",
+        "payeeTag": "0",
+        "amount": "0",
+        "claimed": false
+      },
+      {
+        "nullifier": "6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a",
+        "status": "SETTLED",
+        "holderTag": "132165539049198961208938862745736267525048687696164753097496663643527424581",
+        "expiry": "1790099712",
+        "recordId": "8babc1a26bfb193f416861066f8f880777a03744ae697a20aa0aa536a4f22608",
+        "payeeTag": "132165539049198961208938862745736267525048687696164753097496663643527424581",
+        "amount": "230000",
+        "claimed": true
+      },
+      {
+        "nullifier": "c43c30b4b3b20d70f780b9d1fdea32ca221fe14e540d1d39367c5ab9caf9904e",
+        "status": "OFFERED",
+        "holderTag": "219881069807264927615550041388085188101301739243523945227558881566084388706",
+        "expiry": "1792086912",
+        "recordId": "45f7b70fb0a43acd7f4380269adf892dbb571fe735731a70daada15c53a1d8a8",
+        "payeeTag": "0",
+        "amount": "0",
+        "claimed": false
+      }
+    ],
+    "records": [
+      {
+        "recordId": "45f7b70fb0a43acd7f4380269adf892dbb571fe735731a70daada15c53a1d8a8",
+        "version": 1,
+        "E": {
+          "x": "1722385724400410507130309292538967908396453700240028214712477642930737578891",
+          "y": "32840667620481802641302160330734782366612721316510606287338087941037455374396"
+        },
+        "ct": [
+          "27517058455364977882364184133025556773488557964510909784324174202832952026956",
+          "9160568196001843905335761273804331161577198028069851692274179664151371887112",
+          "51571573977438362804254883175903081286988286587109820406561019103544279748146",
+          "22005442125573847578342938442977160233162695448276813255328523984724993494725",
+          "12258776711624576003478221830635825857640681348932264443928935261875469951860"
+        ]
+      },
+      {
+        "recordId": "664736b515dc188fd213fd1a4d9b1915a499b4ae3fe9ed417e01a373644e26c6",
+        "version": 1,
+        "E": {
+          "x": "34263215554316702799325469246523431657493275690910113944400010175224317881055",
+          "y": "39023756164324513882360286238080026899171073958190642470591226314232957394470"
+        },
+        "ct": [
+          "49487625316568435218527826942090205808921167276372542654179256323949951858960",
+          "44828598592820334022080240451481241560492913044474838371638993845473575469268",
+          "33731372546872078684637855156902597808762748396228572443047671125548726273470",
+          "22571136092899967640696730774883371819537986815243256989229752112835917037411",
+          "21141611371014612011875751786809790276079284539595214956880007521947160130887"
+        ]
+      },
+      {
+        "recordId": "68984fb8e90e8d4d5051e0aef0a525cd33313e0393b149eb87a11546000975f4",
+        "version": 1,
+        "E": {
+          "x": "39013501558731199012270418561252282607939159381309690783434603236740089387699",
+          "y": "46352542115297670588515192777055981055244272438780453397170386625307920066618"
+        },
+        "ct": [
+          "8161879568946863348526754874096272985805824819949270026257702626780132619263",
+          "44530827441249170453172826313530020939688243021329607283745536004141152868907",
+          "2264008937052687601214309700593340746197779018225960921115997435621071900046",
+          "2889555024700708857066373214892159183976404550628900410502264058476742125271",
+          "12456878923591885064915314745743164120365458819376796381886836069133952218213"
+        ]
+      },
+      {
+        "recordId": "8babc1a26bfb193f416861066f8f880777a03744ae697a20aa0aa536a4f22608",
+        "version": 1,
+        "E": {
+          "x": "19328298817204333976162487612679976800382075949141230904794761106973480274270",
+          "y": "16429077634792603178942847765991295252567589070576378371228790912095357156560"
+        },
+        "ct": [
+          "42148771212141176794590422297276593168717264561513200018004939405853760972791",
+          "3363651335108715162385871329474796076314756384865901673119383022672857849423",
+          "51373967256423866508840721381164869374130454860965173784408360371008411351458",
+          "6651749579557235181288207942266287551089160511474947925482158042463814616777",
+          "31426624009459541813890997974383819857500806900050443277515126040554068027996"
+        ]
+      },
+      {
+        "recordId": "ae39aa629a3bf91a2623eb81aae330a206fb1d3990eaf2a4b27b7221994342a4",
+        "version": 1,
+        "E": {
+          "x": "32469530865056238132552564470737587402740323637816181242692078596869403494664",
+          "y": "163645036370209676030877946892426951988785127081931769976470845656225074981"
+        },
+        "ct": [
+          "30876077244609953765921770504904874071069937814720434533599656499993553841380",
+          "42834072305646879174454356520118851994618016415160237887176697533824402505043",
+          "39469386264171742329538124393860073767272972443643260628849675734324251358664",
+          "35597825612612645437705051248751794025269567133246609226278332863580605165494",
+          "12428812632151443851571580322725249538544960544050807819990962101835840379403"
+        ]
+      },
+      {
+        "recordId": "c54c94294b68a10200490becd7da4e894b4bc2c5d7f9adbf2bd85a8b59ef7e7d",
+        "version": 1,
+        "E": {
+          "x": "45397235005428967806565177352877832742690370652909741315350467648182685346509",
+          "y": "48738561012649754255511738639651358227226127481358715169015328947724571829904"
+        },
+        "ct": [
+          "8290551933387473729753736802475032429717623562572867633931747505921017071287",
+          "14196622220182017535456136069519962334968409628093705778793915498760565136315",
+          "39533899350119368761079391481427091137963784428041086419388772539225644649213",
+          "42622321229805687813572653575287852446184933509099157679223457924651095266655",
+          "36882331663226068353949680639264272146119481018873988430727012919356075485515"
+        ]
+      }
+    ],
+    "certificates": [
+      {
+        "certId": "9ea4d53af375d8d527d4f27a15ea0e1b388294f4a23662443a29377d13d7db0d",
+        "borrowerCommit": "9074c979910b00d7e90b73aac63f424067a069b25b119966c0cd127d2d36c7a1",
+        "lenderRef": "54ec10db4bc2ab4b66d635a9d695566e1dda966c195edbc84194012a25cd83fa",
+        "floor": "800000",
+        "count": 4,
+        "validUntil": "1792086912",
+        "nullifiers": [
+          "30caef383b1b2fb6eccffb9a4e60e665beb0f27fbfa2e61480223252d7e43746",
+          "480e2b12621e8e50028e3613b3c45e3cf0f50e7c273d6f019c4e9ffc6af8e6f0",
+          "4b10989c3cfa2db84a83628bb46ba65ba73d7406f7ec956927fe42016f7d5fb7",
+          "c43c30b4b3b20d70f780b9d1fdea32ca221fe14e540d1d39367c5ab9caf9904e"
+        ]
+      }
+    ],
+    "requests": [
+      {
+        "requestId": "2b34c738ee14778cdbeaf790f563963d1ff47e6f8f102f228f50d0cf8d11b657",
+        "recordId": "8babc1a26bfb193f416861066f8f880777a03744ae697a20aa0aa536a4f22608",
+        "caseRef": "582a082ee25aee4b47272b2ded3901b10d4f8ab4b2b3547f13aa4d97ff6b1d79",
+        "approvals": [
+          true,
+          false,
+          true
+        ]
+      }
+    ],
+    "shares": [
+      {
+        "shareKey": "3f326f08c4f9a298ecc61c27b1040abeb7f4ff8609eae803fd9695228e7ef4ca",
+        "version": 1,
+        "E2": {
+          "x": "38853844945585310830271829844390729221832759059953821611659989294687909461969",
+          "y": "40142525953581162263241269798327291239503914962044236625949683106664915480745"
+        },
+        "ct": [
+          "9671789209178898176806395640354447309541133033659450596745740620371423333255",
+          "28406087032071754459375373745391501220641637186764440747631177606896609724506"
+        ]
+      },
+      {
+        "shareKey": "55848a843f460be2eb21eddd731083709fe412334453b04972b123703c510708",
+        "version": 1,
+        "E2": {
+          "x": "13027500928123390334608920757738551113043498037899854684706180968605604046288",
+          "y": "15943309382399016746754242959922168374169074599275314848360638526540605420011"
+        },
+        "ct": [
+          "46536683328301833070521550206739985856984737165682320486577913008203576791221",
+          "23444395643581034530090654977322225599924962469974216383173837597744868558236"
+        ]
+      }
+    ]
+  }
+}
