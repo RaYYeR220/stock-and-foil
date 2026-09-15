@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Domain-separated identity hashes. Every purpose has its own `snf:v1:<purpose>` domain,
+// so a value derived for one role can never be replayed as another.
+pragma language_version >= 0.23.0;
+
+module Identity {
+  import CompactStandardLibrary;
+
+  struct AckNullifierPreimage { domain: Bytes<32>; sk: Bytes<32>; sellerId: Field; invoiceNo: Uint<64>; }
+
+  /** Operator identity sealed at deploy: H("operator", opSk). */
+  export pure circuit operatorIdOf(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:operator"), sk]);
+  }
+
+  /** Debtor member-tree leaf: H("debtor", debtorSk). */
+  export pure circuit debtorLeaf(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:debtor"), sk]);
+  }
+
+  /** Debtor id carried inside invoices: the debtor leaf as a Field. */
+  export pure circuit debtorIdOf(sk: Bytes<32>): Field {
+    return degradeToTransient(debtorLeaf(sk));
+  }
+
+  /** Seller id carried inside invoices: H("seller", sellerSk) as a Field. */
+  export pure circuit sellerIdOf(sk: Bytes<32>): Field {
+    return degradeToTransient(persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:seller"), sk]));
+  }
+
+  /** Financier member-tree leaf: H("financier", finSk). */
+  export pure circuit financierLeaf(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:financier"), sk]);
+  }
+
+  /** One acknowledgment per (debtor, seller, invoice number): H("acknul", debtorSk, sellerId, invoiceNo). */
+  export pure circuit ackNullifierOf(sk: Bytes<32>, sellerId: Field, invoiceNo: Uint<64>): Bytes<32> {
+    return persistentHash<AckNullifierPreimage>(
+      AckNullifierPreimage { domain: pad(32, "snf:v1:acknul"), sk: sk, sellerId: sellerId, invoiceNo: invoiceNo });
+  }
+}

@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Jubjub curve helpers shared by the contract and the SDK (identical maths on and off chain).
+pragma language_version >= 0.23.0;
+
+module Cipher {
+  import CompactStandardLibrary;
+
+  export pure circuit pubKeyOf(k: Field): JubjubPoint {
+    return ecMulGenerator(k);
+  }
+}

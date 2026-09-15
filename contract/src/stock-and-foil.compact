@@ -1,0 +1,83 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Stock & Foil: private collateral registry for receivables finance.
+//
+// Refusal codes are the assert messages below; they are part of the public API.
+// Authorization is always proof of knowledge of a secret whose hash is on the ledger or
+// inside committed data, never the caller's coin public key.
+pragma language_version >= 0.23.0;
+
+import CompactStandardLibrary;
+import "modules/Identity";
+import "modules/Invoice";
+import "modules/Cipher";
+
+export { Invoice };
+export { operatorIdOf, debtorLeaf, debtorIdOf, sellerIdOf, financierLeaf, ackNullifierOf };
+export { fingerprint, ackLeafOf, nullifierOf };
+export { pubKeyOf };
+
+// ------------------------------------------------------------------------------------------
+// Public ledger
+
+export sealed ledger operatorId: Bytes<32>;
+export sealed ledger disclosurePk: JubjubPoint;
+export sealed ledger keyholderPks: Vector<3, JubjubPoint>;
+export sealed ledger threshold: Uint<8>;
+export sealed ledger auditorPk: JubjubPoint;
+export sealed ledger settlementColor: Bytes<32>;
+
+export ledger debtors: HistoricMerkleTree<10, Bytes<32>>;
+export ledger financiers: HistoricMerkleTree<10, Bytes<32>>;
+export ledger acks: HistoricMerkleTree<16, Bytes<32>>;
+export ledger ackNullifiers: Set<Bytes<32>>;
+
+// ------------------------------------------------------------------------------------------
+// Witnesses (untrusted inputs; every property is re-checked by asserts)
+
+witness localSecretKey(): Bytes<32>;
+witness callInvoice(): Invoice;
+witness debtorPathFor(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+constructor(opId: Bytes<32>, dPk: JubjubPoint, kPks: Vector<3, JubjubPoint>, aPk: JubjubPoint, color: Bytes<32>) {
+  operatorId = disclose(opId);
+  disclosurePk = disclose(dPk);
+  keyholderPks = disclose(kPks);
+  threshold = 2;
+  auditorPk = disclose(aPk);
+  settlementColor = disclose(color);
+}
+
+// ------------------------------------------------------------------------------------------
+// Membership
+
+circuit assertOperator(): [] {
+  assert(operatorIdOf(localSecretKey()) == operatorId, "NOT_OPERATOR");
+}
+
+export circuit admitDebtor(leaf: Bytes<32>): [] {
+  assertOperator();
+  debtors.insert(disclose(leaf));
+}
+
+export circuit admitFinancier(leaf: Bytes<32>): [] {
+  assertOperator();
+  financiers.insert(disclose(leaf));
+}
+
+// ------------------------------------------------------------------------------------------
+// Acknowledgment
+
+export circuit acknowledge(): [] {
+  const sk = localSecretKey();
+  const leaf = debtorLeaf(sk);
+  const path = debtorPathFor(leaf);
+  assert(path.leaf == leaf, "NOT_REGISTERED_DEBTOR");
+  assert(debtors.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "NOT_REGISTERED_DEBTOR");
+  const inv = callInvoice();
+  assert(degradeToTransient(leaf) == inv.debtorId, "NOT_YOUR_INVOICE");
+  const ackNul = disclose(ackNullifierOf(sk, inv.sellerId, inv.invoiceNo));
+  assert(!ackNullifiers.member(ackNul), "ALREADY_ACKNOWLEDGED");
+  ackNullifiers.insert(ackNul);
+  acks.insert(disclose(ackLeafOf(inv)));
+}

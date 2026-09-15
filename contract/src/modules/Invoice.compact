@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Invoice commitment scheme. The fingerprint F binds every invoice field including the
+// seller-chosen salt; the ack leaf and the pledge nullifier are derived from F under
+// separate domains, so they cannot be linked without knowing the invoice.
+pragma language_version >= 0.23.0;
+
+module Invoice {
+  import CompactStandardLibrary;
+
+  export struct Invoice {
+    debtorId: Field;
+    sellerId: Field;
+    invoiceNo: Uint<64>;
+    amount: Uint<64>;
+    dueDate: Uint<64>;
+    salt: Field;
+  }
+
+  struct FingerprintPreimage { domain: Bytes<32>; inv: Invoice; }
+
+  /** F = H("invoice", Invoice). Compute once per invoice inside a circuit: SHA-256 dominates cost. */
+  export pure circuit fingerprint(inv: Invoice): Bytes<32> {
+    return persistentHash<FingerprintPreimage>(FingerprintPreimage { domain: pad(32, "snf:v1:invoice"), inv: inv });
+  }
+
+  /** A = H("ack", F). */
+  export pure circuit ackLeafFromFingerprint(f: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:ack"), f]);
+  }
+
+  /** N = H("pledge", F). */
+  export pure circuit nullifierFromFingerprint(f: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "snf:v1:pledge"), f]);
+  }
+
+  export pure circuit ackLeafOf(inv: Invoice): Bytes<32> {
+    return ackLeafFromFingerprint(fingerprint(inv));
+  }
+
+  export pure circuit nullifierOf(inv: Invoice): Bytes<32> {
+    return nullifierFromFingerprint(fingerprint(inv));
+  }
+}
