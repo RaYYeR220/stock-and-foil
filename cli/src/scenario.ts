@@ -31,6 +31,7 @@ import {
   generatePersona,
   hex,
   isRefusal,
+  NETWORKS,
   randomBytes32,
   type ChainNetwork,
   type Invoice,
@@ -52,6 +53,7 @@ import {
   note,
   readJson,
   requireNetwork,
+  resolveTransactions,
   runStatePath,
   say,
   serializeLedgerView,
@@ -542,7 +544,24 @@ export async function scenario(args: Args): Promise<number> {
 
     // -------------------------------------------------------------------------------- evidence
     const finalState = serializeLedgerView(await backend.publicState());
-    const records = state.steps;
+
+    // Explorers index by transaction hash, midnight-js reports identifiers; the indexer maps one
+    // to the other, so the evidence carries both for every transaction including the deployment.
+    const deployIds = [deployment.deployTx, ...deployment.maintenanceTxs.map((t) => t.txId)];
+    const stepIds = state.steps.map((s) => s.txId).filter((id): id is string => id !== undefined);
+    const anchors = await resolveTransactions(NETWORKS[network].indexerHttpUrl, [...deployIds, ...stepIds]);
+    const records = state.steps.map((step) => {
+      const anchor = step.txId === undefined ? undefined : anchors.get(step.txId);
+      return anchor === undefined
+        ? step
+        : {
+            ...step,
+            txHash: anchor.txHash,
+            blockHeight: anchor.blockHeight ?? step.blockHeight,
+            blockHash: anchor.blockHash,
+            blockTimestamp: anchor.blockTimestamp,
+          };
+    });
     const heights = records.map((s) => s.blockHeight).filter((h): h is number => h !== undefined);
     const evidence: EvidenceFile = {
       project: 'Stock & Foil',
@@ -551,6 +570,13 @@ export async function scenario(args: Args): Promise<number> {
       compactVersion: COMPACT_VERSION,
       startedAt: state.startedAt,
       finishedAt: new Date().toISOString(),
+      deployment: {
+        deployTx: anchors.get(deployment.deployTx) ?? { identifier: deployment.deployTx },
+        maintenanceTxs: deployment.maintenanceTxs.map((t) => ({
+          circuit: t.circuit,
+          ...(anchors.get(t.txId) ?? { identifier: t.txId }),
+        })),
+      },
       steps: records,
       summary: {
         steps: records.length,

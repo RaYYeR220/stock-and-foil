@@ -73,8 +73,14 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
   const mnemonic = loadMnemonic(args);
 
   installWebSocket();
-  note(`unlocking the fee-paying wallet and syncing against ${network} (this can take a few minutes)`);
-  const wallet = await createHeadlessWallet({ seedHex: seedHexOf(mnemonic), network });
+  // A public network is synced from genesis on every invocation — preview took about fifteen
+  // minutes at ~236k blocks — so the default here is generous rather than the SDK's ten minutes.
+  const syncTimeoutMs = Number(flagValue(args, 'sync-timeout-minutes') ?? 45) * 60_000;
+  note(
+    `unlocking the fee-paying wallet and syncing against ${network}; ` +
+      `a public network syncs from genesis, which takes ~15 minutes (timeout ${syncTimeoutMs / 60_000} min)`,
+  );
+  const wallet = await createHeadlessWallet({ seedHex: seedHexOf(mnemonic), network, syncTimeoutMs });
   note(`wallet ready: ${wallet.address}`);
 
   const submitted: string[] = [];

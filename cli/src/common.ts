@@ -390,6 +390,62 @@ export function serializeLedgerView(view: PublicLedgerView): LedgerViewJson {
   };
 }
 
+// --------------------------------------------------------------------------- explorer anchors
+
+/**
+ * What a transaction is called on chain.
+ *
+ * midnight-js hands back a transaction *identifier* — the 33-byte value a contract call is keyed
+ * by — while block explorers index by the transaction *hash*. The indexer knows both, so the
+ * evidence carries both and PROOF.md can link straight to an explorer.
+ */
+export interface TxAnchor {
+  identifier: string;
+  txHash?: string;
+  blockHeight?: number;
+  blockHash?: string;
+  blockTimestamp?: string;
+}
+
+interface IndexerTx {
+  hash?: string;
+  block?: { height?: number; hash?: string; timestamp?: number };
+}
+
+/** Resolves identifiers to on-chain anchors in one aliased GraphQL query. */
+export async function resolveTransactions(
+  indexerHttpUrl: string,
+  identifiers: readonly string[],
+): Promise<Map<string, TxAnchor>> {
+  const unique = [...new Set(identifiers)];
+  const anchors = new Map<string, TxAnchor>(unique.map((identifier) => [identifier, { identifier }]));
+  if (unique.length === 0) return anchors;
+
+  const query = `{ ${unique
+    .map((id, i) => `t${i}: transactions(offset: {identifier: "${id}"}) { hash block { height hash timestamp } }`)
+    .join(' ')} }`;
+  const response = await fetch(indexerHttpUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!response.ok) return anchors;
+  const body = (await response.json()) as { data?: Record<string, IndexerTx[]> };
+  unique.forEach((identifier, i) => {
+    const tx = body.data?.[`t${i}`]?.[0];
+    if (!tx) return;
+    anchors.set(identifier, {
+      identifier,
+      txHash: tx.hash,
+      blockHeight: tx.block?.height,
+      blockHash: tx.block?.hash,
+      blockTimestamp:
+        tx.block?.timestamp === undefined ? undefined : new Date(tx.block.timestamp).toISOString(),
+    });
+  });
+  return anchors;
+}
+
 // -------------------------------------------------------------------------------- evidence file
 
 export interface StepRecord {
@@ -398,7 +454,10 @@ export interface StepRecord {
   circuit: string;
   persona: string;
   txId?: string;
+  txHash?: string;
   blockHeight?: number;
+  blockHash?: string;
+  blockTimestamp?: string;
   refused?: string;
   durationMs: number;
   at: string;
@@ -429,6 +488,11 @@ export interface EvidenceFile {
   compactVersion: string;
   startedAt: string;
   finishedAt: string;
+  /** The seven transactions that put this contract on chain, resolved to explorer anchors. */
+  deployment: {
+    deployTx: TxAnchor;
+    maintenanceTxs: Array<TxAnchor & { circuit: string }>;
+  };
   steps: StepRecord[];
   summary: {
     steps: number;
