@@ -161,9 +161,22 @@ export interface PointJson {
 export const pointToJson = (p: Point): PointJson => ({ x: p.x.toString(), y: p.y.toString() });
 export const pointFromJson = (p: PointJson): Point => ({ x: BigInt(p.x), y: BigInt(p.y) });
 
+const NON_ASCII = /[\u0080-\uffff]/g;
+
+/**
+ * Writes JSON as pure ASCII, escaping anything above U+007F as `\uXXXX`.
+ *
+ * The file is still UTF-8 and still decodes to the same characters, but a reader that guesses a
+ * legacy code page — a Windows console at CP1251, a build step that forgets an encoding — cannot
+ * turn an em dash into mojibake, because there are no multi-byte sequences left to misread.
+ */
 export function writeJson(path: string, value: unknown): void {
   ensureDir(resolve(path, '..'));
-  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const json = JSON.stringify(value, null, 2).replace(
+    NON_ASCII,
+    (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+  writeFileSync(path, `${json}\n`, 'utf8');
 }
 
 export function readJson<T>(path: string): T {
@@ -236,6 +249,39 @@ export function loadRegistryKeys(network: ChainNetwork): RegistryKeyMaterial {
 export const SETTLEMENT_COLOR = NATIVE_TOKEN_COLOR;
 export const settlementColorHex = (): string => hex(SETTLEMENT_COLOR);
 
+// ------------------------------------------------------------------------------------ explorers
+
+/**
+ * URL templates for a network's block explorer, so a front end does not have to guess them.
+ *
+ * `{txHash}` is the transaction **hash**, not the midnight-js transaction *identifier* that
+ * `deployTx` and `maintenanceTxs[].txId` carry — the explorer indexes by hash. Every evidence
+ * step and every deployment anchor in an evidence file carries `txHash` alongside the identifier
+ * for exactly this reason. All three patterns were checked against the live preview explorer.
+ */
+export interface ExplorerTemplates {
+  tx: string;
+  contract: string;
+  block: string;
+}
+
+export const EXPLORERS: Record<ChainNetwork, ExplorerTemplates | undefined> = {
+  // A local devnet has no explorer.
+  undeployed: undefined,
+  preview: {
+    tx: 'https://preview.midnightexplorer.com/transactions/{txHash}',
+    contract: 'https://preview.midnightexplorer.com/contracts/{address}',
+    block: 'https://preview.midnightexplorer.com/blocks/{height}',
+  },
+  preprod: {
+    tx: 'https://preprod.midnightexplorer.com/transactions/{txHash}',
+    contract: 'https://preprod.midnightexplorer.com/contracts/{address}',
+    block: 'https://preprod.midnightexplorer.com/blocks/{height}',
+  },
+};
+
+export const explorerFor = (network: ChainNetwork): ExplorerTemplates | undefined => EXPLORERS[network];
+
 // ------------------------------------------------------------------------------------- deployment
 
 export interface DeploymentFile {
@@ -249,6 +295,8 @@ export interface DeploymentFile {
   disclosurePk: PointJson;
   settlementColor: string;
   compactVersion: string;
+  /** Explorer URL templates for this network; absent on a local devnet. */
+  explorer?: ExplorerTemplates;
 }
 
 export function loadDeployment(network: ChainNetwork): DeploymentFile {
@@ -506,6 +554,8 @@ export interface EvidenceFile {
   compactVersion: string;
   startedAt: string;
   finishedAt: string;
+  /** Explorer URL templates for this network; absent on a local devnet. */
+  explorer?: ExplorerTemplates;
   /** The seven transactions that put this contract on chain, resolved to explorer anchors. */
   deployment: {
     deployTx: TxAnchor;

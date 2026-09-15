@@ -28,6 +28,7 @@ import {
 import {
   COMPACT_VERSION,
   deploymentPath,
+  explorerFor,
   flagSet,
   flagValue,
   heading,
@@ -156,6 +157,7 @@ export async function deploy(args: Args): Promise<number> {
       disclosurePk: publicMaterial.disclosurePk,
       settlementColor: settlementColorHex(),
       compactVersion: COMPACT_VERSION,
+      explorer: explorerFor(network),
     };
     writeJson(path, file);
 

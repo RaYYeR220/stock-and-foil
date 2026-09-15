@@ -44,6 +44,7 @@ import { connectDeployed } from './deploy.js';
 import {
   COMPACT_VERSION,
   EVIDENCE_DIR,
+  explorerFor,
   fileStamp,
   flagSet,
   flagValue,
@@ -317,6 +318,39 @@ export async function scenario(args: Args): Promise<number> {
       };
     };
 
+    /**
+     * The lender-side check the security audit added.
+     *
+     * A certificate proves its pool cleared a floor and names the markers it locked, but the
+     * holder tag on each locked slot is a witness the *seller* supplies: nothing in the circuit
+     * ties it to the lender named by `lenderRef`. So the addressee verifies from public state that
+     * every slot really is an unexpired offer it can accept. Financier B, who is not the
+     * addressee, runs the same check on the same certificate and gets `ok: false` — the negative
+     * control that shows the check is doing work.
+     */
+    const checkCertificate = async (): Promise<Outcome> => {
+      const startedAt = Date.now();
+      const certId = financierA.certIdOf(lenderRef, lenderNonce);
+      const mine = await financierA.checkCertificate(certId);
+      const theirs = await financierB.checkCertificate(certId);
+      if (!mine.found) throw new Error(`no certificate ${hex(certId)} on the ledger`);
+      if (!mine.ok) {
+        throw new Error(
+          `the certificate does not lock its pool to the lender that asked for it: ` +
+            `${JSON.stringify(mine.slots)}`,
+        );
+      }
+      if (theirs.ok) throw new Error('a financier that is not the addressee accepted the certificate as its own');
+      return {
+        durationMs: Date.now() - startedAt,
+        note:
+          `certificate ${mine.certId.slice(0, 18)} floor ${money(mine.floor)}, ${mine.slots.length} slots, ` +
+          `all live and addressed to the lender that asked for it; the same certificate checked by ` +
+          `another financier reports ok=false (${theirs.slots.filter((s) => s.addressedToMe).length} of ` +
+          `${theirs.slots.length} slots addressed to it)`,
+      };
+    };
+
     // ------------------------------------------------------------------------------- the steps
     const steps: StepDef[] = [
       {
@@ -363,7 +397,7 @@ export async function scenario(args: Args): Promise<number> {
       },
       {
         id: 'fraud-forged',
-        label: 'Fraud 1 — forged: an invoice the debtor never owed',
+        label: 'Fraud 1, forged: an invoice the debtor never owed',
         circuit: 'offer',
         persona: 'seller',
         run: () =>
@@ -373,7 +407,7 @@ export async function scenario(args: Args): Promise<number> {
       },
       {
         id: 'fraud-inflated',
-        label: `Fraud 2 — inflated: #1001 re-priced tenfold to ${money(INFLATED_AMOUNT)}`,
+        label: `Fraud 2, inflated: #1001 re-priced tenfold to ${money(INFLATED_AMOUNT)}`,
         circuit: 'offer',
         persona: 'seller',
         run: () =>
@@ -383,7 +417,7 @@ export async function scenario(args: Args): Promise<number> {
       },
       {
         id: 'fraud-double-pledge',
-        label: 'Fraud 3 — double pledge: #1001 offered to financier B while A holds it',
+        label: 'Fraud 3, double pledge: #1001 offered to financier B while A holds it',
         circuit: 'offer',
         persona: 'seller',
         run: () => expectRefusal('ALREADY_ENCUMBERED', () => seller.offer(main, tagB, expiry)),
@@ -417,6 +451,13 @@ export async function scenario(args: Args): Promise<number> {
         run: async () => asOutcome(await debtor.pay(main)),
       },
       {
+        id: 'fraud-seller-claim',
+        label: 'Fraud 4, diversion: the seller tries to take proceeds that are pledged to financier B',
+        circuit: 'claimAsSeller',
+        persona: 'seller',
+        run: () => expectRefusal('NOT_PAYEE', () => seller.claim(mainNullifier, session.wallet.payTo)),
+      },
+      {
         id: 'claim-1001-b',
         label: 'Financier B claims the proceeds; the seller cannot divert them',
         circuit: 'claimAsHolder',
@@ -447,6 +488,13 @@ export async function scenario(args: Args): Promise<number> {
         persona: 'seller',
         run: async () =>
           asOutcome(await seller.certify(poolSlots, { lenderRef, lenderNonce, floor: POOL_FLOOR, validUntil })),
+      },
+      {
+        id: 'check-certificate',
+        label: 'The lender checks the certificate really locks its pool to it, and only to it',
+        circuit: 'checkCertificate (off chain)',
+        persona: 'financierA',
+        run: checkCertificate,
       },
       {
         id: 'accept-pool-2001',
@@ -570,6 +618,7 @@ export async function scenario(args: Args): Promise<number> {
       compactVersion: COMPACT_VERSION,
       startedAt: state.startedAt,
       finishedAt: new Date().toISOString(),
+      explorer: deployment.explorer ?? explorerFor(network),
       deployment: {
         deployTx: anchors.get(deployment.deployTx) ?? { identifier: deployment.deployTx },
         maintenanceTxs: deployment.maintenanceTxs.map((t) => ({
