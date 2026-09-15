@@ -92,10 +92,13 @@ whom, not for how much, not since when.
 
 ## Try it
 
-- **Sandbox (no wallet, no install):** the web app runs the real compiled circuits in your browser
-  and replays the whole story, including the three refusals. `npm run -w web dev`
-- **On a public network:** see [PROOF.md](./PROOF.md) for the deployed contract address, every
-  transaction with explorer links, and the one command that re-verifies them.
+- **[stock-and-foil.vercel.app/app/replay](https://stock-and-foil.vercel.app/app/replay)** — press
+  *Run the rest*. Seventeen steps against the real compiled circuits, in your browser tab: no wallet,
+  no install, and the three frauds refused in front of you.
+- **[What the chain sees](https://stock-and-foil.vercel.app/app/ledger)** · **[the workspaces](https://stock-and-foil.vercel.app/app/seller)** · **[the evidence](https://stock-and-foil.vercel.app/proof)** · **[the deck](https://stock-and-foil.vercel.app/deck)**
+- **On a public network:** [PROOF.md](./PROOF.md) has the deployed contract on Midnight preview,
+  every transaction with explorer links, and the one command that re-verifies them.
+- **In five minutes:** [JUDGES.md](./JUDGES.md).
 
 ```bash
 npm install
