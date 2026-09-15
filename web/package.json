@@ -5,6 +5,29 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "build": "echo \"web app not built yet\""
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "e2e": "playwright test",
+    "zk:stage": "node scripts/stage-zk.mjs"
+  },
+  "dependencies": {
+    "@stockandfoil/contract": "0.1.0",
+    "@stockandfoil/sdk": "0.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
+    "@playwright/test": "^1.63.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "buffer": "^6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "vite-plugin-wasm": "^3.5.0"
   }
 }

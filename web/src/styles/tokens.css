@@ -1,0 +1,42 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Stock & Foil, printed in two inks.
+ *
+ * Registry ink #0000FE carries every heading, mark, link and focus ring; overprint #0000AF
+ * carries body copy (11.3:1 on newsprint, 13:1 on plate white). Fluorescent pink is INK ONLY and
+ * never type — it fails contrast at every size, so it appears as the out-of-register shadow under
+ * a button, the ghost behind a section opener, the dot rules, and one half of every tally.
+ * Pink coverage stays well under 20% of the page.
+ */
+:root {
+  --paper: #f1efe8;
+  --paper-2: #e9e7de;
+  --rule: #cfcbbc;
+  --white: #ffffff;
+
+  --pink: #ff48b0;
+  --pink-2: #ffb8dd;
+
+  --ink: #0000fe;
+  --ink-2: #0000af;
+  --ink-3: #00007c;
+  --hair: rgba(0, 0, 175, 0.2);
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 72px;
+  --s9: 104px;
+
+  --gut: clamp(20px, 4.4vw, 64px);
+  --shell: 1280px;
+  --shell-wide: 1440px;
+
+  --display: 'Bricolage Grotesque', 'Arial Narrow', system-ui, sans-serif;
+  --text: 'Work Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Space Mono', ui-monospace, Menlo, Consolas, monospace;
+}

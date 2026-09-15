@@ -20,3 +20,6 @@ contract/src/managed/**/zkir/
 # Public-network deployments and evidence ARE committed.
 cli/deployments/undeployed.json
 cli/evidence/undeployed-*.json
+web/dist/
+web/public/zk/
+web/.vite/

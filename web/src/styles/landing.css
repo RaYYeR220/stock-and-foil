@@ -1,0 +1,501 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The landing page: hero plate, the First Brands band, the four parties, the ledger comparison,
+   the three refusal demos and the record cards. Poster on the outside, instrument on the inside. */
+
+.hero {
+  padding-top: clamp(28px, 3.2vw, 46px);
+  padding-bottom: clamp(44px, 5vw, 76px);
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--s6);
+  align-items: end;
+}
+.kicker {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--s4);
+}
+.kicker i {
+  width: 9px;
+  height: 9px;
+  background: var(--pink);
+  display: block;
+  flex: none;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.hero h1 {
+  grid-column: 1 / span 8;
+  font-weight: 800;
+  font-stretch: 77%;
+  font-variation-settings: 'opsz' 96;
+  font-size: clamp(44px, 6.6vw, 94px);
+  line-height: 0.9;
+  letter-spacing: -0.032em;
+  margin-left: -0.035em;
+}
+.hero-side {
+  grid-column: 9 / -1;
+  padding-bottom: 10px;
+}
+.lede {
+  font-size: 18px;
+  line-height: 1.56;
+  max-width: 42ch;
+}
+.cta-row {
+  grid-column: 1 / span 8;
+  display: flex;
+  align-items: center;
+  gap: var(--s6);
+  flex-wrap: wrap;
+  margin-top: var(--s6);
+}
+.hero-art {
+  grid-column: 1 / -1;
+  margin-top: var(--s7);
+}
+
+/* ── First Brands band ──────────────────────────────────── */
+.sec--blue h2 {
+  color: var(--paper);
+  font-weight: 800;
+  font-stretch: 80%;
+  font-variation-settings: 'opsz' 48;
+  font-size: clamp(28px, 3.4vw, 42px);
+  line-height: 1.04;
+  letter-spacing: -0.024em;
+}
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--s6);
+  row-gap: var(--s6);
+}
+.band-grid h2 {
+  grid-column: 1 / span 5;
+  grid-row: 1;
+}
+.band-fig {
+  grid-column: 1 / span 5;
+  grid-row: 2;
+  align-self: start;
+  display: grid;
+  gap: var(--s5);
+}
+.band-copy {
+  grid-column: 7 / -1;
+  grid-row: 1 / span 2;
+  display: grid;
+  gap: var(--s4);
+  align-content: start;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #d4d4ff;
+  max-width: 58ch;
+}
+.band-copy b {
+  color: var(--paper);
+  font-weight: 600;
+}
+.band-fig div {
+  border-top: 2px solid var(--pink);
+  padding-top: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s4);
+}
+.band-fig strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 80%;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--paper);
+  flex: none;
+  min-width: 2.6em;
+}
+.band-fig span {
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: #c3c3ff;
+}
+
+/* ── the four parties ───────────────────────────────────── */
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s5);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.step-n {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.step-n::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--pink);
+  mix-blend-mode: multiply;
+}
+.step h3 {
+  font-weight: 700;
+  font-stretch: 94%;
+  font-variation-settings: 'opsz' 20;
+  font-size: 20px;
+  line-height: 1.16;
+  letter-spacing: -0.012em;
+}
+.step .who {
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.step .body {
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+.step .sees {
+  margin-top: auto;
+  padding-top: var(--s4);
+  border-top: 1px solid var(--hair);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.step .sees b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink);
+  font-weight: 400;
+  margin-bottom: 3px;
+}
+.note {
+  margin-top: var(--s5);
+  font-size: 16px;
+  max-width: 66ch;
+}
+
+/* ── ledger comparison ──────────────────────────────────── */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+}
+.compare > div {
+  padding: var(--s6);
+}
+.compare > div + div {
+  border-left: 2px solid var(--ink);
+}
+.compare h3 {
+  font-weight: 700;
+  font-stretch: 88%;
+  font-size: 23px;
+  letter-spacing: -0.014em;
+  line-height: 1.15;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.compare h3 em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.compare ul {
+  list-style: none;
+  margin: var(--s5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s4);
+}
+.compare li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: var(--s3);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.compare li::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-top: 5px;
+  background: radial-gradient(circle at 50% 50%, var(--ink) 0 1.6px, transparent 2.1px) 0 0 / 4px 4px;
+}
+.compare .private li::before {
+  opacity: 0.26;
+}
+.compare li b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.compare .foot-note {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--hair);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+/* ── refusal demos ──────────────────────────────────────── */
+.demos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s5);
+}
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+.demo h3 {
+  font-weight: 700;
+  font-stretch: 94%;
+  font-size: 20px;
+  line-height: 1.18;
+  letter-spacing: -0.012em;
+}
+.demo .body {
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+.demo .stage {
+  aspect-ratio: 660/224;
+}
+.demo .stage .anno {
+  opacity: 1;
+}
+.demo .stage .mover {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.6s cubic-bezier(0.3, 1.1, 0.4, 1);
+}
+.demo .run {
+  align-self: flex-start;
+}
+.verdict {
+  margin-top: auto;
+  padding-top: var(--s4);
+  border-top: 1px solid var(--hair);
+  font-size: 14.5px;
+  line-height: 1.55;
+  min-height: 5.6em;
+}
+.verdict code {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--pink-2);
+  padding: 3px 7px;
+  margin-bottom: 6px;
+  mix-blend-mode: multiply;
+}
+.verdict .pending {
+  color: var(--ink-2);
+  opacity: 0.72;
+}
+
+/* ── record cards ───────────────────────────────────────── */
+.records {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s5);
+}
+.records .rec {
+  padding: 0;
+}
+
+/* ── closing plate ──────────────────────────────────────── */
+.closing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: center;
+  padding: var(--s7) var(--s6);
+}
+.closing h2 {
+  font-weight: 800;
+  font-stretch: 84%;
+  font-variation-settings: 'opsz' 40;
+  font-size: clamp(26px, 3vw, 38px);
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+}
+.closing p {
+  margin-top: var(--s4);
+  font-size: 16.5px;
+  line-height: 1.55;
+  max-width: 58ch;
+}
+.closing-cta {
+  display: grid;
+  gap: var(--s4);
+  justify-items: start;
+}
+.closing-cta .hint {
+  font-size: 14.5px;
+  line-height: 1.5;
+  max-width: 34ch;
+  margin-top: 0;
+}
+
+/* ── responsive ─────────────────────────────────────────── */
+@media (max-width: 1080px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+  }
+  .hero h1,
+  .cta-row,
+  .hero-art,
+  .kicker {
+    grid-column: 1 / -1;
+  }
+  .hero-side {
+    grid-column: 1 / -1;
+  }
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .demos {
+    grid-template-columns: 1fr;
+    gap: var(--s6);
+  }
+  .demo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: var(--s4) var(--s6);
+    align-items: start;
+  }
+  .demo h3,
+  .demo .body,
+  .demo .run {
+    grid-column: 1;
+  }
+  .demo .run {
+    justify-self: start;
+  }
+  .demo .stage {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .demo .verdict {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    margin-top: 0;
+    min-height: 0;
+  }
+  .records {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .closing {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 860px) {
+  .hero-grid {
+    display: block;
+  }
+  .hero h1 {
+    font-size: clamp(40px, 10.4vw, 62px);
+    margin-left: -0.03em;
+  }
+  .hero-side {
+    padding: 0;
+    margin-top: var(--s5);
+  }
+  .lede {
+    max-width: 44ch;
+    font-size: 17px;
+  }
+  .hero-art {
+    margin-top: var(--s6);
+  }
+  .band-grid {
+    display: block;
+  }
+  .band-copy {
+    margin-top: var(--s5);
+    max-width: none;
+  }
+  .band-fig {
+    margin-top: var(--s6);
+  }
+  .compare {
+    grid-template-columns: 1fr;
+  }
+  .compare > div + div {
+    border-left: 0;
+    border-top: 2px solid var(--ink);
+  }
+  .compare > div {
+    padding: var(--s5);
+  }
+  .demo {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .demo .run {
+    align-self: flex-start;
+  }
+  .demo .verdict {
+    margin-top: 0;
+  }
+  .records {
+    grid-template-columns: 1fr;
+  }
+  .closing {
+    padding: var(--s6) var(--s5);
+  }
+}
+@media (max-width: 560px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+  .kicker {
+    font-size: 11.5px;
+  }
+  .cta-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--s4);
+  }
+  .cta-row .btn {
+    width: 100%;
+  }
+  .quiet {
+    align-self: flex-start;
+  }
+  .demo .run {
+    align-self: stretch;
+  }
+  .closing-cta .btn {
+    width: 100%;
+  }
+}
