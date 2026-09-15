@@ -190,6 +190,60 @@ describe('detecting a reused sealing scalar', () => {
   });
 });
 
+describe('a certificate a lender did not address', () => {
+  it('locks the pool with tags the named lender cannot recompute, and the check says so', async () => {
+    // The holder tag of every locked slot comes from a witness the *seller* supplies; nothing in
+    // the circuit ties it to `lenderRef`. A lender that advances against a certificate without
+    // checking gets markers it can never accept, which fall free again at `validUntil`.
+    const invoices = [11n, 12n].map((no) => invoiceOf(no, 100_000n));
+    for (const inv of invoices) await w.debtor.acknowledge(inv);
+    const slots = invoices.map((invoice) => ({
+      invoice,
+      // Tags for financier B, on a certificate presented to financier A.
+      holderTag: w.financierB.holderTag(pureCircuits.nullifierOf(invoice)),
+    }));
+    const lenderRef = new Uint8Array(32).fill(0x1d);
+    const nonce = w.financierA.newLenderNonce();
+    await w.seller.certify(slots, { lenderRef, lenderNonce: nonce, floor: 200_000n, validUntil: T0 + 30n * DAY });
+    const certId = pureCircuits.certIdOf(lenderRef, nonce);
+
+    const forA = await w.financierA.checkCertificate(certId);
+    expect(forA.found).toBe(true);
+    expect(forA.ok).toBe(false);
+    expect(forA.slots.map((s) => s.addressedToMe)).toEqual([false, false]);
+    // Every slot is a live offer, so the markers look locked to any observer.
+    expect(forA.slots.every((s) => s.live)).toBe(true);
+
+    const forB = await w.financierB.checkCertificate(certId);
+    expect(forB.ok).toBe(true);
+    expect(forB.slots.map((s) => s.addressedToMe)).toEqual([true, true]);
+    expect(forB.floor).toBe(200_000n);
+  });
+
+  it('reports a certificate that has expired, and one that does not exist', async () => {
+    const inv = invoiceOf(13n, 100_000n);
+    await w.debtor.acknowledge(inv);
+    const lenderRef = new Uint8Array(32).fill(0x1d);
+    const nonce = w.financierA.newLenderNonce();
+    await w.seller.certify([{ invoice: inv, holderTag: w.financierA.holderTag(pureCircuits.nullifierOf(inv)) }], {
+      lenderRef,
+      lenderNonce: nonce,
+      floor: 0n,
+      validUntil: T0 + 30n * DAY,
+    });
+    const certId = pureCircuits.certIdOf(lenderRef, nonce);
+    expect((await w.financierA.checkCertificate(certId)).ok).toBe(true);
+
+    w.backend.advanceTo(T0 + 31n * DAY);
+    const stale = await w.financierA.checkCertificate(certId);
+    expect(stale.expired).toBe(true);
+    expect(stale.ok).toBe(false);
+    expect(stale.slots.every((s) => s.live)).toBe(false);
+
+    expect(await w.financierA.checkCertificate(new Uint8Array(32))).toMatchObject({ found: false, ok: false });
+  });
+});
+
 describe('lender nonces', () => {
   it('a lender issues 32 unpredictable bytes, and the seller refuses anything else', async () => {
     const nonce = w.financierA.newLenderNonce();

@@ -161,6 +161,8 @@ export {
   OperatorClient,
   RoleClient,
   SellerClient,
+  type CertificateCheck,
+  type CertificateSlot,
   type CertifyOptions,
   type Disclosure,
   type KeyholderIndex,
