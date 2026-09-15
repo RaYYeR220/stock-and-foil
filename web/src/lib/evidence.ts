@@ -12,9 +12,10 @@ export interface Deployment {
   deployedAt?: string;
   settlementColor?: string;
   compactVersion?: string;
-  maintenanceTxs?: Array<{ circuit?: string; txId?: string }>;
-  /** Explorer bases, when the CLI recorded them; otherwise the defaults below are used. */
-  explorer?: { tx?: string; address?: string };
+  deployTxHash?: string;
+  maintenanceTxs?: Array<{ circuit?: string; txId?: string; txHash?: string }>;
+  /** Explorer URL templates recorded by the CLI, with `{txHash}` / `{address}` / `{height}` slots. */
+  explorer?: { tx?: string; contract?: string; block?: string; subscanBlock?: string };
   [key: string]: unknown;
 }
 
@@ -24,6 +25,7 @@ export interface EvidenceStep {
   circuit?: string;
   persona?: string;
   txId?: string;
+  txHash?: string;
   blockHeight?: number;
   refused?: string;
   note?: string;
@@ -94,12 +96,13 @@ export const DEPLOYMENTS: Deployment[] = Object.entries(deploymentModules).flatM
     network: text(raw.network) ?? path.split('/').pop()?.replace('.json', '') ?? 'unknown',
     contractAddress: address,
     deployTx: text(raw.deployTx),
+    deployTxHash: text(raw.deployTxHash),
     deployedAt: text(raw.deployedAt),
     settlementColor: text(raw.settlementColor),
     compactVersion: text(raw.compactVersion),
     maintenanceTxs: maintenance.map((entry) => {
       const m = asRecord(entry);
-      return { circuit: text(m.circuit), txId: text(m.txId) };
+      return { circuit: text(m.circuit), txId: text(m.txId), txHash: text(m.txHash) };
     }),
     explorer: asRecord(raw.explorer) as Deployment['explorer'],
   };
@@ -133,6 +136,7 @@ export const EVIDENCE: Evidence[] = Object.entries(evidenceModules)
           circuit: text(s.circuit),
           persona: text(s.persona),
           txId: text(s.txId),
+          txHash: text(s.txHash),
           blockHeight: num(s.blockHeight),
           refused: text(s.refused),
           note: text(s.note),
@@ -175,16 +179,41 @@ export const isLocal = (network: string): boolean => network === 'undeployed' ||
 /** Deployments a visitor could independently verify. */
 export const PUBLIC_DEPLOYMENTS = DEPLOYMENTS.filter((d) => !isLocal(d.network));
 
-const explorerBase = (network: string): string => `https://${network}.midnightexplorer.com`;
+// Explorer URLs come from templates the CLI verified against the live explorer. The explorer keys a
+// transaction by its ledger hash, not by the identifier midnight-js returns, so a link is only built
+// when the evidence carries that hash.
+const DEFAULTS = {
+  tx: 'https://{network}.midnightexplorer.com/transactions/{txHash}',
+  contract: 'https://{network}.midnightexplorer.com/contracts/{address}',
+  block: 'https://{network}.midnightexplorer.com/blocks/{height}',
+  subscanBlock: 'https://midnight-{network}.subscan.io/block/{height}',
+} as const;
 
-export const txUrl = (network: string, txId: string, deployment?: Deployment): string | undefined =>
-  isLocal(network) ? undefined : `${deployment?.explorer?.tx ?? `${explorerBase(network)}/transactions`}/${txId}`;
+const fill = (template: string, values: Record<string, string>): string =>
+  Object.entries(values).reduce((out, [key, value]) => out.replaceAll(`{${key}}`, value), template);
+
+const link = (
+  kind: keyof typeof DEFAULTS,
+  network: string,
+  values: Record<string, string>,
+  deployment?: Deployment,
+): string | undefined => {
+  if (isLocal(network)) return undefined;
+  const template = deployment?.explorer?.[kind] ?? DEFAULTS[kind];
+  return fill(template, { network, ...values });
+};
+
+export const txUrl = (network: string, txHash: string | undefined, deployment?: Deployment): string | undefined =>
+  txHash ? link('tx', network, { txHash }, deployment) : undefined;
 
 export const addressUrl = (network: string, address: string, deployment?: Deployment): string | undefined =>
-  isLocal(network) ? undefined : `${deployment?.explorer?.address ?? `${explorerBase(network)}/contracts`}/${address}`;
+  link('contract', network, { address }, deployment);
 
-export const subscanUrl = (network: string, txId: string): string | undefined =>
-  isLocal(network) ? undefined : `https://midnight-${network}.subscan.io/extrinsic/${txId}`;
+export const blockUrl = (network: string, height: number | undefined, deployment?: Deployment): string | undefined =>
+  height === undefined ? undefined : link('block', network, { height: String(height) }, deployment);
+
+export const subscanUrl = (network: string, height: number | undefined, deployment?: Deployment): string | undefined =>
+  height === undefined ? undefined : link('subscanBlock', network, { height: String(height) }, deployment);
 
 export const when = (iso: string | undefined): string => {
   if (!iso) return '—';

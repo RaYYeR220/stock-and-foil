@@ -25,13 +25,30 @@ const NETWORK_LABEL: Record<string, string> = {
   preprod: 'preprod',
 };
 
-function TxLink({ network, txId, deployment }: { network: string; txId: string; deployment?: Deployment }) {
-  const url = txUrl(network, txId, deployment);
-  const subscan = subscanUrl(network, txId);
-  if (!url) return <span className="mono">{shortHex(txId, 10, 6)}</span>;
+/**
+ * The explorer keys a transaction by its ledger hash, so a link needs the hash the tool recorded
+ * next to the identifier. Without one, the identifier is still shown — as text, not as a dead link.
+ */
+function TxLink({
+  network,
+  txId,
+  txHash,
+  blockHeight,
+  deployment,
+}: {
+  network: string;
+  txId?: string;
+  txHash?: string;
+  blockHeight?: number;
+  deployment?: Deployment;
+}) {
+  const label = shortHex(txHash ?? txId ?? '', 10, 6);
+  const url = txUrl(network, txHash, deployment);
+  const subscan = subscanUrl(network, blockHeight, deployment);
+  if (!url) return <span className="mono">{label}</span>;
   return (
     <span className="mono">
-      <a href={url}>{shortHex(txId, 10, 6)}</a>
+      <a href={url}>{label}</a>
       {subscan ? (
         <>
           {' · '}
@@ -115,7 +132,12 @@ export function Proof() {
                     {
                       label: 'Deploy transaction',
                       value: deployment.deployTx ? (
-                        <TxLink network={deployment.network} txId={deployment.deployTx} deployment={deployment} />
+                        <TxLink
+                          network={deployment.network}
+                          txId={deployment.deployTx}
+                          txHash={deployment.deployTxHash}
+                          deployment={deployment}
+                        />
                       ) : (
                         '—'
                       ),
@@ -124,7 +146,25 @@ export function Proof() {
                     { label: 'Deployed at', value: when(deployment.deployedAt) },
                     {
                       label: 'Verifier keys added afterwards',
-                      value: `${deployment.maintenanceTxs?.length ?? 0} maintenance transactions`,
+                      value:
+                        deployment.maintenanceTxs && deployment.maintenanceTxs.length > 0 ? (
+                          <span>
+                            {deployment.maintenanceTxs.length} maintenance transactions ·{' '}
+                            {deployment.maintenanceTxs.map((tx, i) => (
+                              <span key={tx.txHash ?? tx.txId ?? i}>
+                                {i > 0 ? ' ' : ''}
+                                <TxLink
+                                  network={deployment.network}
+                                  txId={tx.txId}
+                                  txHash={tx.txHash}
+                                  deployment={deployment}
+                                />
+                              </span>
+                            ))}
+                          </span>
+                        ) : (
+                          '0 maintenance transactions'
+                        ),
                     },
                     { label: 'Compact version', value: deployment.compactVersion ?? '—' },
                     {
@@ -229,7 +269,13 @@ export function Proof() {
                       </span>
                       <span className="mono">
                         {step.txId ? (
-                          <TxLink network={network} txId={step.txId} deployment={deployment} />
+                          <TxLink
+                            network={network}
+                            txId={step.txId}
+                            txHash={step.txHash}
+                            blockHeight={step.blockHeight}
+                            deployment={deployment}
+                          />
                         ) : step.refused ? (
                           'never submitted'
                         ) : (
