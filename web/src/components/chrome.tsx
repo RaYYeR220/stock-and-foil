@@ -135,6 +135,10 @@ export function Footer() {
               <li>
                 <Link to="/proof">Proof</Link>
               </li>
+              {/* The deck is a static page beside the app, not a route, so it needs a real href. */}
+              <li>
+                <a href="/deck">The deck</a> · <a href="/deck/stock-and-foil-deck.pdf">PDF</a>
+              </li>
             </ul>
           </div>
           <div>
