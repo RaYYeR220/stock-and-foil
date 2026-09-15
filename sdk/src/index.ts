@@ -126,6 +126,7 @@ export {
 
 // Backends
 export { SimulatorBackend, type SimulatorDeployOptions, type SimulatorSnapshot } from './backend/simulator.js';
+export { decodeSnapshot, encodeSnapshot } from './backend/snapshot.js';
 export {
   CIRCUIT_IDS,
   NetworkBackend,
