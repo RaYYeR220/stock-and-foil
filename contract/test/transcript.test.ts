@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
   DAY,
-  hex,
+  keyHex,
   leHex,
   offered,
   pure,
@@ -60,14 +60,14 @@ describe('acknowledge', () => {
     const values = published(res);
     // The ack nullifier is a Set key, so it is published verbatim: that is what makes one
     // acknowledgment per (debtor, seller, invoice number) enforceable, and non-repudiable.
-    expect(values.has(hex(pure.ackNullifierOf(r.debtor.sk, inv.sellerId, inv.invoiceNo)))).toBe(true);
+    expect(values.has(keyHex(pure.ackNullifierOf(r.debtor.sk, inv.sellerId, inv.invoiceNo)))).toBe(true);
     // The ack leaf is not: a Merkle insert stores the hash of the value, so even `A = H("ack", F)`
     // stays one preimage away from the chain.
-    expect(values.has(hex(pure.ackLeafOf(inv)))).toBe(false);
+    expect(values.has(keyHex(pure.ackLeafOf(inv)))).toBe(false);
     expectNoInvoiceFields(res, inv);
     // The debtor stays inside the anonymity set: membership is proved against a root.
-    expect(values.has(hex(r.debtor.leaf))).toBe(false);
-    expect(values.has(hex(r.debtor.sk))).toBe(false);
+    expect(values.has(keyHex(r.debtor.leaf))).toBe(false);
+    expect(values.has(keyHex(r.debtor.sk))).toBe(false);
   });
 });
 
@@ -81,12 +81,12 @@ describe('offer', () => {
     const res = r.seller.offer(inv, tag, expiry);
     const values = published(res);
 
-    expect(values.has(hex(n))).toBe(true);
+    expect(values.has(keyHex(n))).toBe(true);
     expect(values.has(leHex(expiry))).toBe(true);
     expect(values.has(leHex(tag))).toBe(true);
-    expect(values.has(hex(r.ledger().pledges.lookup(n).recordId))).toBe(true);
+    expect(values.has(keyHex(r.ledger().pledges.lookup(n).recordId))).toBe(true);
     // The ack leaf itself is NOT published: the proof is against a root, not a leaf.
-    expect(values.has(hex(pure.ackLeafOf(inv)))).toBe(false);
+    expect(values.has(keyHex(pure.ackLeafOf(inv)))).toBe(false);
     expectNoInvoiceFields(res, inv);
   });
 
@@ -110,10 +110,10 @@ describe('accept, release and settle', () => {
     const r = setupRegistry();
     const { inv, n } = offered(r);
     const res = r.financierA.accept(n);
-    expect(published(res).has(hex(n))).toBe(true);
+    expect(published(res).has(keyHex(n))).toBe(true);
     expectNoInvoiceFields(res, inv);
     // Membership is proved against a root: the financier's own leaf never appears.
-    expect(published(res).has(hex(r.financierA.leaf))).toBe(false);
+    expect(published(res).has(keyHex(r.financierA.leaf))).toBe(false);
   });
 
   it('payInvoice publishes the amount, because settlement is unshielded', () => {
@@ -122,7 +122,7 @@ describe('accept, release and settle', () => {
     const res = r.debtor.pay(inv);
     const values = published(res);
     expect(values.has(leHex(inv.amount))).toBe(true);
-    expect(values.has(hex(pure.nullifierOf(inv)))).toBe(true);
+    expect(values.has(keyHex(pure.nullifierOf(inv)))).toBe(true);
     // Every other invoice field stays private, including the due date and the number.
     for (const [name, value] of privateFields(inv)) {
       if (name === 'amount') continue;
@@ -138,9 +138,9 @@ describe('accept, release and settle', () => {
     const to = userAddress(0x5e);
     const res = r.seller.claim(n, to);
     const values = published(res);
-    expect(values.has(hex(n))).toBe(true);
+    expect(values.has(keyHex(n))).toBe(true);
     expect(values.has(leHex(inv.amount))).toBe(true);
-    expect(values.has(hex(to.bytes))).toBe(true);
+    expect(values.has(keyHex(to.bytes))).toBe(true);
   });
 });
 
@@ -162,14 +162,14 @@ describe('certifyBorrowingBase', () => {
 
     expect(values.has(leHex(floor))).toBe(true);
     expect(values.has(leHex(validUntil))).toBe(true);
-    expect(values.has(hex(LENDER_REF))).toBe(true);
-    expect(values.has(hex(pure.certIdOf(LENDER_REF, nonce)))).toBe(true);
-    expect(values.has(hex(pure.borrowerCommitOf(r.seller.id, nonce)))).toBe(true);
-    for (const inv of invoices) expect(values.has(hex(pure.nullifierOf(inv)))).toBe(true);
+    expect(values.has(keyHex(LENDER_REF))).toBe(true);
+    expect(values.has(keyHex(pure.certIdOf(LENDER_REF, nonce)))).toBe(true);
+    expect(values.has(keyHex(pure.borrowerCommitOf(r.seller.id, nonce)))).toBe(true);
+    for (const inv of invoices) expect(values.has(keyHex(pure.nullifierOf(inv)))).toBe(true);
 
     // The nonce itself is a circuit argument, so only its hashes reach the chain — which is why
     // it has to be unguessable (see docs/PRIVACY-BOUNDARY.md).
-    expect(values.has(hex(nonce))).toBe(false);
+    expect(values.has(keyHex(nonce))).toBe(false);
     for (const inv of invoices) expectNoInvoiceFields(res, inv);
   });
 
@@ -185,8 +185,8 @@ describe('certifyBorrowingBase', () => {
       validUntil: r.now + 30n * DAY,
     });
     const values = published(res);
-    expect(values.has(hex(pure.nullifierOf(used)))).toBe(true);
-    expect(values.has(hex(pure.nullifierOf(parked)))).toBe(false);
+    expect(values.has(keyHex(pure.nullifierOf(used)))).toBe(true);
+    expect(values.has(keyHex(pure.nullifierOf(parked)))).toBe(false);
     expectNoInvoiceFields(res, parked);
     // What is public is the pool *size*: the certificate carries `count`, and one marker per slot.
     expect(r.ledger().certificates.lookup(pure.certIdOf(LENDER_REF, nonce)).count).toBe(1n);
@@ -200,9 +200,9 @@ describe('disclosure', () => {
     const recordId = r.ledger().pledges.lookup(n).recordId;
     const res = r.auditor.request(recordId, CASE_REF);
     const values = published(res);
-    expect(values.has(hex(recordId))).toBe(true);
-    expect(values.has(hex(CASE_REF))).toBe(true);
-    expect(values.has(hex(pure.requestIdOf(recordId, CASE_REF)))).toBe(true);
+    expect(values.has(keyHex(recordId))).toBe(true);
+    expect(values.has(keyHex(CASE_REF))).toBe(true);
+    expect(values.has(keyHex(pure.requestIdOf(recordId, CASE_REF)))).toBe(true);
     expectNoInvoiceFields(res, inv);
   });
 
@@ -214,7 +214,7 @@ describe('disclosure', () => {
     const requestId = pure.requestIdOf(recordId, CASE_REF);
     const res = r.keyholders[1].approve(requestId);
     const values = published(res);
-    expect(values.has(hex(pure.shareKeyOf(requestId, 1n)))).toBe(true);
+    expect(values.has(keyHex(pure.shareKeyOf(requestId, 1n)))).toBe(true);
     // The Shamir share and the point D = s·E it proves are never in the clear.
     expect(values.has(leHex(r.keyholders[1].share.value))).toBe(false);
     const D = pure.mulPoint(r.ledger().records.lookup(recordId).E, r.keyholders[1].share.value);

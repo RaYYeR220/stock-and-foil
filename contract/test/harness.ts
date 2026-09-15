@@ -129,6 +129,16 @@ export function transcriptValues(res: CircuitResult): string[] {
   return out;
 }
 
+/**
+ * A 32-byte ledger key as the transcript would carry it: trailing zero bytes trimmed.
+ *
+ * The trimming is not cosmetic. One key in 256 ends in `0x00`, and comparing such a key against
+ * `hex(bytes)` misses — which made every "this key *is* published" assertion flaky and every
+ * "this value is *not* published" assertion pass for free whenever the value happened to end in a
+ * zero byte. Compare transcript cells with this, never with `hex`.
+ */
+export const keyHex = (b: Uint8Array): string => hex(b).replace(/(?:00)+$/, '');
+
 /** A number as the transcript would carry it: little-endian, trailing zero bytes trimmed. */
 export function leHex(value: bigint): string {
   let rest = value;
