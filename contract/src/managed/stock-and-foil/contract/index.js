@@ -5175,14 +5175,14 @@ export const pureCircuits = {
     if (!(lenderRef_0.buffer instanceof ArrayBuffer && lenderRef_0.BYTES_PER_ELEMENT === 1 && lenderRef_0.length === 32)) {
       __compactRuntime.typeError('certIdOf',
                                  'argument 1',
-                                 'BorrowingBase.compact line 33 char 3',
+                                 'BorrowingBase.compact line 42 char 3',
                                  'Bytes<32>',
                                  lenderRef_0)
     }
     if (!(lenderNonce_0.buffer instanceof ArrayBuffer && lenderNonce_0.BYTES_PER_ELEMENT === 1 && lenderNonce_0.length === 32)) {
       __compactRuntime.typeError('certIdOf',
                                  'argument 2',
-                                 'BorrowingBase.compact line 33 char 3',
+                                 'BorrowingBase.compact line 42 char 3',
                                  'Bytes<32>',
                                  lenderNonce_0)
     }
@@ -5197,14 +5197,14 @@ export const pureCircuits = {
     if (!(typeof(sellerId_0) === 'bigint' && sellerId_0 >= 0 && sellerId_0 <= __compactRuntime.MAX_FIELD)) {
       __compactRuntime.typeError('borrowerCommitOf',
                                  'argument 1',
-                                 'BorrowingBase.compact line 45 char 3',
+                                 'BorrowingBase.compact line 54 char 3',
                                  'Field',
                                  sellerId_0)
     }
     if (!(lenderNonce_0.buffer instanceof ArrayBuffer && lenderNonce_0.BYTES_PER_ELEMENT === 1 && lenderNonce_0.length === 32)) {
       __compactRuntime.typeError('borrowerCommitOf',
                                  'argument 2',
-                                 'BorrowingBase.compact line 45 char 3',
+                                 'BorrowingBase.compact line 54 char 3',
                                  'Bytes<32>',
                                  lenderNonce_0)
     }
@@ -5218,7 +5218,7 @@ export const pureCircuits = {
     if (!(Array.isArray(used_0) && used_0.length === 4 && used_0.every((t) => typeof(t) === 'boolean'))) {
       __compactRuntime.typeError('poolCount',
                                  'argument 1',
-                                 'BorrowingBase.compact line 51 char 3',
+                                 'BorrowingBase.compact line 60 char 3',
                                  'Vector<4, Boolean>',
                                  used_0)
     }
@@ -5232,7 +5232,7 @@ export const pureCircuits = {
     if (!(Array.isArray(amounts_0) && amounts_0.length === 4 && amounts_0.every((t) => typeof(t) === 'bigint' && t >= 0n && t <= 18446744073709551615n))) {
       __compactRuntime.typeError('poolTotal',
                                  'argument 1',
-                                 'BorrowingBase.compact line 56 char 3',
+                                 'BorrowingBase.compact line 65 char 3',
                                  'Vector<4, Uint<0..18446744073709551616>>',
                                  amounts_0)
     }
@@ -5247,14 +5247,14 @@ export const pureCircuits = {
     if (!(Array.isArray(used_0) && used_0.length === 4 && used_0.every((t) => typeof(t) === 'boolean'))) {
       __compactRuntime.typeError('poolDistinct',
                                  'argument 1',
-                                 'BorrowingBase.compact line 61 char 3',
+                                 'BorrowingBase.compact line 70 char 3',
                                  'Vector<4, Boolean>',
                                  used_0)
     }
     if (!(Array.isArray(ns_0) && ns_0.length === 4 && ns_0.every((t) => t.buffer instanceof ArrayBuffer && t.BYTES_PER_ELEMENT === 1 && t.length === 32))) {
       __compactRuntime.typeError('poolDistinct',
                                  'argument 2',
-                                 'BorrowingBase.compact line 61 char 3',
+                                 'BorrowingBase.compact line 70 char 3',
                                  'Vector<4, Bytes<32>>',
                                  ns_0)
     }

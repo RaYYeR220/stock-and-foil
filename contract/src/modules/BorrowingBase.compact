@@ -17,6 +17,15 @@ module BorrowingBase {
    * What the public sees about a pool: its size, its floor, how long it is valid and the pledge
    * nullifiers it locked (zero bytes for unused slots). The borrower stays private only as long as
    * `lenderNonce` does — see `borrowerCommitOf`.
+   *
+   * A certificate proves the pool is acknowledged, unencumbered, current and worth at least
+   * `floor`. It does **not** prove the pool is addressed to the lender reading it: the holder tag
+   * of each locked slot is a seller-supplied witness and nothing here ties it to `lenderRef`.
+   * Nothing could: a tag is `H("holder", finSk, N)`, so the circuit has no key material to check
+   * the seller's claim against. The locked markers are public, so the lender checks it itself —
+   * recompute your own tag per nullifier (`FinancierClient.checkCertificate`), or simply accept
+   * every slot, which fails `NOT_ADDRESSEE` the same way. Do not advance money before one of the
+   * two. See docs/THREAT-MODEL.md §3.1.
    */
   export struct Certificate {
     borrowerCommit: Bytes<32>;

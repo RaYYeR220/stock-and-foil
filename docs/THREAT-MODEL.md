@@ -25,7 +25,7 @@ account of that, and `contract/test/transcript.test.ts` asserts it.
 |---|---|---|---|
 | **Operator** (registry consortium) | `opSk` | admitting real, KYB'd debtors and financiers; deploying a sound ceremony; retaining the contract's maintenance authority | reading records, pledging, settling, or opening a disclosure — it has no cryptographic power over any of those |
 | **Debtor** (buyer) | `debtorSk`, the invoices it acknowledged, including salts | the truth of what it acknowledges; paying through the contract | nothing else — it cannot pledge, claim or read a record |
-| **Seller** (supplier) | `sellerSk`, invoices incl. salts, holder tags received off-chain | drawing a fresh sealing scalar per record | the invoice's truth (the debtor's acknowledgment carries that) |
+| **Seller** (supplier) | `sellerSk`, invoices incl. salts, holder tags received off-chain | drawing a fresh sealing scalar per record | the invoice's truth (the debtor's acknowledgment carries that); which lender a certificate's slots are actually addressed to (§3.1) |
 | **Financier** (factor) | `finSk`, its holder tags | issuing a tag only for a receivable it intends to fund | anything about other financiers' books |
 | **Auditor / trustee** | `audSk` | asking for one record, for a stated case | opening anything without two keyholders |
 | **Keyholder** ×3 | one Shamir share `s_i` | not colluding with a second keyholder | the contents of anything — a keyholder never sees a plaintext |
@@ -68,6 +68,10 @@ them:
 | P8 | A registry whose disclosure ceremony is degenerate or inconsistent cannot exist. | four constructor asserts | `ceremony.test.ts` (whole file) |
 | P9 | No invoice field, salt or secret key reaches the public transcript. | disclosure typing in Compact; sealed records | `transcript.test.ts` (whole file) |
 
+P2 and P5 are about the *marker*, not about who the marker names. A certificate proves its pool is
+acknowledged, unencumbered, current and worth at least `floor`; it does **not** prove the pool is
+addressed to the lender reading it (§3.1). Check the tags, or accept the slots.
+
 ---
 
 ## 3. Attackers
@@ -102,6 +106,16 @@ The central adversary: the First Brands fraud pattern.
 - **Leak its own counterparties**, by reusing one sealing scalar across records: the masks cancel
   and an observer with no key reads off which records share a debtor or a seller.
   `limits.test.ts` "lets a passive observer read off which fields two records share".
+- **Issue a certificate the named lender cannot take up.** The holder tag of each locked slot
+  comes from a witness the seller supplies, and nothing in the circuit ties it to `lenderRef`. The
+  markers read `OFFERED` to every observer and the floor proof is genuine, but the lender can
+  never `accept` them and they fall free at `validUntil`. A lender that advances money against a
+  certificate *without* accepting its slots is exposed, and the receivables stay blocked for the
+  whole window. No circuit can close this: a tag is `H("holder", finSk, N)`, so the contract has
+  no key material to check the seller's claim against. `FinancierClient.checkCertificate`
+  recomputes every tag from public state before money moves — `limits.test.ts` "locks the pool to
+  whatever tags the seller supplies", `sdk/test/audit.test.ts` "locks the pool with tags the named
+  lender cannot recompute". **Accepted, not fixed** — see `docs/audit-report.md` F-05.
 - Lock collateral it never intends to finance, up to four receivables at a time, until
   `validUntil`. Self-inflicted.
 - Refuse to release. A financier releases; a seller cannot.
@@ -254,6 +268,8 @@ with no on-chain request at all. That is inherent to 2-of-3 and is a published l
 - Timing correlation between an acknowledgment and a later offer.
 - The operator's admission decisions and its maintenance authority (§1).
 - A seller that reuses its own sealing scalar (3.1).
+- A certificate whose slots are not addressed to the lender it names (3.1). The lender checks it
+  itself, with `FinancierClient.checkCertificate` or by accepting every slot.
 - `sellerId`-based linkability of settled, unfinanced receivables (3.5).
 
 Each of these has a test that reproduces it, so "not defended" is a measured statement rather than

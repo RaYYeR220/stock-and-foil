@@ -20,7 +20,9 @@ the clear. That is the leak channel. Two things are *not* in it:
 Anything derived from a witness and used in a ledger operation **is** published, including the
 key of every map lookup and the root of every Merkle check. `contract/test/transcript.test.ts`
 asserts the tables below value by value: `transcriptValues(res)` is the set of bit patterns a call
-published, so "this private field is not in it" is a checked claim, not a hope.
+published, so "this private field is not in it" is a checked claim, not a hope. Transcript cells
+are little-endian with trailing zero bytes trimmed, so compare a 32-byte key with `keyHex`, never
+with plain hex — one key in 256 ends in `0x00`, and an untrimmed comparison misses it.
 
 Three conventions make the tables readable:
 
@@ -107,7 +109,10 @@ carries the tag of whoever last held it.
 
 The locked markers are public and have to be: publishing them is what makes the lock verifiable by
 the lender and by every other financier. `floor` is a lower bound the pool proves; the line items
-are not published and the total is not either.
+are not published and the total is not either. What the certificate does **not** publish is
+whether the slots are addressed to the lender named by `lenderRef` — the holder tags come from a
+seller-supplied witness, so only the lender can tell, by recomputing its own tag per marker
+(`FinancierClient.checkCertificate`). See `docs/THREAT-MODEL.md` §3.1.
 
 ### `payInvoice()`
 

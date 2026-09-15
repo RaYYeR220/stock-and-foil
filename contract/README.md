@@ -116,6 +116,18 @@ and any scalar: the circuit computes their nullifier and discards it, so a real 
 an unused slot would have its nullifier computed needlessly. The SDK's `CallInputs` mirrors this
 with `invoices`, `used`, `holderTags` and `ephemerals`.
 
+**A certificate's holder tags are not bound to its `lenderRef`.** `certHolderTags` is a witness the
+*seller* supplies, and no assert ties it to the lender the certificate names. It cannot be tied:
+a tag is `H("holder", finSk, N)`, so the circuit has no key material to check the claim against —
+and making the tags circuit arguments would not help, because a Compact argument is a private
+input too and is `disclose`d at the same point. A certificate therefore proves its pool is
+acknowledged, unencumbered, current and worth at least `floor`, and **nothing about who it is
+addressed to**. The locked markers are public, so the lender verifies it from public state:
+`FinancierClient.checkCertificate(certId)` recomputes its own tag per marker, or `accept(n)` on
+every slot fails with `NOT_ADDRESSEE` the same way. No ABI or product-semantics change; the limit
+is reproduced by `test/limits.test.ts` "locks the pool to whatever tags the seller supplies" and
+documented in `../docs/THREAT-MODEL.md` §3.1.
+
 **Two member-path witnesses, not one.** `debtorPathFor` and `financierPathFor` instead of a single
 `memberPathFor(tree, leaf)`, because a witness cannot pick a tree at runtime. The ack tree has its
 own `ackPathFor` (depth 16; member trees are depth 10). When no real path exists the witness
