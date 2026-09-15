@@ -26,7 +26,13 @@ test/lifecycle.test.ts          happy paths for every circuit
 test/refusals.test.ts           one scenario per refusal code, plus lying-witness cases
 test/model.property.test.ts     fast-check model test over random lifecycles
 test/disclosure.test.ts         2-of-3 threshold decryption with negative controls
+test/ceremony.test.ts           deploy-time validation of the disclosure ceremony
+test/transcript.test.ts         what each circuit publishes, value by value
+test/limits.test.ts             the documented leaks and griefing vectors, reproduced
 ```
+
+`../docs/THREAT-MODEL.md` and `../docs/PRIVACY-BOUNDARY.md` are the prose these last three files
+check; changing one without the other makes the documentation wrong.
 
 ## Build and test
 
@@ -49,6 +55,7 @@ replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `inv
 
 | Circuit | Refusals |
 |---|---|
+| *constructor (deploy time)* | `BAD_DISCLOSURE_KEY`, `BAD_AUDITOR_KEY`, `BAD_KEYHOLDER_KEY`, `BAD_KEY_SHARING` |
 | `admitDebtor`, `admitFinancier` | `NOT_OPERATOR` |
 | `acknowledge` | `NOT_REGISTERED_DEBTOR`, `NOT_YOUR_INVOICE`, `ALREADY_ACKNOWLEDGED` |
 | `offer` | `NOT_INVOICE_OWNER`, `NOT_ACKNOWLEDGED`, `BAD_EXPIRY`, `INVOICE_OVERDUE`, `ALREADY_SETTLED`, `ALREADY_ENCUMBERED`, `BAD_EPHEMERAL` |
@@ -68,6 +75,18 @@ encumbrance it caused itself.
 ## ABI notes
 
 Deviations from the Wave 1 plan's ABI sketch, and things the SDK has to know.
+
+**The constructor validates the ceremony.** Every confidentiality claim rests on `disclosurePk`,
+`keyholderPks` and `auditorPk`, and a wrong ceremony fails silently — a degenerate or duplicated
+key lets one party open every record alone, and an inconsistent or mis-ordered sharing means no
+two keyholders can ever open one, which is only discovered when an investigation needs it. All of
+it is public, so the constructor checks all of it: no key may be the curve identity, the auditor
+key may be neither the disclosure key nor a keyholder key, no keyholder key may be the disclosure
+key, and the three keyholder keys must be a genuine 2-of-3 sharing of the disclosure key, in
+Shamir-index order — proved in point form as `2·pk₁ − pk₂ = sk·G` and `3·pk₁ − pk₃ = 2·sk·G`.
+These four asserts refuse a *deployment*, not a call; `verifyRegistryConfig` in the SDK is the
+same predicate, for a registry somebody else deployed. Adding them left every circuit's ZKIR and
+verifier key byte-identical, because a constructor is not a circuit.
 
 **Added refusal code.** `BAD_EPHEMERAL` is not in the spec table. Sealing uses a witness-supplied
 scalar `e`; if `e ≡ 0 (mod ℓ)` then `E = e·G` is the curve identity, the shared point is the
@@ -102,6 +121,23 @@ with `invoices`, `used`, `holderTags` and `ephemerals`.
 own `ackPathFor` (depth 16; member trees are depth 10). When no real path exists the witness
 returns a dummy path (requested leaf, zero siblings) so the refusal comes from the circuit assert
 rather than from a JavaScript exception.
+
+**A sealing scalar must never be reused.** `e` is a witness, and freshness is not something a
+circuit can prove, so two properties rest on the caller drawing a fresh scalar per record. Reusing
+one publishes the same `E` twice, and the masks cancel: subtracting the two ciphertexts shows
+which fields the records share — same debtor, same seller — with no key at all. And because the
+ledger key is `recordIdOf(N, E)`, re-offering the *same* receivable with the same `e` lands on the
+same key and **replaces** the earlier record, so records are append-only only under that
+discipline. The SDK draws a fresh scalar on every call, `CallInputs.ephemeral` is for tests, and
+`reusedSealingKeys` finds a repeat from public state.
+
+**Lender nonces must be unpredictable.** `certifyBorrowingBase` is keyed by
+`certIdOf(lenderRef, lenderNonce)` with a public `lenderRef`, and `borrowerCommit` is
+`H("borrower", sellerId, lenderNonce)`. A guessable nonce (a counter, a date, a customer
+reference) is therefore recoverable from the public certificate id by brute force, after which
+anyone holding a candidate `sellerId` — every debtor of that seller does — can confirm the
+borrower, and anyone can pre-register the same id to deny it (`DUPLICATE_CERTIFICATE`). Lenders
+issue nonces with `FinancierClient.newLenderNonce()`; `SellerClient.certify` enforces 32 bytes.
 
 **Sealed record format.** `CipherRecord { version: Uint<8>, E: JubjubPoint, ct: Vector<5, Field> }`
 with `ct = [debtorId, sellerId, packFields(invoiceNo, amount, dueDate), salt, holderTag] + mask`,
