@@ -26,6 +26,14 @@ export type CipherShare = { version: bigint;
                             ct: bigint[]
                           };
 
+export type Certificate = { borrowerCommit: Uint8Array;
+                            lenderRef: Uint8Array;
+                            floor: bigint;
+                            count: bigint;
+                            validUntil: bigint;
+                            nullifiers: Uint8Array[]
+                          };
+
 export type Invoice = { debtorId: bigint;
                         sellerId: bigint;
                         invoiceNo: bigint;
@@ -58,6 +66,10 @@ export type Witnesses<PS> = {
                                                  goes_left: boolean
                                                }[]
                                        }];
+  certInvoices(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Invoice[]];
+  certUsed(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, boolean[]];
+  certHolderTags(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint[]];
+  certEphemerals(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint[]];
 }
 
 export type ImpureCircuits<PS> = {
@@ -70,6 +82,11 @@ export type ImpureCircuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
+                       lenderRef_0: Uint8Array,
+                       lenderNonce_0: Uint8Array,
+                       floor_0: bigint,
+                       validUntil_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
@@ -95,6 +112,11 @@ export type ProvableCircuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
+                       lenderRef_0: Uint8Array,
+                       lenderNonce_0: Uint8Array,
+                       floor_0: bigint,
+                       validUntil_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
@@ -119,8 +141,6 @@ export type PureCircuits = {
   ackNullifierOf(sk_0: Uint8Array, sellerId_0: bigint, invoiceNo_0: bigint): Uint8Array;
   holderTagOf(sk_0: Uint8Array, n_0: Uint8Array): bigint;
   sellerPayeeTagOf(sellerId_0: bigint, n_0: Uint8Array): bigint;
-  certIdOf(lenderRef_0: Uint8Array, lenderNonce_0: Uint8Array): Uint8Array;
-  borrowerCommitOf(sellerId_0: bigint, lenderNonce_0: Uint8Array): Uint8Array;
   fingerprint(inv_0: Invoice): Uint8Array;
   ackLeafFromFingerprint(f_0: Uint8Array): Uint8Array;
   nullifierFromFingerprint(f_0: Uint8Array): Uint8Array;
@@ -136,6 +156,11 @@ export type PureCircuits = {
   recordIdOf(n_0: Uint8Array, E_0: __compactRuntime.JubjubPoint): Uint8Array;
   requestIdOf(recordId_0: Uint8Array, caseRef_0: Uint8Array): Uint8Array;
   shareKeyOf(requestId_0: Uint8Array, index_0: bigint): Uint8Array;
+  certIdOf(lenderRef_0: Uint8Array, lenderNonce_0: Uint8Array): Uint8Array;
+  borrowerCommitOf(sellerId_0: bigint, lenderNonce_0: Uint8Array): Uint8Array;
+  poolCount(used_0: boolean[]): bigint;
+  poolTotal(amounts_0: bigint[]): bigint;
+  poolDistinct(used_0: boolean[], ns_0: Uint8Array[]): boolean;
 }
 
 export type Circuits<PS> = {
@@ -154,12 +179,6 @@ export type Circuits<PS> = {
   sellerPayeeTagOf(context: __compactRuntime.CircuitContext<PS>,
                    sellerId_0: bigint,
                    n_0: Uint8Array): __compactRuntime.CircuitResults<PS, bigint>;
-  certIdOf(context: __compactRuntime.CircuitContext<PS>,
-           lenderRef_0: Uint8Array,
-           lenderNonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
-  borrowerCommitOf(context: __compactRuntime.CircuitContext<PS>,
-                   sellerId_0: bigint,
-                   lenderNonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   fingerprint(context: __compactRuntime.CircuitContext<PS>, inv_0: Invoice): __compactRuntime.CircuitResults<PS, Uint8Array>;
   ackLeafFromFingerprint(context: __compactRuntime.CircuitContext<PS>,
                          f_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
@@ -192,6 +211,17 @@ export type Circuits<PS> = {
   shareKeyOf(context: __compactRuntime.CircuitContext<PS>,
              requestId_0: Uint8Array,
              index_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  certIdOf(context: __compactRuntime.CircuitContext<PS>,
+           lenderRef_0: Uint8Array,
+           lenderNonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  borrowerCommitOf(context: __compactRuntime.CircuitContext<PS>,
+                   sellerId_0: bigint,
+                   lenderNonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  poolCount(context: __compactRuntime.CircuitContext<PS>, used_0: boolean[]): __compactRuntime.CircuitResults<PS, bigint>;
+  poolTotal(context: __compactRuntime.CircuitContext<PS>, amounts_0: bigint[]): __compactRuntime.CircuitResults<PS, bigint>;
+  poolDistinct(context: __compactRuntime.CircuitContext<PS>,
+               used_0: boolean[],
+               ns_0: Uint8Array[]): __compactRuntime.CircuitResults<PS, boolean>;
   admitDebtor(context: __compactRuntime.CircuitContext<PS>, leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   admitFinancier(context: __compactRuntime.CircuitContext<PS>,
                  leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
@@ -201,6 +231,11 @@ export type Circuits<PS> = {
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
+                       lenderRef_0: Uint8Array,
+                       lenderNonce_0: Uint8Array,
+                       floor_0: bigint,
+                       validUntil_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   payInvoice(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   claimAsHolder(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
@@ -269,6 +304,13 @@ export type Ledger = {
     member(key_0: Uint8Array): boolean;
     lookup(key_0: Uint8Array): CipherRecord;
     [Symbol.iterator](): Iterator<[Uint8Array, CipherRecord]>
+  };
+  certificates: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): Certificate;
+    [Symbol.iterator](): Iterator<[Uint8Array, Certificate]>
   };
   requests: {
     isEmpty(): boolean;

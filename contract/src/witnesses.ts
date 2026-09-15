@@ -52,6 +52,12 @@ function ephemeral(ctx: Ctx): bigint {
   return ctx.privateState.call?.ephemeral ?? randomScalar();
 }
 
+/** Certificate slots always come as four; unused slots carry the zero invoice. */
+function require4<T>(value: [T, T, T, T] | undefined, witness: string): [T, T, T, T] {
+  if (!value) throw new Error(`witness ${witness}: privateState.call is missing the pool slots`);
+  return value;
+}
+
 export const witnesses: Witnesses<StockAndFoilPrivateState> = {
   localSecretKey: (ctx) => [ctx.privateState, ctx.privateState.secretKey],
   localScalar: (ctx) => [ctx.privateState, requireScalar(ctx)],
@@ -60,4 +66,11 @@ export const witnesses: Witnesses<StockAndFoilPrivateState> = {
   debtorPathFor: (ctx, leaf) => [ctx.privateState, resolvePath(ctx, 'debtors', 10, leaf)],
   financierPathFor: (ctx, leaf) => [ctx.privateState, resolvePath(ctx, 'financiers', 10, leaf)],
   ackPathFor: (ctx, leaf) => [ctx.privateState, resolvePath(ctx, 'acks', 16, leaf)],
+  certInvoices: (ctx) => [ctx.privateState, require4(ctx.privateState.call?.invoices, 'certInvoices')],
+  certUsed: (ctx) => [ctx.privateState, require4(ctx.privateState.call?.used, 'certUsed')],
+  certHolderTags: (ctx) => [ctx.privateState, require4(ctx.privateState.call?.holderTags, 'certHolderTags')],
+  certEphemerals: (ctx) => [
+    ctx.privateState,
+    ctx.privateState.call?.ephemerals ?? [randomScalar(), randomScalar(), randomScalar(), randomScalar()],
+  ],
 };

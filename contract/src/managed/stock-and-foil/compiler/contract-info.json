@@ -170,55 +170,6 @@
       }
     },
     {
-      "name": "certIdOf",
-      "pure": true,
-      "proof": false,
-      "arguments": [
-        {
-          "name": "lenderRef",
-          "type": {
-            "type-name": "Bytes",
-            "length": 32
-          }
-        },
-        {
-          "name": "lenderNonce",
-          "type": {
-            "type-name": "Bytes",
-            "length": 32
-          }
-        }
-      ],
-      "result-type": {
-        "type-name": "Bytes",
-        "length": 32
-      }
-    },
-    {
-      "name": "borrowerCommitOf",
-      "pure": true,
-      "proof": false,
-      "arguments": [
-        {
-          "name": "sellerId",
-          "type": {
-            "type-name": "Field"
-          }
-        },
-        {
-          "name": "lenderNonce",
-          "type": {
-            "type-name": "Bytes",
-            "length": 32
-          }
-        }
-      ],
-      "result-type": {
-        "type-name": "Bytes",
-        "length": 32
-      }
-    },
-    {
       "name": "fingerprint",
       "pure": true,
       "proof": false,
@@ -685,6 +636,129 @@
       }
     },
     {
+      "name": "certIdOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "lenderRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "lenderNonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "borrowerCommitOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "sellerId",
+          "type": {
+            "type-name": "Field"
+          }
+        },
+        {
+          "name": "lenderNonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "poolCount",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "used",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Boolean"
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Uint",
+        "maxval": 255
+      }
+    },
+    {
+      "name": "poolTotal",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "amounts",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Uint",
+              "maxval": 18446744073709551615
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Uint",
+        "maxval": 73786976294838206463
+      }
+    },
+    {
+      "name": "poolDistinct",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "used",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Boolean"
+            }
+          }
+        },
+        {
+          "name": "ns",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
       "name": "admitDebtor",
       "pure": false,
       "proof": true,
@@ -788,6 +862,46 @@
           "type": {
             "type-name": "Bytes",
             "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "certifyBorrowingBase",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "lenderRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "lenderNonce",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "floor",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        },
+        {
+          "name": "validUntil",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
           }
         }
       ],
@@ -1184,6 +1298,96 @@
           }
         ]
       }
+    },
+    {
+      "name": "certInvoices",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Vector",
+        "length": 4,
+        "type": {
+          "type-name": "Struct",
+          "name": "Invoice",
+          "elements": [
+            {
+              "name": "debtorId",
+              "type": {
+                "type-name": "Field"
+              }
+            },
+            {
+              "name": "sellerId",
+              "type": {
+                "type-name": "Field"
+              }
+            },
+            {
+              "name": "invoiceNo",
+              "type": {
+                "type-name": "Uint",
+                "maxval": 18446744073709551615
+              }
+            },
+            {
+              "name": "amount",
+              "type": {
+                "type-name": "Uint",
+                "maxval": 18446744073709551615
+              }
+            },
+            {
+              "name": "dueDate",
+              "type": {
+                "type-name": "Uint",
+                "maxval": 18446744073709551615
+              }
+            },
+            {
+              "name": "salt",
+              "type": {
+                "type-name": "Field"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "certUsed",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Vector",
+        "length": 4,
+        "type": {
+          "type-name": "Boolean"
+        }
+      }
+    },
+    {
+      "name": "certHolderTags",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Vector",
+        "length": 4,
+        "type": {
+          "type-name": "Field"
+        }
+      }
+    },
+    {
+      "name": "certEphemerals",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Vector",
+        "length": 4,
+        "type": {
+          "type-name": "Field"
+        }
+      }
     }
   ],
   "contracts": [
@@ -1421,8 +1625,70 @@
       }
     },
     {
-      "name": "requests",
+      "name": "certificates",
       "index": 12,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "Certificate",
+        "elements": [
+          {
+            "name": "borrowerCommit",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "lenderRef",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "floor",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 18446744073709551615
+            }
+          },
+          {
+            "name": "count",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 255
+            }
+          },
+          {
+            "name": "validUntil",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 18446744073709551615
+            }
+          },
+          {
+            "name": "nullifiers",
+            "type": {
+              "type-name": "Vector",
+              "length": 4,
+              "type": {
+                "type-name": "Bytes",
+                "length": 32
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "requests",
+      "index": 13,
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1462,7 +1728,7 @@
     },
     {
       "name": "shares",
-      "index": 13,
+      "index": 14,
       "exported": true,
       "storage": "Map",
       "key": {

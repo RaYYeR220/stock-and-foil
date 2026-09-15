@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Borrowing-base certificates. A certificate is a *pool offer*: the seller offers up to four
+// acknowledged invoices to one lender in a single transaction and proves the pool totals at
+// least `floor`. Each used slot becomes an ordinary offer, so the certificate locks the
+// collateral instead of only describing it.
+//
+// The stateful half of the circuit lives in the top-level contract, because ledger state
+// declared inside a Compact module is private to that module and would not appear in the
+// public ledger projection the SDK and the explorer read.
+pragma language_version >= 0.23.0;
+
+module BorrowingBase {
+  import CompactStandardLibrary;
+
+  /**
+   * What the public sees about a pool: its size, its floor, how long it is valid and the pledge
+   * nullifiers it locked (zero bytes for unused slots). `borrowerCommit` is only checkable by the
+   * lender who chose the nonce, so the borrower's identity stays private.
+   */
+  export struct Certificate {
+    borrowerCommit: Bytes<32>;
+    lenderRef: Bytes<32>;
+    floor: Uint<64>;
+    count: Uint<8>;
+    validUntil: Uint<64>;
+    nullifiers: Vector<4, Bytes<32>>;
+  }
+
+  struct BorrowerPreimage { domain: Bytes<32>; sellerId: Field; nonce: Bytes<32>; }
+
+  /** Ledger key of a certificate: H("cert", lenderRef, lenderNonce). */
+  export pure circuit certIdOf(lenderRef: Bytes<32>, lenderNonce: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:cert"), lenderRef, lenderNonce]);
+  }
+
+  /** H("borrower", sellerId, lenderNonce): the lender can test it, nobody else can invert it. */
+  export pure circuit borrowerCommitOf(sellerId: Field, lenderNonce: Bytes<32>): Bytes<32> {
+    return persistentHash<BorrowerPreimage>(
+      BorrowerPreimage { domain: pad(32, "snf:v1:borrower"), sellerId: sellerId, nonce: lenderNonce });
+  }
+
+  /** Number of slots in use. */
+  export pure circuit poolCount(used: Vector<4, Boolean>): Uint<8> {
+    return ((used[0] ? 1 : 0) + (used[1] ? 1 : 0) + (used[2] ? 1 : 0) + (used[3] ? 1 : 0)) as Uint<8>;
+  }
+
+  /** Face value of the pool; four Uint<64> amounts need two extra bits of headroom. */
+  export pure circuit poolTotal(amounts: Vector<4, Uint<64>>): Uint<66> {
+    return (amounts[0] + amounts[1] + amounts[2] + amounts[3]) as Uint<66>;
+  }
+
+  /** No invoice may be counted twice: used slots must have pairwise distinct nullifiers. */
+  export pure circuit poolDistinct(used: Vector<4, Boolean>, ns: Vector<4, Bytes<32>>): Boolean {
+    return (!(used[0] && used[1]) || ns[0] != ns[1])
+        && (!(used[0] && used[2]) || ns[0] != ns[2])
+        && (!(used[0] && used[3]) || ns[0] != ns[3])
+        && (!(used[1] && used[2]) || ns[1] != ns[2])
+        && (!(used[1] && used[3]) || ns[1] != ns[3])
+        && (!(used[2] && used[3]) || ns[2] != ns[3]);
+  }
+}

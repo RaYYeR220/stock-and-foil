@@ -55,14 +55,4 @@ module Identity {
       PayeeTagPreimage { domain: pad(32, "snf:v1:sellerpayee"), sellerId: sellerId, n: n }));
   }
 
-  /** Borrowing-base certificate id: H("cert", lenderRef, lenderNonce). */
-  export pure circuit certIdOf(lenderRef: Bytes<32>, lenderNonce: Bytes<32>): Bytes<32> {
-    return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:cert"), lenderRef, lenderNonce]);
-  }
-
-  /** Borrower commitment inside a certificate: only the lender who chose the nonce can test it. */
-  export pure circuit borrowerCommitOf(sellerId: Field, lenderNonce: Bytes<32>): Bytes<32> {
-    return persistentHash<PayeeTagPreimage>(
-      PayeeTagPreimage { domain: pad(32, "snf:v1:borrower"), sellerId: sellerId, n: lenderNonce });
-  }
 }

@@ -43,6 +43,8 @@ interface InvoiceModel {
 interface Model {
   time: bigint;
   start: bigint;
+  /** Certificates attempted so far; used to keep every lender nonce fresh. */
+  certs: number;
   invoices: InvoiceModel[];
 }
 
@@ -334,6 +336,92 @@ class Claim extends RegistryCommand {
   }
 }
 
+/**
+ * The borrowing-base certificate is a pool offer: it locks every chosen invoice to one lender in
+ * a single call, so the model has to predict the refusal of the *first* slot that fails.
+ */
+class Certify extends RegistryCommand {
+  constructor(
+    raw: number,
+    focus: boolean,
+    readonly mask: number,
+    readonly f: 'A' | 'B',
+    readonly days: bigint,
+    readonly greedy: boolean,
+  ) {
+    super(raw, focus);
+  }
+  protected wants(inv: InvoiceModel): boolean {
+    return inv.acked && inv.status !== 'SETTLED';
+  }
+  private free(inv: InvoiceModel, time: bigint): boolean {
+    return !(inv.status === 'PLEDGED' || (inv.status === 'OFFERED' && time < inv.expiry));
+  }
+  run(m: Model, s: Real): void {
+    const chosen = [0, 1, 2].filter((k) => (this.mask >> k) & 1);
+    const slots = this.focus
+      ? chosen.filter((k) => this.wants(m.invoices[k]!) && this.free(m.invoices[k]!, m.time))
+      : chosen;
+    const validUntil = m.time + this.days * DAY;
+    const total = slots.reduce((sum, k) => sum + m.invoices[k]!.amount, 0n);
+    const floor = this.greedy ? total + 1n : total;
+
+    let expected: string | null = null;
+    if (slots.length === 0) {
+      expected = 'EMPTY_POOL';
+    } else {
+      for (const k of slots) {
+        const inv = m.invoices[k]!;
+        if (!inv.acked) {
+          expected = 'NOT_ACKNOWLEDGED';
+          break;
+        }
+        if (validUntil > m.start + DUE_IN) {
+          expected = 'INVOICE_OVERDUE';
+          break;
+        }
+      }
+      if (!expected && this.greedy) expected = 'BELOW_FLOOR';
+      if (!expected) {
+        for (const k of slots) {
+          const inv = m.invoices[k]!;
+          if (inv.status === 'SETTLED') {
+            expected = 'ALREADY_SETTLED';
+            break;
+          }
+          if (!this.free(inv, m.time)) {
+            expected = 'ALREADY_ENCUMBERED';
+            break;
+          }
+        }
+      }
+    }
+
+    const financier = this.f === 'A' ? s.r.financierA : s.r.financierB;
+    const lenderNonce = new Uint8Array(32);
+    lenderNonce[0] = m.certs & 0xff;
+    m.certs += 1;
+    expectOutcome(this.toString(), expected, () =>
+      s.r.seller.certify(
+        slots.map((k) => ({ invoice: s.invoices[k]!, holderTag: financier.holderTag(s.nullifiers[k]!) })),
+        { lenderRef: new Uint8Array(32).fill(0x1d), lenderNonce, floor, validUntil },
+      ),
+    );
+    if (!expected) {
+      for (const k of slots) {
+        const inv = m.invoices[k]!;
+        inv.status = 'OFFERED';
+        inv.holder = this.f;
+        inv.expiry = validUntil;
+      }
+    }
+    checkLedger(m, s);
+  }
+  toString(): string {
+    return `Certify(${this.mask.toString(2)}${this.focus ? '*' : ''}, ${this.f}, +${this.days}d${this.greedy ? ', greedy' : ''})`;
+  }
+}
+
 class AdvanceTime extends RegistryCommand {
   constructor(readonly days: bigint) {
     super(0, false);
@@ -370,6 +458,9 @@ const commands = [
   fc
     .tuple(index, focus, fc.constantFrom('payee' as const, 'A' as const, 'B' as const, 'seller' as const))
     .map(([i, k, w]) => new Claim(i, k, w)),
+  fc
+    .tuple(index, focus, fc.integer({ min: 0, max: 7 }), financier, offerDays, fc.boolean())
+    .map(([i, k, mask, f, d, greedy]) => new Certify(i, k, mask, f, d, greedy)),
   days.map((d) => new AdvanceTime(d)),
 ];
 
@@ -396,11 +487,18 @@ const REQUIRED_COVERAGE = [
   'Claim:NOT_SETTLED',
   'Claim:NOT_PAYEE',
   'Claim:ALREADY_CLAIMED',
+  'Certify:OK',
+  'Certify:EMPTY_POOL',
+  'Certify:BELOW_FLOOR',
+  'Certify:NOT_ACKNOWLEDGED',
+  'Certify:INVOICE_OVERDUE',
+  'Certify:ALREADY_ENCUMBERED',
+  'Certify:ALREADY_SETTLED',
 ];
 
 it('random lifecycles agree with the reference model and keep the registry invariants', { timeout: 600_000 }, () => {
   fc.assert(
-    fc.property(fc.commands(commands, { maxCommands: 24, size: 'max' }), (cmds) => {
+    fc.property(fc.commands(commands, { maxCommands: 32, size: 'max' }), (cmds) => {
       fc.modelRun(() => {
         const r = setupRegistry();
         const invoices = [1n, 2n, 3n].map((no, k) =>
@@ -414,6 +512,7 @@ it('random lifecycles agree with the reference model and keep the registry invar
         const model: Model = {
           time: r.now,
           start: r.now,
+          certs: 0,
           invoices: invoices.map((inv) => ({
             acked: false,
             status: 'NONE',

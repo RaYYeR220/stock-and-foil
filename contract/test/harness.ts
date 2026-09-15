@@ -396,6 +396,39 @@ export function offered(r: Registry, financier?: Financier, o: Parameters<typeof
   return { inv, n };
 }
 
+export interface Pool {
+  invoices: Invoice[];
+  nullifiers: Bytes[];
+  lenderRef: Bytes;
+  lenderNonce: Bytes;
+  floor: bigint;
+  validUntil: bigint;
+}
+
+/** Acknowledges three invoices and locks them to one lender as a single borrowing-base pool. */
+export function borrowingBase(
+  r: Registry,
+  o: { financier?: Financier; floor?: bigint; validUntil?: bigint; amounts?: bigint[] } = {},
+): Pool {
+  const financier = o.financier ?? r.financierA;
+  const amounts = o.amounts ?? [100_000n, 200_000n, 300_000n];
+  const invoices = amounts.map((amount, k) => acknowledged(r, { invoiceNo: BigInt(k + 1), amount }));
+  const nullifiers = invoices.map((inv) => pure.nullifierOf(inv));
+  const pool: Pool = {
+    invoices,
+    nullifiers,
+    lenderRef: new Uint8Array(32).fill(0x1d),
+    lenderNonce: new Uint8Array(32).fill(0x2e),
+    floor: o.floor ?? 500_000n,
+    validUntil: o.validUntil ?? r.now + 30n * DAY,
+  };
+  r.seller.certify(
+    invoices.map((invoice, k) => ({ invoice, holderTag: financier.holderTag(nullifiers[k]!) })),
+    pool,
+  );
+  return pool;
+}
+
 /** Deploys a registry and admits debtor, debtor2, financier A and financier B. */
 export function setupRegistry(o: { now?: bigint; settlementColor?: Bytes } = {}): Registry {
   const r = deployRegistry(o);

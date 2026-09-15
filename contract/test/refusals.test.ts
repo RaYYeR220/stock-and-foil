@@ -294,6 +294,106 @@ describe('settlement refusals', () => {
   });
 });
 
+describe('borrowing-base certificate refusals', () => {
+  const LENDER_REF = new Uint8Array(32).fill(0x1d);
+  const NONCE = new Uint8Array(32).fill(0x2e);
+
+  /** Acknowledges `amounts.length` invoices and returns them with their holder tags for lender A. */
+  function pool(r: ReturnType<typeof setupRegistry>, amounts: bigint[]) {
+    return amounts.map((amount, k) => {
+      const invoice = acknowledged(r, { invoiceNo: BigInt(k + 1), amount });
+      return { invoice, holderTag: r.financierA.holderTag(pure.nullifierOf(invoice)) };
+    });
+  }
+
+  const certifyWith = (
+    r: ReturnType<typeof setupRegistry>,
+    slots: ReturnType<typeof pool>,
+    o: { floor?: bigint; validUntil?: bigint; lenderRef?: Uint8Array; lenderNonce?: Uint8Array } = {},
+  ) =>
+    r.seller.certify(slots, {
+      lenderRef: o.lenderRef ?? LENDER_REF,
+      lenderNonce: o.lenderNonce ?? NONCE,
+      floor: o.floor ?? 0n,
+      validUntil: o.validUntil ?? r.now + 30n * DAY,
+    });
+
+  it('EMPTY_POOL: a certificate must lock at least one invoice', () => {
+    const r = setupRegistry();
+    expectRefusal(() => certifyWith(r, []), 'EMPTY_POOL');
+    expect(r.ledger().certificates.size()).toBe(0n);
+  });
+
+  it('BELOW_FLOOR: the pool must be worth at least the floor it claims', () => {
+    const r = setupRegistry();
+    expectRefusal(() => certifyWith(r, pool(r, [100_000n, 200_000n]), { floor: 500_000n }), 'BELOW_FLOOR');
+    expect(r.ledger().pledges.size()).toBe(0n);
+  });
+
+  it('DUPLICATE_INVOICE: the same invoice cannot fill two slots', () => {
+    const r = setupRegistry();
+    const slots = pool(r, [100_000n]);
+    expectRefusal(() => certifyWith(r, [slots[0]!, slots[0]!], { floor: 200_000n }), 'DUPLICATE_INVOICE');
+  });
+
+  it('ALREADY_ENCUMBERED: a pool cannot include an invoice already pledged elsewhere', () => {
+    const r = setupRegistry();
+    const slots = pool(r, [100_000n, 200_000n]);
+    const taken = pure.nullifierOf(slots[1]!.invoice);
+    r.seller.offer(slots[1]!.invoice, r.financierB.holderTag(taken), r.now + 7n * DAY);
+    r.financierB.accept(taken);
+    expectRefusal(() => certifyWith(r, slots, { floor: 300_000n }), 'ALREADY_ENCUMBERED');
+    expect(r.ledger().pledges.size()).toBe(1n);
+  });
+
+  it('ALREADY_SETTLED: a settled invoice cannot back a new borrowing base', () => {
+    const r = setupRegistry();
+    const slots = pool(r, [100_000n]);
+    r.debtor.pay(slots[0]!.invoice);
+    expectRefusal(() => certifyWith(r, slots), 'ALREADY_SETTLED');
+  });
+
+  it('DUPLICATE_CERTIFICATE: one lender reference and nonce may only be used once', () => {
+    const r = setupRegistry();
+    const slots = pool(r, [100_000n, 200_000n, 300_000n]);
+    certifyWith(r, slots.slice(0, 2), { floor: 300_000n });
+    expectRefusal(() => certifyWith(r, slots.slice(2), { floor: 0n }), 'DUPLICATE_CERTIFICATE');
+    // The same lender with a fresh nonce is a new certificate.
+    certifyWith(r, slots.slice(2), { floor: 0n, lenderNonce: new Uint8Array(32).fill(0x2f) });
+    expect(r.ledger().certificates.size()).toBe(2n);
+  });
+
+  it('BAD_EXPIRY: a certificate cannot already be expired', () => {
+    const r = setupRegistry();
+    expectRefusal(() => certifyWith(r, pool(r, [100_000n]), { validUntil: r.now - DAY }), 'BAD_EXPIRY');
+  });
+
+  it('INVOICE_OVERDUE: a certificate cannot outlive the invoices backing it', () => {
+    const r = setupRegistry();
+    const slots = [
+      { invoice: acknowledged(r, { invoiceNo: 1n, amount: 100_000n, due: 10n * DAY }), holderTag: 0n },
+    ];
+    slots[0]!.holderTag = r.financierA.holderTag(pure.nullifierOf(slots[0]!.invoice));
+    expectRefusal(() => certifyWith(r, slots, { validUntil: r.now + 30n * DAY }), 'INVOICE_OVERDUE');
+  });
+
+  it('NOT_ACKNOWLEDGED: an invoice the debtor never acknowledged cannot back a certificate', () => {
+    const r = setupRegistry();
+    const forged = r.seller.issueInvoice({ debtor: r.debtor, invoiceNo: 9n, amount: 900_000n, dueDate: r.now + 90n * DAY });
+    const slots = [{ invoice: forged, holderTag: r.financierA.holderTag(pure.nullifierOf(forged)) }];
+    expectRefusal(() => certifyWith(r, slots), 'NOT_ACKNOWLEDGED');
+  });
+
+  it('NOT_INVOICE_OWNER: another seller cannot certify against these invoices', () => {
+    const r = setupRegistry();
+    const slots = pool(r, [100_000n]);
+    expectRefusal(
+      () => r.seller2.certify(slots, { lenderRef: LENDER_REF, lenderNonce: NONCE, floor: 0n, validUntil: r.now + 30n * DAY }),
+      'NOT_INVOICE_OWNER',
+    );
+  });
+});
+
 describe('disclosure refusals', () => {
   it('NOT_AUDITOR: only the holder of the auditor key can open a request', () => {
     const r = setupRegistry();

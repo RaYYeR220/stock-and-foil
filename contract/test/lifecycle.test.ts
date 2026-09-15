@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
+  borrowingBase,
   DAY,
   deployRegistry,
   hex,
@@ -243,5 +244,74 @@ describe('settlement', () => {
     const r = setupRegistry();
     const n = randomBytes32();
     expect(pure.sellerPayeeTagOf(r.seller.id, n)).not.toBe(r.financierA.holderTag(n));
+  });
+});
+
+describe('borrowing-base certificates', () => {
+  it('locks a pool of three invoices to one lender and publishes the certificate', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    const cert = r.ledger().certificates.lookup(pure.certIdOf(pool.lenderRef, pool.lenderNonce));
+    expect(cert.count).toBe(3n);
+    expect(cert.floor).toBe(pool.floor);
+    expect(cert.validUntil).toBe(pool.validUntil);
+    expect(hex(cert.lenderRef)).toBe(hex(pool.lenderRef));
+    expect(hex(cert.borrowerCommit)).toBe(hex(pure.borrowerCommitOf(r.seller.id, pool.lenderNonce)));
+    expect(cert.nullifiers.map(hex)).toEqual([...pool.nullifiers.map(hex), hex(new Uint8Array(32))]);
+
+    for (const n of pool.nullifiers) {
+      const p = r.ledger().pledges.lookup(n);
+      expect(p.status).toBe(PledgeStatus.OFFERED);
+      expect(p.expiry).toBe(pool.validUntil);
+      expect(p.holderTag).toBe(r.financierA.holderTag(n));
+    }
+    expect(r.ledger().records.size()).toBe(3n);
+  });
+
+  it('every slot of the pool opens under the disclosure key', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    pool.invoices.forEach((inv, k) => {
+      const rec = r.ledger().records.lookup(r.ledger().pledges.lookup(pool.nullifiers[k]!).recordId);
+      const opened = openRecord(rec, pure.mulPoint(rec.E, r.disclosureSk));
+      expect(opened.invoice).toEqual(inv);
+      expect(opened.holderTag).toBe(r.financierA.holderTag(pool.nullifiers[k]!));
+    });
+  });
+
+  it('the lender takes up every locked slot with the ordinary accept', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    for (const n of pool.nullifiers) r.financierA.accept(n);
+    for (const n of pool.nullifiers) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+  });
+
+  it('slots the lender never took up are re-offerable once the certificate expires', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    r.advance(31n * DAY);
+    const n = pool.nullifiers[0]!;
+    r.seller.offer(pool.invoices[0]!, r.financierB.holderTag(n), r.now + 7n * DAY);
+    r.financierB.accept(n);
+    expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+    expect(r.ledger().pledges.lookup(n).holderTag).toBe(r.financierB.holderTag(n));
+  });
+
+  it('a one-slot pool leaves the other three slots empty', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r, { invoiceNo: 1n, amount: 100_000n });
+    const n = pure.nullifierOf(inv);
+    const lenderRef = new Uint8Array(32).fill(0x1d);
+    const lenderNonce = new Uint8Array(32).fill(0x2e);
+    r.seller.certify([{ invoice: inv, holderTag: r.financierA.holderTag(n) }], {
+      lenderRef,
+      lenderNonce,
+      floor: 100_000n,
+      validUntil: r.now + 30n * DAY,
+    });
+    const cert = r.ledger().certificates.lookup(pure.certIdOf(lenderRef, lenderNonce));
+    expect(cert.count).toBe(1n);
+    expect(cert.nullifiers.map(hex)).toEqual([hex(n), ...Array(3).fill(hex(new Uint8Array(32)))]);
+    expect(r.ledger().pledges.size()).toBe(1n);
   });
 });

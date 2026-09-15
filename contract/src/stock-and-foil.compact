@@ -11,10 +11,12 @@ import CompactStandardLibrary;
 import "modules/Identity";
 import "modules/Invoice";
 import "modules/Cipher";
+import "modules/BorrowingBase";
 
 export { Invoice };
 export { operatorIdOf, debtorLeaf, debtorIdOf, sellerIdOf, financierLeaf, ackNullifierOf };
-export { holderTagOf, sellerPayeeTagOf, certIdOf, borrowerCommitOf };
+export { holderTagOf, sellerPayeeTagOf };
+export { Certificate, certIdOf, borrowerCommitOf, poolCount, poolTotal, poolDistinct };
 export { fingerprint, ackLeafFromFingerprint, nullifierFromFingerprint, ackLeafOf, nullifierOf, packFields };
 export { CipherRecord, CipherShare };
 export { cipherVersion, pubKeyOf, mulPoint, addPoints, identityPoint, maskOf, recordIdOf, requestIdOf, shareKeyOf };
@@ -63,6 +65,7 @@ export ledger ackNullifiers: Set<Bytes<32>>;
 
 export ledger pledges: Map<Bytes<32>, PledgeState>;
 export ledger records: Map<Bytes<32>, CipherRecord>;
+export ledger certificates: Map<Bytes<32>, Certificate>;
 export ledger requests: Map<Bytes<32>, DisclosureRequest>;
 export ledger shares: Map<Bytes<32>, CipherShare>;
 
@@ -76,6 +79,10 @@ witness callInvoice(): Invoice;
 witness debtorPathFor(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 witness financierPathFor(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 witness ackPathFor(leaf: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
+witness certInvoices(): Vector<4, Invoice>;
+witness certUsed(): Vector<4, Boolean>;
+witness certHolderTags(): Vector<4, Field>;
+witness certEphemerals(): Vector<4, Field>;
 
 constructor(opId: Bytes<32>, dPk: JubjubPoint, kPks: Vector<3, JubjubPoint>, aPk: JubjubPoint, color: Bytes<32>) {
   operatorId = disclose(opId);
@@ -148,8 +155,7 @@ circuit assertFree(n: Bytes<32>): [] {
 }
 
 /** Seals the invoice and the holder tag to the registry disclosure key and stores the record. */
-circuit writeRecord(n: Bytes<32>, inv: Invoice, holderTag: Field): Bytes<32> {
-  const e = ephemeralScalar();
+circuit sealRecord(n: Bytes<32>, inv: Invoice, holderTag: Field, e: Field): Bytes<32> {
   const E = ecMulGenerator(e);
   assert(E != identityPoint(), "BAD_EPHEMERAL");
   const S = ecMul(disclosurePk, e);
@@ -172,7 +178,7 @@ export circuit offer(holderTag: Field, expiry: Uint<64>): [] {
   assert(blockTimeLt(disclose(expiry)), "BAD_EXPIRY");
   assert(expiry <= inv.dueDate, "INVOICE_OVERDUE");
   assertFree(n);
-  const recordId = writeRecord(n, inv, holderTag);
+  const recordId = sealRecord(n, inv, holderTag, ephemeralScalar());
   pledges.insert(n, PledgeState { status: PledgeStatus.OFFERED,
                                   holderTag: disclose(holderTag),
                                   expiry: disclose(expiry),
@@ -204,6 +210,88 @@ export circuit release(n: Bytes<32>): [] {
   assert(p.status == PledgeStatus.PLEDGED, "NOT_PLEDGED");
   assert(p.holderTag == holderTagOf(localSecretKey(), k), "NOT_HOLDER");
   pledges.insert(k, PledgeState { ...p, status: PledgeStatus.RELEASED });
+}
+
+// ------------------------------------------------------------------------------------------
+// Borrowing-base certificates
+//
+// A certificate is a pool offer: up to four acknowledged invoices are locked to one lender at
+// once, with a proof that the pool is worth at least `floor`. Each used slot becomes an ordinary
+// offer expiring at `validUntil`, which the lender takes up with the normal `accept(n)`.
+// The slot-usage pattern and the locked nullifiers are public — that is inherent to proving the
+// pool is unencumbered — while the invoices, amounts, debtors and the borrower stay private.
+
+struct PoolSlot { n: Bytes<32>; amount: Uint<64>; }
+
+/** Pass 1: the seller owns each used invoice, the debtor acknowledged it, and it outlives the pool. */
+circuit checkSlot(inv: Invoice, used: Boolean, me: Field, validUntil: Uint<64>): PoolSlot {
+  const f = fingerprint(inv);
+  const leaf = ackLeafFromFingerprint(f);
+  const path = ackPathFor(leaf);
+  const root = merkleTreePathRoot<16, Bytes<32>>(path);
+  const u = disclose(used);
+  if (u) {
+    assert(me == inv.sellerId, "NOT_INVOICE_OWNER");
+    assert(path.leaf == leaf, "NOT_ACKNOWLEDGED");
+    assert(acks.checkRoot(disclose(root)), "NOT_ACKNOWLEDGED");
+    assert(validUntil <= inv.dueDate, "INVOICE_OVERDUE");
+  }
+  return PoolSlot { n: nullifierFromFingerprint(f), amount: u ? inv.amount : 0 };
+}
+
+/** Pass 2: turns one checked slot into an offer addressed to the lender, and reports its nullifier. */
+circuit lockSlot(inv: Invoice, used: Boolean, slot: PoolSlot, tag: Field, e: Field, validUntil: Uint<64>): Bytes<32> {
+  const u = disclose(used);
+  // Unused slots must carry the zero invoice: their nullifier is computed, never published.
+  const k = disclose(slot.n);
+  if (u) {
+    assertFree(k);
+    pledges.insert(k, PledgeState { status: PledgeStatus.OFFERED,
+                                    holderTag: disclose(tag),
+                                    expiry: disclose(validUntil),
+                                    recordId: sealRecord(k, inv, tag, e),
+                                    payeeTag: 0,
+                                    amount: 0,
+                                    claimed: false });
+  }
+  return u ? k : pad(32, "");
+}
+
+export circuit certifyBorrowingBase(lenderRef: Bytes<32>,
+                                    lenderNonce: Bytes<32>,
+                                    floor: Uint<64>,
+                                    validUntil: Uint<64>): [] {
+  assert(blockTimeLt(disclose(validUntil)), "BAD_EXPIRY");
+  const certId = certIdOf(disclose(lenderRef), disclose(lenderNonce));
+  assert(!certificates.member(certId), "DUPLICATE_CERTIFICATE");
+
+  const me = sellerIdOf(localSecretKey());
+  const invs = certInvoices();
+  const used = certUsed();
+  const count = poolCount(used);
+  assert(count > 0, "EMPTY_POOL");
+
+  const s0 = checkSlot(invs[0], used[0], me, validUntil);
+  const s1 = checkSlot(invs[1], used[1], me, validUntil);
+  const s2 = checkSlot(invs[2], used[2], me, validUntil);
+  const s3 = checkSlot(invs[3], used[3], me, validUntil);
+  // Distinctness and the floor are checked before anything is locked, so a pool that lists one
+  // invoice twice is refused as DUPLICATE_INVOICE rather than as a self-inflicted encumbrance.
+  assert(poolDistinct(used, [s0.n, s1.n, s2.n, s3.n]), "DUPLICATE_INVOICE");
+  assert(poolTotal([s0.amount, s1.amount, s2.amount, s3.amount]) >= floor, "BELOW_FLOOR");
+
+  const tags = certHolderTags();
+  const es = certEphemerals();
+  const ns = [lockSlot(invs[0], used[0], s0, tags[0], es[0], validUntil),
+              lockSlot(invs[1], used[1], s1, tags[1], es[1], validUntil),
+              lockSlot(invs[2], used[2], s2, tags[2], es[2], validUntil),
+              lockSlot(invs[3], used[3], s3, tags[3], es[3], validUntil)];
+  certificates.insert(certId, Certificate { borrowerCommit: disclose(borrowerCommitOf(me, disclose(lenderNonce))),
+                                            lenderRef: disclose(lenderRef),
+                                            floor: disclose(floor),
+                                            count: disclose(count),
+                                            validUntil: disclose(validUntil),
+                                            nullifiers: ns });
 }
 
 // ------------------------------------------------------------------------------------------
