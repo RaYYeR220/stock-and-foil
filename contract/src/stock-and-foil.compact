@@ -144,7 +144,7 @@ circuit acknowledgedNullifier(inv: Invoice): Bytes<32> {
   return disclose(nullifierFromFingerprint(f));
 }
 
-/** True when no live encumbrance exists: absent, released, or an offer nobody took up in time. */
+/** Refuses unless the invoice is free: absent, released, or an offer nobody took up in time. */
 circuit assertFree(n: Bytes<32>): [] {
   if (pledges.member(n)) {
     const p = pledges.lookup(n);
@@ -308,10 +308,10 @@ export circuit payInvoice(): [] {
   const n = acknowledgedNullifier(inv);
   const amount = disclose(inv.amount);
   const sellerPayee = disclose(sellerPayeeTagOf(inv.sellerId, n));
-  receiveUnshielded(settlementColor, amount);
   if (pledges.member(n)) {
     const p = pledges.lookup(n);
     assert(p.status != PledgeStatus.SETTLED, "ALREADY_SETTLED");
+    receiveUnshielded(settlementColor, amount);
     // A live pledge redirects the proceeds to its holder; an offer nobody took up, or a
     // released pledge, pays the seller.
     pledges.insert(n, PledgeState { ...p,
@@ -320,6 +320,7 @@ export circuit payInvoice(): [] {
                                     amount: amount,
                                     claimed: false });
   } else {
+    receiveUnshielded(settlementColor, amount);
     pledges.insert(n, PledgeState { status: PledgeStatus.SETTLED,
                                     holderTag: 0,
                                     expiry: 0,

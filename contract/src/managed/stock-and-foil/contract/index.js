@@ -884,21 +884,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('claimAsHolder',
                                      'argument 1 (as invoked from Typescript)',
-                                     'stock-and-foil.compact line 345 char 1',
+                                     'stock-and-foil.compact line 346 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(n_0.buffer instanceof ArrayBuffer && n_0.BYTES_PER_ELEMENT === 1 && n_0.length === 32)) {
           __compactRuntime.typeError('claimAsHolder',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 345 char 1',
+                                     'stock-and-foil.compact line 346 char 1',
                                      'Bytes<32>',
                                      n_0)
         }
         if (!(typeof(to_0) === 'object' && to_0.bytes.buffer instanceof ArrayBuffer && to_0.bytes.BYTES_PER_ELEMENT === 1 && to_0.bytes.length === 32)) {
           __compactRuntime.typeError('claimAsHolder',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 345 char 1',
+                                     'stock-and-foil.compact line 346 char 1',
                                      'struct UserAddress<bytes: Bytes<32>>',
                                      to_0)
         }
@@ -929,21 +929,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('claimAsSeller',
                                      'argument 1 (as invoked from Typescript)',
-                                     'stock-and-foil.compact line 349 char 1',
+                                     'stock-and-foil.compact line 350 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(n_0.buffer instanceof ArrayBuffer && n_0.BYTES_PER_ELEMENT === 1 && n_0.length === 32)) {
           __compactRuntime.typeError('claimAsSeller',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 349 char 1',
+                                     'stock-and-foil.compact line 350 char 1',
                                      'Bytes<32>',
                                      n_0)
         }
         if (!(typeof(to_0) === 'object' && to_0.bytes.buffer instanceof ArrayBuffer && to_0.bytes.BYTES_PER_ELEMENT === 1 && to_0.bytes.length === 32)) {
           __compactRuntime.typeError('claimAsSeller',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 349 char 1',
+                                     'stock-and-foil.compact line 350 char 1',
                                      'struct UserAddress<bytes: Bytes<32>>',
                                      to_0)
         }
@@ -974,21 +974,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('requestDisclosure',
                                      'argument 1 (as invoked from Typescript)',
-                                     'stock-and-foil.compact line 360 char 1',
+                                     'stock-and-foil.compact line 361 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(recordId_0.buffer instanceof ArrayBuffer && recordId_0.BYTES_PER_ELEMENT === 1 && recordId_0.length === 32)) {
           __compactRuntime.typeError('requestDisclosure',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 360 char 1',
+                                     'stock-and-foil.compact line 361 char 1',
                                      'Bytes<32>',
                                      recordId_0)
         }
         if (!(caseRef_0.buffer instanceof ArrayBuffer && caseRef_0.BYTES_PER_ELEMENT === 1 && caseRef_0.length === 32)) {
           __compactRuntime.typeError('requestDisclosure',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 360 char 1',
+                                     'stock-and-foil.compact line 361 char 1',
                                      'Bytes<32>',
                                      caseRef_0)
         }
@@ -1019,21 +1019,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('approveDisclosure',
                                      'argument 1 (as invoked from Typescript)',
-                                     'stock-and-foil.compact line 371 char 1',
+                                     'stock-and-foil.compact line 372 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(requestId_0.buffer instanceof ArrayBuffer && requestId_0.BYTES_PER_ELEMENT === 1 && requestId_0.length === 32)) {
           __compactRuntime.typeError('approveDisclosure',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 371 char 1',
+                                     'stock-and-foil.compact line 372 char 1',
                                      'Bytes<32>',
                                      requestId_0)
         }
         if (!(typeof(index_0) === 'bigint' && index_0 >= 0n && index_0 <= 255n)) {
           __compactRuntime.typeError('approveDisclosure',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'stock-and-foil.compact line 371 char 1',
+                                     'stock-and-foil.compact line 372 char 1',
                                      'Uint<0..256>',
                                      index_0)
         }
@@ -2884,21 +2884,6 @@ export class Contract {
     const n_0 = this._acknowledgedNullifier_0(context, partialProofData, inv_0);
     const amount_0 = inv_0.amount;
     const sellerPayee_0 = this._sellerPayeeTagOf_0(inv_0.sellerId, n_0);
-    this._receiveUnshielded_0(context,
-                              partialProofData,
-                              _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
-                                                                                        partialProofData,
-                                                                                        [
-                                                                                         { dup: { n: 0 } },
-                                                                                         { idx: { cached: false,
-                                                                                                  pushPath: false,
-                                                                                                  path: [
-                                                                                                         { tag: 'value',
-                                                                                                           value: { value: _descriptor_2.toValue(5n),
-                                                                                                                    alignment: _descriptor_2.alignment() } }] } },
-                                                                                         { popeq: { cached: false,
-                                                                                                    result: undefined } }]).value),
-                              amount_0);
     if (_descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                   partialProofData,
                                                                   [
@@ -2935,6 +2920,21 @@ export class Contract {
                                                                               { popeq: { cached: false,
                                                                                          result: undefined } }]).value);
       __compactRuntime.assert(p_0.status !== 3, 'ALREADY_SETTLED');
+      this._receiveUnshielded_0(context,
+                                partialProofData,
+                                _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                          partialProofData,
+                                                                                          [
+                                                                                           { dup: { n: 0 } },
+                                                                                           { idx: { cached: false,
+                                                                                                    pushPath: false,
+                                                                                                    path: [
+                                                                                                           { tag: 'value',
+                                                                                                             value: { value: _descriptor_2.toValue(5n),
+                                                                                                                      alignment: _descriptor_2.alignment() } }] } },
+                                                                                           { popeq: { cached: false,
+                                                                                                      result: undefined } }]).value),
+                                amount_0);
       const tmp_0 = { status: 3,
                       holderTag: p_0.holderTag,
                       expiry: p_0.expiry,
@@ -2960,6 +2960,21 @@ export class Contract {
                                          { ins: { cached: false, n: 1 } },
                                          { ins: { cached: true, n: 1 } }]);
     } else {
+      this._receiveUnshielded_0(context,
+                                partialProofData,
+                                _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                          partialProofData,
+                                                                                          [
+                                                                                           { dup: { n: 0 } },
+                                                                                           { idx: { cached: false,
+                                                                                                    pushPath: false,
+                                                                                                    path: [
+                                                                                                           { tag: 'value',
+                                                                                                             value: { value: _descriptor_2.toValue(5n),
+                                                                                                                      alignment: _descriptor_2.alignment() } }] } },
+                                                                                           { popeq: { cached: false,
+                                                                                                      result: undefined } }]).value),
+                                amount_0);
       const tmp_1 = { status: 3,
                       holderTag: 0n,
                       expiry: 0n,
