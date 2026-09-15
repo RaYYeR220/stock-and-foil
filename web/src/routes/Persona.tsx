@@ -4,7 +4,7 @@
 // it actually has — the aside on every page says what this party can see and what it cannot, and
 // the actions are the circuits that party is allowed to call.
 import { NavLink, Navigate, useParams } from 'react-router-dom';
-import { KeyValues, SectionOpener } from '../components/ui.js';
+import { KeyValues, SectionOpener, useTitle } from '../components/ui.js';
 import { PERSONAS, personaMeta, type PersonaId } from '../lib/world.js';
 import { useRegistry } from '../state/registry.js';
 import { DebtorWork, OperatorWork } from './work/parties.js';
@@ -19,6 +19,19 @@ export function Persona() {
   const { view } = useRegistry();
   if (!isPersona(persona)) return <Navigate to="/app/operator" replace />;
   const meta = personaMeta(persona);
+  return <Workspace meta={meta} persona={persona} view={view} />;
+}
+
+function Workspace({
+  meta,
+  persona,
+  view,
+}: {
+  meta: ReturnType<typeof personaMeta>;
+  persona: PersonaId;
+  view: ReturnType<typeof useRegistry>['view'];
+}) {
+  useTitle(meta.name);
 
   return (
     <>
@@ -35,7 +48,7 @@ export function Persona() {
           <i aria-hidden="true" />
           {meta.role}
         </p>
-        <SectionOpener title={`${meta.name}.`} small dek={meta.summary} />
+        <SectionOpener title={`${meta.name}.`} level="h1" small dek={meta.summary} />
       </div>
 
       <div className="workspace">

@@ -5,7 +5,7 @@
 // it never turns a local devnet into a public one, and it never claims an audit.
 import { Link } from 'react-router-dom';
 import { Footer, Topbar } from '../components/chrome.js';
-import { KeyValues, SectionOpener } from '../components/ui.js';
+import { KeyValues, SectionOpener, useTitle } from '../components/ui.js';
 import {
   DEPLOYMENTS,
   EVIDENCE,
@@ -43,6 +43,7 @@ function TxLink({ network, txId, deployment }: { network: string; txId: string; 
 }
 
 export function Proof() {
+  useTitle('Proof');
   return (
     <>
       <a className="skip" href="#main">
@@ -58,6 +59,7 @@ export function Proof() {
             </p>
             <SectionOpener
               title="Show your working."
+              level="h1"
               small
               dek="Generated from the files the command-line tool wrote when it deployed the contract and ran the scenario against it. Nothing on this page is typed by hand, and a run on a local devnet is labelled as one."
             />

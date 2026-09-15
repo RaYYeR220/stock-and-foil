@@ -3,7 +3,7 @@
 // The small parts every working surface is built from: outcome states (a refusal is a designed
 // state, never a raw error), labelled fields, key/value record rows and the tally strip that draws
 // a record from its own commitment.
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { REFUSAL_MESSAGES } from '../lib/sdk.js';
 import { ms } from '../lib/format.js';
 import { notches } from '../lib/press.js';
@@ -139,16 +139,42 @@ export function KeyValues({ rows }: { rows: Array<{ label: string; value: ReactN
   );
 }
 
-export function SectionOpener({ title, dek, small }: { title: string; dek?: ReactNode; small?: boolean }) {
+/**
+ * A section opener: display type with a pink ghost a few pixels out of register, over a halftone
+ * dot rule. `level` is `h1` when the opener is the page's own title, so every page has one.
+ */
+export function SectionOpener({
+  title,
+  dek,
+  small,
+  level = 'h2',
+}: {
+  title: string;
+  dek?: ReactNode;
+  small?: boolean;
+  level?: 'h1' | 'h2';
+}) {
+  const Heading = level;
   return (
     <>
       <div className={small ? 'opener opener--sm' : 'opener'}>
-        <h2 data-ghost={title}>{title}</h2>
+        <Heading data-ghost={title}>{title}</Heading>
         {dek ? <p className="dek">{dek}</p> : null}
       </div>
       <hr className={small ? 'dotrule dotrule--tight' : 'dotrule'} />
     </>
   );
+}
+
+/** Sets the document title for a route, so tab lists and screen readers name the page. */
+export function useTitle(title: string): void {
+  useEffect(() => {
+    const previous = document.title;
+    document.title = `${title} — Stock & Foil`;
+    return () => {
+      document.title = previous;
+    };
+  }, [title]);
 }
 
 export type StripState = 'none' | 'acknowledged' | 'encumbered' | 'settled';

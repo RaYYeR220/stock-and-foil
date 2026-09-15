@@ -4,7 +4,7 @@
 // derived from it. Nothing on this page is privileged — it is built from the same `publicState()`
 // any observer can read.
 import { encumbranceOf } from '../lib/sdk.js';
-import { KeyValues, SectionOpener, TallyStrip } from '../components/ui.js';
+import { KeyValues, SectionOpener, TallyStrip, useTitle } from '../components/ui.js';
 import { day, money, shortField, shortHex } from '../lib/format.js';
 import { useRegistry } from '../state/registry.js';
 
@@ -16,6 +16,7 @@ const STATUS_TAG: Record<string, string> = {
 };
 
 export function Ledger() {
+  useTitle('Public ledger');
   const { view, now } = useRegistry();
   if (!view) return null;
   const { counts } = view;
@@ -29,6 +30,7 @@ export function Ledger() {
         </p>
         <SectionOpener
           title="What the chain sees."
+          level="h1"
           small
           dek="Marks, not documents. Every value below is readable by anyone with the contract address, and none of it can be turned back into an invoice, a party or a position."
         />

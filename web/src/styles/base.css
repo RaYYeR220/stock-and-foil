@@ -256,6 +256,7 @@ ol {
 .opener {
   margin-bottom: var(--s5);
 }
+.opener h1,
 .opener h2 {
   position: relative;
   display: inline-block;
@@ -266,6 +267,7 @@ ol {
   line-height: 0.94;
   letter-spacing: -0.026em;
 }
+.opener h1::before,
 .opener h2::before {
   content: attr(data-ghost);
   position: absolute;
@@ -282,6 +284,7 @@ ol {
   font-size: 18px;
   line-height: 1.56;
 }
+.opener--sm h1,
 .opener--sm h2 {
   font-size: clamp(27px, 3.2vw, 40px);
   font-variation-settings: 'opsz' 40;

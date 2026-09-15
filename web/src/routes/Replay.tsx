@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { findPledge, isRefusal, REFUSAL_MESSAGES, toHex, type Refusal } from '../lib/sdk.js';
-import { KeyValues, SectionOpener, TallyStrip, type StripState } from '../components/ui.js';
+import { KeyValues, SectionOpener, TallyStrip, useTitle, type StripState } from '../components/ui.js';
 import { day, money, ms, shortField, shortHex } from '../lib/format.js';
 import { REPLAY_STEPS, type Fact } from '../lib/replay.js';
 import { personaMeta, type WorldSnapshot } from '../lib/world.js';
@@ -93,6 +93,7 @@ function RecordPanel() {
 }
 
 export function Replay() {
+  useTitle('Guided replay');
   const { world, refresh } = useRegistry();
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<Record<string, StepResult>>({});
@@ -214,6 +215,7 @@ export function Replay() {
         </p>
         <SectionOpener
           title="The First Brands replay."
+          level="h1"
           small
           dek={`${REPLAY_STEPS.length} steps through one receivable: acknowledged, offered, pledged, paid and disclosed — with the frauds that broke First Brands refused on the way. Each step is a real circuit call in this tab, and every refusal is the contract's own assert, not a message this page invented.`}
         />
