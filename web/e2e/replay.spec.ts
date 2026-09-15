@@ -69,6 +69,13 @@ test('the guided replay refuses the three frauds and opens a verified disclosure
   await expect(facts).toContainText('$2,300.00');
 
   await expect(page.locator('.progress')).toContainText(`${stepCount} of ${stepCount} run`);
+
+  // The replay admitted each party exactly once: step one starts from the contract as deployed.
+  await page.getByRole('link', { name: 'Public ledger', exact: true }).click();
+  await expect(page.locator('.counts div').nth(0)).toContainText('1Debtors');
+  await expect(page.locator('.counts div').nth(1)).toContainText('2Financiers');
+  await expect(page.locator('.counts div').nth(2)).toContainText('3Acknowledgments');
+
   expect(consoleErrors, `console errors: ${consoleErrors.join(' | ')}`).toHaveLength(0);
 });
 
