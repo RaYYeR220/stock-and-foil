@@ -49,6 +49,24 @@ export const EVIDENCE_DIR = join(CLI_DIR, 'evidence');
 /** Compiled proving keys and ZKIR, as the ZK config provider expects them. */
 export const ZK_ASSETS_PATH = join(REPO_ROOT, 'contract', 'src', 'managed', 'stock-and-foil');
 
+/**
+ * Where to read `keys/` and `zkir/` from. Defaults to the compiler's output directory, and can be
+ * pointed elsewhere with `--zk-assets` or `MIDNIGHT_ZK_ASSETS` — useful when the artifacts are
+ * staged somewhere else (the web app serves its own copy) or when a concurrent `compile:fast`,
+ * which writes no proving keys, would otherwise pull them out from under a long run.
+ */
+export function zkAssetsPath(args: Args): string {
+  const path = flagValue(args, 'zk-assets') ?? process.env.MIDNIGHT_ZK_ASSETS ?? ZK_ASSETS_PATH;
+  const keys = join(path, 'keys');
+  if (!existsSync(keys) || readdirSync(keys).filter((n) => n.endsWith('.verifier')).length === 0) {
+    throw new UsageError(
+      `no proving keys under ${keys}. Run \`npm run compile\` (the full build; \`compile:fast\` ` +
+        'skips the keys), or point --zk-assets at a directory that has keys/ and zkir/.',
+    );
+  }
+  return path;
+}
+
 export const keysPath = (network: ChainNetwork): string => join(SECRETS_DIR, `${network}-keys.json`);
 export const runStatePath = (network: ChainNetwork): string => join(SECRETS_DIR, `${network}-scenario.json`);
 export const deploymentPath = (network: ChainNetwork): string => join(DEPLOYMENTS_DIR, `${network}.json`);

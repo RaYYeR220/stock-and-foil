@@ -42,7 +42,7 @@ import {
   settlementColorHex,
   UsageError,
   writeJson,
-  ZK_ASSETS_PATH,
+  zkAssetsPath,
   type Args,
   type DeploymentFile,
   type RegistryKeyMaterial,
@@ -55,6 +55,8 @@ export interface WalletSession {
   /** Transaction ids as they were submitted. A staged deploy produces seven. */
   submitted: string[];
   keys: RegistryKeyMaterial;
+  /** Directory the proving keys and ZKIR were read from. */
+  assets: string;
   close(): Promise<void>;
 }
 
@@ -66,9 +68,7 @@ export interface WalletSession {
  * maintenance interface, which does not hand their ids back.
  */
 export async function openWallet(args: Args, network: ChainNetwork): Promise<WalletSession> {
-  if (!existsSync(ZK_ASSETS_PATH)) {
-    throw new UsageError(`no compiled contract at ${ZK_ASSETS_PATH}; run: npm run compile`);
-  }
+  const assets = zkAssetsPath(args);
   const keys = loadRegistryKeys(network);
   const mnemonic = loadMnemonic(args);
 
@@ -97,7 +97,7 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
   const providers = createProviders({
     network,
     wallet: recording,
-    zkConfigProvider: nodeZkConfigProvider(ZK_ASSETS_PATH),
+    zkConfigProvider: nodeZkConfigProvider(assets),
     privateStateProvider: levelPrivateState({
       path: privateStatePath(network),
       password: privateStatePassword(),
@@ -106,7 +106,7 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
     webSocket: globalThis.WebSocket,
   });
 
-  return { wallet, providers, submitted, keys, close: () => wallet.close() };
+  return { wallet, providers, submitted, keys, assets, close: () => wallet.close() };
 }
 
 export async function deploy(args: Args): Promise<number> {
@@ -124,7 +124,7 @@ export async function deploy(args: Args): Promise<number> {
     const backend = await NetworkBackend.deploy({
       network,
       providers: session.providers,
-      compiledAssetsPath: ZK_ASSETS_PATH,
+      compiledAssetsPath: session.assets,
       constructorArgs: session.keys.constructorArgs,
       operator: session.keys.operator,
       verifierKeysPerTx: perTx,
@@ -189,7 +189,7 @@ export async function connectDeployed(
   const backend = await NetworkBackend.connect({
     network,
     providers: session.providers,
-    compiledAssetsPath: ZK_ASSETS_PATH,
+    compiledAssetsPath: session.assets,
     contractAddress,
   });
   return { session, backend };
