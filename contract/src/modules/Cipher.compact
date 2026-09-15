@@ -58,7 +58,15 @@ module Cipher {
     return transientHash<Vector<3, Field>>([jubjubPointX(S), jubjubPointY(S), j]);
   }
 
-  /** Ledger key of a sealed record: H("record", N, E). Fresh per offer, so records are append-only. */
+  /**
+   * Ledger key of a sealed record: H("record", N, E).
+   *
+   * Records accumulate only as long as every offer uses a fresh sealing scalar, which the circuit
+   * cannot check: `e` is a witness and freshness is not a provable property. Re-offering the same
+   * receivable with the same `e` lands on this same key and replaces the earlier ciphertext. The
+   * SDK always draws a fresh scalar, and `reusedSealingKeys` finds a repeat on the ledger, because
+   * `E` is stored in the clear. See docs/THREAT-MODEL.md.
+   */
   export pure circuit recordIdOf(n: Bytes<32>, E: JubjubPoint): Bytes<32> {
     return persistentHash<RecordIdPreimage>(
       RecordIdPreimage { domain: pad(32, "snf:v1:record"), n: n, ex: jubjubPointX(E), ey: jubjubPointY(E) });

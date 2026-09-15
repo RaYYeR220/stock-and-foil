@@ -84,7 +84,33 @@ witness certUsed(): Vector<4, Boolean>;
 witness certHolderTags(): Vector<4, Field>;
 witness certEphemerals(): Vector<4, Field>;
 
+/** ℓ − 1, ℓ = the Jubjub subgroup order: `ecMul(P, negOne())` is −P, which needs no field inverse. */
+pure circuit negOne(): Field {
+  return 6554484396890773809930967563523245729705921265872317281365359162392183254198 as Field;
+}
+
+/**
+ * The whole confidentiality story rests on the setup ceremony, and a wrong ceremony fails
+ * silently: a degenerate or duplicated key lets one party open every record alone, and an
+ * inconsistent sharing means no two keyholders can ever open one — which is only discovered when
+ * an investigation needs it. Every key is public, so the constructor checks all of it at deploy.
+ * These asserts fire while the deploy transaction is built; they are not circuit refusal codes.
+ */
 constructor(opId: Bytes<32>, dPk: JubjubPoint, kPks: Vector<3, JubjubPoint>, aPk: JubjubPoint, color: Bytes<32>) {
+  const id = identityPoint();
+  assert(dPk != id, "BAD_DISCLOSURE_KEY");
+  assert(aPk != id && aPk != dPk, "BAD_AUDITOR_KEY");
+  assert(kPks[0] != id && kPks[1] != id && kPks[2] != id, "BAD_KEYHOLDER_KEY");
+  // A keyholder key equal to the disclosure key means a constant sharing (every holder has the
+  // master key); equal to the auditor key means the auditor counts twice towards the threshold.
+  assert(kPks[0] != dPk && kPks[1] != dPk && kPks[2] != dPk, "BAD_KEYHOLDER_KEY");
+  assert(kPks[0] != aPk && kPks[1] != aPk && kPks[2] != aPk, "BAD_KEYHOLDER_KEY");
+  // Feldman consistency in point form. With f(x) = sk + a·x and pk_i = f(i)·G,
+  // 2·pk_1 − pk_2 = sk·G and 3·pk_1 − pk_3 = 2·sk·G; together they pin all three shares to one
+  // line through the disclosure key, so any two of them really do reconstruct it.
+  assert(addPoints(mulPoint(kPks[0], 2), mulPoint(kPks[1], negOne())) == dPk, "BAD_KEY_SHARING");
+  assert(addPoints(mulPoint(kPks[0], 3), mulPoint(kPks[2], negOne())) == mulPoint(dPk, 2), "BAD_KEY_SHARING");
+
   operatorId = disclose(opId);
   disclosurePk = disclose(dPk);
   keyholderPks = disclose(kPks);
@@ -354,9 +380,16 @@ export circuit claimAsSeller(n: Bytes<32>, to: UserAddress): [] {
 // ------------------------------------------------------------------------------------------
 // Threshold disclosure
 //
-// Nobody holds the disclosure key: it was split 2-of-3 at the setup ceremony and discarded.
+// Nobody holds the disclosure key: it was split 2-of-3 at the setup ceremony and discarded, and
+// the constructor proves that split against the published keys before the registry exists.
 // A keyholder never reveals its share — it publishes D_i = s_i·E sealed to the auditor, and the
 // auditor Lagrange-combines two of those points into S = sk·E to open exactly one record.
+//
+// D_i depends on the record's E, not on the request that asked for it, so two requests naming one
+// record with one approval each are as good as one request with two: the 2-of-3 threshold holds,
+// but a request's `approvals` vector is not by itself the record's disclosure state. Count it per
+// record (`recordDisclosureState` in the SDK). `threshold` is stored for readers; the policy is
+// enforced by the sharing, not by a count on chain.
 
 export circuit requestDisclosure(recordId: Bytes<32>, caseRef: Bytes<32>): [] {
   assert(ecMulGenerator(localScalar()) == auditorPk, "NOT_AUDITOR");

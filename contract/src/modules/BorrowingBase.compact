@@ -15,8 +15,8 @@ module BorrowingBase {
 
   /**
    * What the public sees about a pool: its size, its floor, how long it is valid and the pledge
-   * nullifiers it locked (zero bytes for unused slots). `borrowerCommit` is only checkable by the
-   * lender who chose the nonce, so the borrower's identity stays private.
+   * nullifiers it locked (zero bytes for unused slots). The borrower stays private only as long as
+   * `lenderNonce` does — see `borrowerCommitOf`.
    */
   export struct Certificate {
     borrowerCommit: Bytes<32>;
@@ -34,7 +34,14 @@ module BorrowingBase {
     return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:cert"), lenderRef, lenderNonce]);
   }
 
-  /** H("borrower", sellerId, lenderNonce): the lender can test it, nobody else can invert it. */
+  /**
+   * H("borrower", sellerId, lenderNonce): a test, not a one-way name. Whoever holds the nonce can
+   * confirm or exclude any candidate `sellerId`, and `sellerId` is held by every debtor of that
+   * seller. The nonce is therefore the only thing keeping the borrower private, and the
+   * certificate's own ledger key is H("cert", lenderRef, lenderNonce) with a public `lenderRef`:
+   * a guessable nonce is recoverable from that key by brute force. Lenders must issue 32
+   * uniformly random bytes (`FinancierClient.newLenderNonce`). See docs/PRIVACY-BOUNDARY.md.
+   */
   export pure circuit borrowerCommitOf(sellerId: Field, lenderNonce: Bytes<32>): Bytes<32> {
     return persistentHash<BorrowerPreimage>(
       BorrowerPreimage { domain: pad(32, "snf:v1:borrower"), sellerId: sellerId, nonce: lenderNonce });

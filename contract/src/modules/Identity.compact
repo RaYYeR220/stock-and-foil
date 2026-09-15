@@ -49,7 +49,17 @@ module Identity {
     return degradeToTransient(persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:holder"), sk, n]));
   }
 
-  /** Payee tag of an unpledged invoice: H("sellerpayee", sellerId, N). Only the seller can recompute it. */
+  /**
+   * Payee tag of an unpledged invoice: H("sellerpayee", sellerId, N). Only the holder of the
+   * seller's secret can *claim* against it — `claimAsSeller` derives `sellerId` from `sellerSk`.
+   *
+   * It is not unlinkable, though, and deliberately cannot be: the debtor pays through
+   * `payInvoice` and has to be able to compute the seller's payee tag from what an invoice
+   * carries, so the tag is keyed by `sellerId` rather than by a secret. `N` is public, so anyone
+   * already holding a `sellerId` — every debtor of that seller, and the auditor after any opened
+   * record — can recognise that seller's settled-but-unfinanced receivables on the ledger. A
+   * holder tag, by contrast, is keyed by `finSk` and stays unlinkable. See docs/PRIVACY-BOUNDARY.md.
+   */
   export pure circuit sellerPayeeTagOf(sellerId: Field, n: Bytes<32>): Field {
     return degradeToTransient(persistentHash<PayeeTagPreimage>(
       PayeeTagPreimage { domain: pad(32, "snf:v1:sellerpayee"), sellerId: sellerId, n: n }));
