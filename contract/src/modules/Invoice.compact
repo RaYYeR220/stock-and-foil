@@ -41,4 +41,14 @@ module Invoice {
   export pure circuit nullifierOf(inv: Invoice): Bytes<32> {
     return nullifierFromFingerprint(fingerprint(inv));
   }
+
+  /**
+   * Packs the three Uint<64> invoice fields into one Field so a sealed record needs 5 slots
+   * instead of 7: invoiceNo·2^128 + amount·2^64 + dueDate (< 2^192, lossless).
+   */
+  export pure circuit packFields(invoiceNo: Uint<64>, amount: Uint<64>, dueDate: Uint<64>): Field {
+    return (invoiceNo as Field) * (340282366920938463463374607431768211456 as Field)
+         + (amount as Field) * (18446744073709551616 as Field)
+         + (dueDate as Field);
+  }
 }

@@ -55,6 +55,23 @@ export function expectRefusal(fn: () => unknown, code: string): void {
   expect(refusalOf(fn)).toBe(code);
 }
 
+export const MASK64 = (1n << 64n) - 1n;
+export const unpack = (packed: bigint) => ({
+  invoiceNo: packed >> 128n,
+  amount: (packed >> 64n) & MASK64,
+  dueDate: packed & MASK64,
+});
+
+/** Removes the ECDH masks of a sealed record given the shared point S (= sk·E). */
+export function openRecord(record: { E: Point; ct: bigint[] }, S: Point): { invoice: Invoice; holderTag: bigint } {
+  const f = record.ct.map((c, j) => modP(c - pure.maskOf(S, BigInt(j))));
+  const u = unpack(f[2]!);
+  return {
+    invoice: { debtorId: f[0]!, sellerId: f[1]!, invoiceNo: u.invoiceNo, amount: u.amount, dueDate: u.dueDate, salt: f[3]! },
+    holderTag: f[4]!,
+  };
+}
+
 export interface DeployParams {
   operatorSk: Bytes;
   disclosurePk: Point;
@@ -293,6 +310,31 @@ export function deployRegistry(o: { now?: bigint; settlementColor?: Bytes } = {}
   r.advance = (s) => h.advance(s);
   r.setTime = (t) => h.setTime(t);
   return r;
+}
+
+/** Seller issues an invoice to `debtor` (default: r.debtor) and the debtor acknowledges it. */
+export function acknowledged(
+  r: Registry,
+  o: { debtor?: Debtor; seller?: Seller; invoiceNo?: bigint; amount?: bigint; due?: bigint } = {},
+): Invoice {
+  const seller = o.seller ?? r.seller;
+  const debtor = o.debtor ?? r.debtor;
+  const inv = seller.issueInvoice({
+    debtor,
+    invoiceNo: o.invoiceNo ?? 1001n,
+    amount: o.amount ?? 230_000n,
+    dueDate: r.now + (o.due ?? 90n * DAY),
+  });
+  debtor.acknowledge(inv);
+  return inv;
+}
+
+/** Acknowledged invoice offered to `financier` (default: A) with a 7-day expiry. */
+export function offered(r: Registry, financier?: Financier, o: Parameters<typeof acknowledged>[1] = {}) {
+  const inv = acknowledged(r, o);
+  const n = pure.nullifierOf(inv);
+  (o?.seller ?? r.seller).offer(inv, (financier ?? r.financierA).holderTag(n), r.now + 7n * DAY);
+  return { inv, n };
 }
 
 /** Deploys a registry and admits debtor, debtor2, financier A and financier B. */

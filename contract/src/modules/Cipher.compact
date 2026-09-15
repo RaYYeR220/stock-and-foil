@@ -1,12 +1,77 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Jubjub curve helpers shared by the contract and the SDK (identical maths on and off chain).
+// In-circuit ECDH sealing and the Jubjub helpers shared by the contract and the SDK
+// (identical maths on and off chain).
+//
+// A record is sealed to the registry disclosure key: a fresh scalar e gives E = e·G and
+// S = e·disclosurePk; every plaintext field is masked with `maskOf(S, j)`. The mask is a
+// Poseidon (`transientHash`) image, which is uniform over the whole field — a
+// `degradeToTransient(persistentHash(...))` mask is < 2^248 and would leak the high bits of
+// 248-bit plaintexts such as identities and tags. Poseidon is not promised to be stable across
+// platform upgrades, so every sealed value carries `cipherVersion()`.
 pragma language_version >= 0.23.0;
 
 module Cipher {
   import CompactStandardLibrary;
 
+  /** Sealed pledge record: ct = [debtorId, sellerId, pack(invoiceNo, amount, dueDate), salt, holderTag] + masks. */
+  export struct CipherRecord {
+    version: Uint<8>;
+    E: JubjubPoint;
+    ct: Vector<5, Field>;
+  }
+
+  /** Sealed decryption share: ct = [D.x, D.y] + masks, sealed to the auditor key. */
+  export struct CipherShare {
+    version: Uint<8>;
+    E2: JubjubPoint;
+    ct: Vector<2, Field>;
+  }
+
+  struct RecordIdPreimage { domain: Bytes<32>; n: Bytes<32>; ex: Field; ey: Field; }
+  struct ShareKeyPreimage { domain: Bytes<32>; requestId: Bytes<32>; index: Uint<8>; }
+
+  /** Mask construction version carried by every sealed value on the ledger. */
+  export pure circuit cipherVersion(): Uint<8> {
+    return 1;
+  }
+
   export pure circuit pubKeyOf(k: Field): JubjubPoint {
     return ecMulGenerator(k);
+  }
+
+  export pure circuit mulPoint(P: JubjubPoint, k: Field): JubjubPoint {
+    return ecMul(P, k);
+  }
+
+  export pure circuit addPoints(P: JubjubPoint, Q: JubjubPoint): JubjubPoint {
+    return ecAdd(P, Q);
+  }
+
+  /** The curve identity; a sealed value whose ephemeral point is the identity has no secrecy. */
+  export pure circuit identityPoint(): JubjubPoint {
+    return constructJubjubPoint(0, 1);
+  }
+
+  /** One-time pad for slot j of a record sealed under the shared point S. */
+  export pure circuit maskOf(S: JubjubPoint, j: Field): Field {
+    return transientHash<Vector<3, Field>>([jubjubPointX(S), jubjubPointY(S), j]);
+  }
+
+  /** Ledger key of a sealed record: H("record", N, E). Fresh per offer, so records are append-only. */
+  export pure circuit recordIdOf(n: Bytes<32>, E: JubjubPoint): Bytes<32> {
+    return persistentHash<RecordIdPreimage>(
+      RecordIdPreimage { domain: pad(32, "snf:v1:record"), n: n, ex: jubjubPointX(E), ey: jubjubPointY(E) });
+  }
+
+  /** Ledger key of a disclosure request: H("request", recordId, caseRef). */
+  export pure circuit requestIdOf(recordId: Bytes<32>, caseRef: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:request"), recordId, caseRef]);
+  }
+
+  /** Ledger key of one keyholder's share: Map iteration order is not insertion order, so shares are addressed. */
+  export pure circuit shareKeyOf(requestId: Bytes<32>, index: Uint<8>): Bytes<32> {
+    return persistentHash<ShareKeyPreimage>(
+      ShareKeyPreimage { domain: pad(32, "snf:v1:share"), requestId: requestId, index: index });
   }
 }

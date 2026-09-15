@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, it } from 'vitest';
-import { DAY, deployRegistry, hex, NATIVE_COLOR, pure, setupRegistry } from './harness.js';
+import { acknowledged, DAY, deployRegistry, hex, MASK64, NATIVE_COLOR, openRecord, pure, setupRegistry, unpack } from './harness.js';
+import { PledgeStatus } from '../src/index.js';
 import { FIELD_MODULUS, randomBytes32 } from '../../sdk/src/crypto/scalar.js';
+
+const IDENTITY = { x: 0n, y: 1n };
 
 describe('deployment and membership', () => {
   it('stores the sealed configuration at deploy', () => {
@@ -57,6 +60,14 @@ describe('acknowledgment', () => {
     expect(r.ledger().acks.firstFree()).toBe(2n);
   });
 
+  it('ack leaf and nullifier derive from the fingerprint under their own domains', () => {
+    const r = setupRegistry();
+    const inv = r.seller.issueInvoice({ debtor: r.debtor, invoiceNo: 9n, amount: 5n, dueDate: r.now + DAY });
+    const f = pure.fingerprint(inv);
+    expect(hex(pure.ackLeafFromFingerprint(f))).toBe(hex(pure.ackLeafOf(inv)));
+    expect(hex(pure.nullifierFromFingerprint(f))).toBe(hex(pure.nullifierOf(inv)));
+  });
+
   it('fingerprint, ack leaf and pledge nullifier are pairwise distinct', () => {
     const r = setupRegistry();
     const inv = r.seller.issueInvoice({ debtor: r.debtor, invoiceNo: 7n, amount: 1n, dueDate: r.now + DAY });
@@ -64,5 +75,87 @@ describe('acknowledgment', () => {
     expect(new Set(values).size).toBe(3);
     const salted = { ...inv, salt: inv.salt + 1n };
     expect(hex(pure.nullifierOf(salted))).not.toBe(hex(pure.nullifierOf(inv)));
+  });
+});
+
+describe('offer, accept, release', () => {
+  it('debtor acknowledges, seller offers, financier accepts', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    const tag = r.financierA.holderTag(n);
+    const expiry = r.now + 7n * DAY;
+    r.seller.offer(inv, tag, expiry);
+    const offered = r.ledger().pledges.lookup(n);
+    expect(offered.status).toBe(PledgeStatus.OFFERED);
+    expect(offered.holderTag).toBe(tag);
+    expect(offered.expiry).toBe(expiry);
+    expect(offered.claimed).toBe(false);
+    r.financierA.accept(n);
+    const pledged = r.ledger().pledges.lookup(n);
+    expect(pledged.status).toBe(PledgeStatus.PLEDGED);
+    expect(pledged.holderTag).toBe(tag);
+    expect(hex(pledged.recordId)).toBe(hex(offered.recordId));
+  });
+
+  it('offer stores a versioned record that the disclosure key opens to the invoice and holder tag', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    const tag = r.financierA.holderTag(n);
+    r.seller.offer(inv, tag, r.now + 7n * DAY);
+    const recordId = r.ledger().pledges.lookup(n).recordId;
+    const rec = r.ledger().records.lookup(recordId);
+    expect(rec.version).toBe(1n);
+    expect(rec.ct).toHaveLength(5);
+    expect(rec.E).not.toEqual(IDENTITY);
+    expect(hex(pure.recordIdOf(n, rec.E))).toBe(hex(recordId));
+    const opened = openRecord(rec, pure.mulPoint(rec.E, r.disclosureSk));
+    expect(opened.invoice).toEqual(inv);
+    expect(opened.holderTag).toBe(tag);
+    expect(hex(pure.nullifierOf(opened.invoice))).toBe(hex(n));
+    expect(rec.ct).not.toContain(inv.debtorId);
+    expect(rec.ct).not.toContain(inv.sellerId);
+  });
+
+  it('packs invoiceNo, amount and dueDate into one field without loss at the Uint<64> maximum', () => {
+    const packed = pure.packFields(MASK64, MASK64 - 1n, MASK64 - 2n);
+    expect(unpack(packed)).toEqual({ invoiceNo: MASK64, amount: MASK64 - 1n, dueDate: MASK64 - 2n });
+  });
+
+  it('released invoice is re-offered to financier B, who accepts; both records stay on the ledger', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    r.seller.offer(inv, r.financierA.holderTag(n), r.now + 7n * DAY);
+    r.financierA.accept(n);
+    r.financierA.release(n);
+    expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.RELEASED);
+    const tagB = r.financierB.holderTag(n);
+    r.seller.offer(inv, tagB, r.now + 7n * DAY);
+    r.financierB.accept(n);
+    const p = r.ledger().pledges.lookup(n);
+    expect(p.status).toBe(PledgeStatus.PLEDGED);
+    expect(p.holderTag).toBe(tagB);
+    expect(r.ledger().records.size()).toBe(2n);
+  });
+
+  it('an unaccepted offer becomes re-offerable once its expiry passes', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    r.seller.offer(inv, r.financierA.holderTag(n), r.now + 7n * DAY);
+    r.advance(7n * DAY);
+    r.seller.offer(inv, r.financierB.holderTag(n), r.now + 7n * DAY);
+    r.financierB.accept(n);
+    expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+  });
+
+  it('holder tags are per financier and per nullifier', () => {
+    const r = setupRegistry();
+    const n1 = randomBytes32();
+    const n2 = randomBytes32();
+    expect(r.financierA.holderTag(n1)).not.toBe(r.financierB.holderTag(n1));
+    expect(r.financierA.holderTag(n1)).not.toBe(r.financierA.holderTag(n2));
   });
 });

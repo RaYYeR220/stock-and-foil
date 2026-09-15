@@ -8,6 +8,7 @@ module Identity {
   import CompactStandardLibrary;
 
   struct AckNullifierPreimage { domain: Bytes<32>; sk: Bytes<32>; sellerId: Field; invoiceNo: Uint<64>; }
+  struct PayeeTagPreimage { domain: Bytes<32>; sellerId: Field; n: Bytes<32>; }
 
   /** Operator identity sealed at deploy: H("operator", opSk). */
   export pure circuit operatorIdOf(sk: Bytes<32>): Bytes<32> {
@@ -38,5 +39,30 @@ module Identity {
   export pure circuit ackNullifierOf(sk: Bytes<32>, sellerId: Field, invoiceNo: Uint<64>): Bytes<32> {
     return persistentHash<AckNullifierPreimage>(
       AckNullifierPreimage { domain: pad(32, "snf:v1:acknul"), sk: sk, sellerId: sellerId, invoiceNo: invoiceNo });
+  }
+
+  /**
+   * Holder tag T = H("holder", finSk, N): the financier hands it to the seller off-chain, and only
+   * the financier can recompute it. Distinct per pledge, so tags of one financier are unlinkable.
+   */
+  export pure circuit holderTagOf(sk: Bytes<32>, n: Bytes<32>): Field {
+    return degradeToTransient(persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:holder"), sk, n]));
+  }
+
+  /** Payee tag of an unpledged invoice: H("sellerpayee", sellerId, N). Only the seller can recompute it. */
+  export pure circuit sellerPayeeTagOf(sellerId: Field, n: Bytes<32>): Field {
+    return degradeToTransient(persistentHash<PayeeTagPreimage>(
+      PayeeTagPreimage { domain: pad(32, "snf:v1:sellerpayee"), sellerId: sellerId, n: n }));
+  }
+
+  /** Borrowing-base certificate id: H("cert", lenderRef, lenderNonce). */
+  export pure circuit certIdOf(lenderRef: Bytes<32>, lenderNonce: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:cert"), lenderRef, lenderNonce]);
+  }
+
+  /** Borrower commitment inside a certificate: only the lender who chose the nonce can test it. */
+  export pure circuit borrowerCommitOf(sellerId: Field, lenderNonce: Bytes<32>): Bytes<32> {
+    return persistentHash<PayeeTagPreimage>(
+      PayeeTagPreimage { domain: pad(32, "snf:v1:borrower"), sellerId: sellerId, n: lenderNonce });
   }
 }

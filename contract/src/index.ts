@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-export { Contract, ledger, pureCircuits } from './managed/stock-and-foil/contract/index.js';
-export type { Invoice, Ledger, PureCircuits, Witnesses } from './managed/stock-and-foil/contract/index.js';
+export { Contract, ledger, pureCircuits, PledgeStatus } from './managed/stock-and-foil/contract/index.js';
+export type {
+  CipherRecord,
+  CipherShare,
+  Invoice,
+  Ledger,
+  PledgeState,
+  PureCircuits,
+  Witnesses,
+} from './managed/stock-and-foil/contract/index.js';
 export { witnesses } from './witnesses.js';
 export {
   createPrivateState,

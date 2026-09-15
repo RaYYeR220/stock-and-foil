@@ -14,8 +14,30 @@ import "modules/Cipher";
 
 export { Invoice };
 export { operatorIdOf, debtorLeaf, debtorIdOf, sellerIdOf, financierLeaf, ackNullifierOf };
-export { fingerprint, ackLeafOf, nullifierOf };
-export { pubKeyOf };
+export { holderTagOf, sellerPayeeTagOf, certIdOf, borrowerCommitOf };
+export { fingerprint, ackLeafFromFingerprint, nullifierFromFingerprint, ackLeafOf, nullifierOf, packFields };
+export { CipherRecord, CipherShare };
+export { cipherVersion, pubKeyOf, mulPoint, addPoints, identityPoint, maskOf, recordIdOf, requestIdOf, shareKeyOf };
+
+// ------------------------------------------------------------------------------------------
+// Public data
+
+/** Lifecycle of one receivable. A pledge only ever moves forwards; SETTLED is terminal. */
+export enum PledgeStatus { OFFERED, PLEDGED, RELEASED, SETTLED }
+
+/**
+ * Public state of one receivable, keyed by its pledge nullifier N. `holderTag` and `payeeTag`
+ * are unlinkable per-pledge tags: only the financier (resp. the seller) can recompute them.
+ */
+export struct PledgeState {
+  status: PledgeStatus;
+  holderTag: Field;
+  expiry: Uint<64>;
+  recordId: Bytes<32>;
+  payeeTag: Field;
+  amount: Uint<64>;
+  claimed: Boolean;
+}
 
 // ------------------------------------------------------------------------------------------
 // Public ledger
@@ -32,12 +54,19 @@ export ledger financiers: HistoricMerkleTree<10, Bytes<32>>;
 export ledger acks: HistoricMerkleTree<16, Bytes<32>>;
 export ledger ackNullifiers: Set<Bytes<32>>;
 
+export ledger pledges: Map<Bytes<32>, PledgeState>;
+export ledger records: Map<Bytes<32>, CipherRecord>;
+
 // ------------------------------------------------------------------------------------------
 // Witnesses (untrusted inputs; every property is re-checked by asserts)
 
 witness localSecretKey(): Bytes<32>;
+witness localScalar(): Field;
+witness ephemeralScalar(): Field;
 witness callInvoice(): Invoice;
 witness debtorPathFor(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness financierPathFor(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness ackPathFor(leaf: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
 
 constructor(opId: Bytes<32>, dPk: JubjubPoint, kPks: Vector<3, JubjubPoint>, aPk: JubjubPoint, color: Bytes<32>) {
   operatorId = disclose(opId);
@@ -80,4 +109,90 @@ export circuit acknowledge(): [] {
   assert(!ackNullifiers.member(ackNul), "ALREADY_ACKNOWLEDGED");
   ackNullifiers.insert(ackNul);
   acks.insert(disclose(ackLeafOf(inv)));
+}
+
+// ------------------------------------------------------------------------------------------
+// Pledges
+
+/**
+ * Proves the debtor acknowledged exactly this invoice and returns its public pledge nullifier.
+ * Re-pricing or forging any field changes the ack leaf, so this Merkle check is what refuses
+ * forged and inflated invoices.
+ */
+circuit acknowledgedNullifier(inv: Invoice): Bytes<32> {
+  const f = fingerprint(inv);
+  const leaf = ackLeafFromFingerprint(f);
+  const path = ackPathFor(leaf);
+  assert(path.leaf == leaf, "NOT_ACKNOWLEDGED");
+  assert(acks.checkRoot(disclose(merkleTreePathRoot<16, Bytes<32>>(path))), "NOT_ACKNOWLEDGED");
+  return disclose(nullifierFromFingerprint(f));
+}
+
+/** True when no live encumbrance exists: absent, released, or an offer nobody took up in time. */
+circuit assertFree(n: Bytes<32>): [] {
+  if (pledges.member(n)) {
+    const p = pledges.lookup(n);
+    assert(p.status != PledgeStatus.SETTLED, "ALREADY_SETTLED");
+    assert(p.status == PledgeStatus.RELEASED || (p.status == PledgeStatus.OFFERED && blockTimeGte(p.expiry)),
+           "ALREADY_ENCUMBERED");
+  }
+}
+
+/** Seals the invoice and the holder tag to the registry disclosure key and stores the record. */
+circuit writeRecord(n: Bytes<32>, inv: Invoice, holderTag: Field): Bytes<32> {
+  const e = ephemeralScalar();
+  const E = ecMulGenerator(e);
+  assert(E != identityPoint(), "BAD_EPHEMERAL");
+  const S = ecMul(disclosurePk, e);
+  const ct = [inv.debtorId + maskOf(S, 0),
+              inv.sellerId + maskOf(S, 1),
+              packFields(inv.invoiceNo, inv.amount, inv.dueDate) + maskOf(S, 2),
+              inv.salt + maskOf(S, 3),
+              holderTag + maskOf(S, 4)];
+  const recordId = recordIdOf(n, disclose(E));
+  records.insert(recordId, CipherRecord { version: cipherVersion(), E: disclose(E), ct: disclose(ct) });
+  return recordId;
+}
+
+export circuit offer(holderTag: Field, expiry: Uint<64>): [] {
+  const inv = callInvoice();
+  assert(sellerIdOf(localSecretKey()) == inv.sellerId, "NOT_INVOICE_OWNER");
+  const n = acknowledgedNullifier(inv);
+  // blockTimeLt puts its argument in the public transcript, so the bound must be the public
+  // expiry; `expiry <= dueDate` then privately implies the invoice is not yet due.
+  assert(blockTimeLt(disclose(expiry)), "BAD_EXPIRY");
+  assert(expiry <= inv.dueDate, "INVOICE_OVERDUE");
+  assertFree(n);
+  const recordId = writeRecord(n, inv, holderTag);
+  pledges.insert(n, PledgeState { status: PledgeStatus.OFFERED,
+                                  holderTag: disclose(holderTag),
+                                  expiry: disclose(expiry),
+                                  recordId: recordId,
+                                  payeeTag: 0,
+                                  amount: 0,
+                                  claimed: false });
+}
+
+export circuit accept(n: Bytes<32>): [] {
+  const sk = localSecretKey();
+  const leaf = financierLeaf(sk);
+  const path = financierPathFor(leaf);
+  assert(path.leaf == leaf, "NOT_LICENSED");
+  assert(financiers.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "NOT_LICENSED");
+  const k = disclose(n);
+  assert(pledges.member(k), "NO_SUCH_OFFER");
+  const p = pledges.lookup(k);
+  assert(p.status == PledgeStatus.OFFERED, "NO_SUCH_OFFER");
+  assert(p.holderTag == holderTagOf(sk, k), "NOT_ADDRESSEE");
+  assert(blockTimeLt(p.expiry), "OFFER_EXPIRED");
+  pledges.insert(k, PledgeState { ...p, status: PledgeStatus.PLEDGED });
+}
+
+export circuit release(n: Bytes<32>): [] {
+  const k = disclose(n);
+  assert(pledges.member(k), "NOT_PLEDGED");
+  const p = pledges.lookup(k);
+  assert(p.status == PledgeStatus.PLEDGED, "NOT_PLEDGED");
+  assert(p.holderTag == holderTagOf(localSecretKey(), k), "NOT_HOLDER");
+  pledges.insert(k, PledgeState { ...p, status: PledgeStatus.RELEASED });
 }
