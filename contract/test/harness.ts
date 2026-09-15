@@ -16,6 +16,7 @@ import {
 } from '../src/index.js';
 import {
   FIELD_MODULUS,
+  lagrangeAtZero,
   randomBytes32,
   randomField,
   randomScalar,
@@ -104,6 +105,30 @@ export function openRecord(record: { E: Point; ct: bigint[] }, S: Point): { invo
     invoice: { debtorId: f[0]!, sellerId: f[1]!, invoiceNo: u.invoiceNo, amount: u.amount, dueDate: u.dueDate, salt: f[3]! },
     holderTag: f[4]!,
   };
+}
+
+/** Removes the auditor-directed masks of a keyholder share, returning D_i = s_i·E. */
+export function openShare(share: { E2: Point; ct: bigint[] }, auditorSk: bigint): Point {
+  const S2 = pure.mulPoint(share.E2, auditorSk);
+  return { x: modP(share.ct[0]! - pure.maskOf(S2, 0n)), y: modP(share.ct[1]! - pure.maskOf(S2, 1n)) };
+}
+
+/** Lagrange-combines decryption shares: Σ λ_i·D_i = sk·E. Indices are Shamir indices (1-based). */
+export function combineShares(parts: Array<{ index: number; D: Point }>): Point {
+  const lambdas = lagrangeAtZero(parts.map((p) => p.index));
+  return parts.map((p, k) => pure.mulPoint(p.D, lambdas[k]!)).reduce((acc, P) => pure.addPoints(acc, P));
+}
+
+/**
+ * Self-verifying disclosure: a correctly opened record recomputes the nullifier the ledger is
+ * keyed by. Garbage plaintexts overflow Uint<64>, which the pure circuit rejects outright.
+ */
+export function recomputesNullifier(invoice: Invoice, n: Bytes): boolean {
+  try {
+    return hex(pure.nullifierOf(invoice)) === hex(n);
+  } catch {
+    return false;
+  }
 }
 
 export interface DeployParams {

@@ -878,6 +878,58 @@
         "types": [
         ]
       }
+    },
+    {
+      "name": "requestDisclosure",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "recordId",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "caseRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "approveDisclosure",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "requestId",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "index",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 255
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
     }
   ],
   "witnesses": [
@@ -888,6 +940,14 @@
       "result type": {
         "type-name": "Bytes",
         "length": 32
+      }
+    },
+    {
+      "name": "localScalar",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Field"
       }
     },
     {
@@ -1352,6 +1412,90 @@
             "type": {
               "type-name": "Vector",
               "length": 5,
+              "type": {
+                "type-name": "Field"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "requests",
+      "index": 12,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "DisclosureRequest",
+        "elements": [
+          {
+            "name": "recordId",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "caseRef",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "approvals",
+            "type": {
+              "type-name": "Vector",
+              "length": 3,
+              "type": {
+                "type-name": "Boolean"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "shares",
+      "index": 13,
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "CipherShare",
+        "elements": [
+          {
+            "name": "version",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 255
+            }
+          },
+          {
+            "name": "E2",
+            "type": {
+              "type-name": "Alias",
+              "name": "JubjubPoint",
+              "type": {
+                "type-name": "Opaque",
+                "tsType": "JubjubPoint"
+              }
+            }
+          },
+          {
+            "name": "ct",
+            "type": {
+              "type-name": "Vector",
+              "length": 2,
               "type": {
                 "type-name": "Field"
               }

@@ -39,6 +39,13 @@ export struct PledgeState {
   claimed: Boolean;
 }
 
+/** An auditor's standing request to open one sealed record, and who has approved it so far. */
+export struct DisclosureRequest {
+  recordId: Bytes<32>;
+  caseRef: Bytes<32>;
+  approvals: Vector<3, Boolean>;
+}
+
 // ------------------------------------------------------------------------------------------
 // Public ledger
 
@@ -56,6 +63,8 @@ export ledger ackNullifiers: Set<Bytes<32>>;
 
 export ledger pledges: Map<Bytes<32>, PledgeState>;
 export ledger records: Map<Bytes<32>, CipherRecord>;
+export ledger requests: Map<Bytes<32>, DisclosureRequest>;
+export ledger shares: Map<Bytes<32>, CipherShare>;
 
 // ------------------------------------------------------------------------------------------
 // Witnesses (untrusted inputs; every property is re-checked by asserts)
@@ -251,4 +260,47 @@ export circuit claimAsHolder(n: Bytes<32>, to: UserAddress): [] {
 
 export circuit claimAsSeller(n: Bytes<32>, to: UserAddress): [] {
   claim(n, sellerPayeeTagOf(sellerIdOf(localSecretKey()), disclose(n)), to);
+}
+
+// ------------------------------------------------------------------------------------------
+// Threshold disclosure
+//
+// Nobody holds the disclosure key: it was split 2-of-3 at the setup ceremony and discarded.
+// A keyholder never reveals its share — it publishes D_i = s_i·E sealed to the auditor, and the
+// auditor Lagrange-combines two of those points into S = sk·E to open exactly one record.
+
+export circuit requestDisclosure(recordId: Bytes<32>, caseRef: Bytes<32>): [] {
+  assert(ecMulGenerator(localScalar()) == auditorPk, "NOT_AUDITOR");
+  const rid = disclose(recordId);
+  assert(records.member(rid), "NO_SUCH_RECORD");
+  const requestId = requestIdOf(rid, disclose(caseRef));
+  assert(!requests.member(requestId), "DUPLICATE_REQUEST");
+  requests.insert(requestId, DisclosureRequest { recordId: rid,
+                                                 caseRef: disclose(caseRef),
+                                                 approvals: [false, false, false] });
+}
+
+export circuit approveDisclosure(requestId: Bytes<32>, index: Uint<8>): [] {
+  const s = localScalar();
+  const i = disclose(index);
+  assert(i < 3, "NOT_KEYHOLDER");
+  // A runtime vector index does not compile, and a ledger read inside a branch would disclose
+  // the comparison, so the keys are read first and selected with a conditional chain.
+  const pks = keyholderPks;
+  assert(ecMulGenerator(s) == (i == 0 ? pks[0] : (i == 1 ? pks[1] : pks[2])), "NOT_KEYHOLDER");
+  const rid = disclose(requestId);
+  assert(requests.member(rid), "NO_SUCH_REQUEST");
+  const req = requests.lookup(rid);
+  const done = req.approvals;
+  assert(!(i == 0 ? done[0] : (i == 1 ? done[1] : done[2])), "ALREADY_APPROVED");
+
+  const e2 = ephemeralScalar();
+  const E2 = ecMulGenerator(e2);
+  assert(E2 != identityPoint(), "BAD_EPHEMERAL");
+  const S2 = ecMul(auditorPk, e2);
+  const D = ecMul(records.lookup(req.recordId).E, s);
+  const ct = [jubjubPointX(D) + maskOf(S2, 0), jubjubPointY(D) + maskOf(S2, 1)];
+  shares.insert(shareKeyOf(rid, i), CipherShare { version: cipherVersion(), E2: disclose(E2), ct: disclose(ct) });
+  requests.insert(rid, DisclosureRequest { ...req,
+                                           approvals: [done[0] || i == 0, done[1] || i == 1, done[2] || i == 2] });
 }

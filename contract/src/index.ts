@@ -3,6 +3,7 @@ export { Contract, ledger, pureCircuits, PledgeStatus } from './managed/stock-an
 export type {
   CipherRecord,
   CipherShare,
+  DisclosureRequest,
   Invoice,
   Ledger,
   PledgeState,

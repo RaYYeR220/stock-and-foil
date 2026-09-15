@@ -11,6 +11,11 @@ export type PledgeState = { status: PledgeStatus;
                             claimed: boolean
                           };
 
+export type DisclosureRequest = { recordId: Uint8Array;
+                                  caseRef: Uint8Array;
+                                  approvals: boolean[]
+                                };
+
 export type CipherRecord = { version: bigint;
                              E: __compactRuntime.JubjubPoint;
                              ct: bigint[]
@@ -31,6 +36,7 @@ export type Invoice = { debtorId: bigint;
 
 export type Witnesses<PS> = {
   localSecretKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  localScalar(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   ephemeralScalar(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   callInvoice(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Invoice];
   debtorPathFor(context: __compactRuntime.WitnessContext<Ledger, PS>,
@@ -71,6 +77,12 @@ export type ImpureCircuits<PS> = {
   claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
                 to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  requestDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    recordId_0: Uint8Array,
+                    caseRef_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    requestId_0: Uint8Array,
+                    index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -90,6 +102,12 @@ export type ProvableCircuits<PS> = {
   claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
                 to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  requestDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    recordId_0: Uint8Array,
+                    caseRef_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    requestId_0: Uint8Array,
+                    index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type PureCircuits = {
@@ -190,6 +208,12 @@ export type Circuits<PS> = {
   claimAsSeller(context: __compactRuntime.CircuitContext<PS>,
                 n_0: Uint8Array,
                 to_0: { bytes: Uint8Array }): __compactRuntime.CircuitResults<PS, []>;
+  requestDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    recordId_0: Uint8Array,
+                    caseRef_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
+                    requestId_0: Uint8Array,
+                    index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type Ledger = {
@@ -245,6 +269,20 @@ export type Ledger = {
     member(key_0: Uint8Array): boolean;
     lookup(key_0: Uint8Array): CipherRecord;
     [Symbol.iterator](): Iterator<[Uint8Array, CipherRecord]>
+  };
+  requests: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): DisclosureRequest;
+    [Symbol.iterator](): Iterator<[Uint8Array, DisclosureRequest]>
+  };
+  shares: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): CipherShare;
+    [Symbol.iterator](): Iterator<[Uint8Array, CipherShare]>
   };
 }
 
