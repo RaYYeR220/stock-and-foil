@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "allowJs": true,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src", "test"]
+}

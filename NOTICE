@@ -1,0 +1,8 @@
+Stock & Foil
+Copyright 2026 Stock & Foil contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It is built on the Midnight Network toolchain (Compact compiler, compact-runtime,
+midnight-js, wallet SDK, proof server) published by Midnight Foundation and
+Shielded Technologies under their respective licenses.

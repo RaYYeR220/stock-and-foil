@@ -1,0 +1,24 @@
+{
+  "name": "stock-and-foil",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private collateral registry for receivables finance on Midnight",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "contract",
+    "sdk",
+    "cli",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "compile": "npm run -w contract compile",
+    "test": "npm run -w contract test && npm run -w sdk test",
+    "build": "npm run -w sdk build && npm run -w cli build && npm run -w web build"
+  },
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@stockandfoil/cli",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@stockandfoil/sdk": "0.1.0"
+  }
+}
