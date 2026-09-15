@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
   DAY,
+  expectRefusal,
   hex,
   offered,
   pure,
@@ -104,6 +105,73 @@ describe('a guessable lender nonce', () => {
       lenderNonce: randomBytes32(),
     });
     expect(r.ledger().certificates.size()).toBe(2n);
+  });
+});
+
+describe('a certificate the named lender cannot take up', () => {
+  it('locks the pool to whatever tags the seller supplies, whoever `lenderRef` names', () => {
+    // `certHolderTags()` is a witness and nothing in `certifyBorrowingBase` ties it to `lenderRef`
+    // — it cannot: a tag is `H("holder", finSk, N)` and only the financier can compute it, so the
+    // circuit has no key material to check the seller's claim against. The certificate therefore
+    // proves the pool is acknowledged, unencumbered, current and worth at least `floor`, and
+    // nothing at all about who it is addressed to.
+    const r = setupRegistry();
+    const invoices = [1n, 2n].map((no) => acknowledged(r, { invoiceNo: no, amount: 100_000n }));
+    const nullifiers = invoices.map((inv) => pure.nullifierOf(inv));
+    const validUntil = r.now + 30n * DAY;
+    const nonce = randomBytes32();
+    // Presented to financier A; locked with financier B's tags.
+    r.seller.certify(
+      invoices.map((invoice, k) => ({ invoice, holderTag: r.financierB.holderTag(nullifiers[k]!) })),
+      { lenderRef: LENDER_REF, lenderNonce: nonce, floor: 200_000n, validUntil },
+    );
+
+    // To any observer the pool is locked: two live offers and a genuine floor proof.
+    const cert = r.ledger().certificates.lookup(pure.certIdOf(LENDER_REF, nonce));
+    expect(cert.count).toBe(2n);
+    expect(cert.floor).toBe(200_000n);
+    expect(hex(cert.lenderRef)).toBe(hex(LENDER_REF));
+    for (const n of nullifiers) {
+      expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.OFFERED);
+      expect(r.ledger().pledges.lookup(n).expiry).toBe(validUntil);
+    }
+
+    // The lender the certificate names can never take it up.
+    for (const n of nullifiers) expectRefusal(() => r.financierA.accept(n), 'NOT_ADDRESSEE');
+    // The check a lender has to run itself: recompute its own tag per locked marker. This is
+    // `FinancierClient.checkCertificate` in the SDK, against the same public values.
+    const addressedTo = (f: typeof r.financierA): boolean =>
+      nullifiers.every((n) => r.ledger().pledges.lookup(n).holderTag === f.holderTag(n));
+    expect(addressedTo(r.financierA)).toBe(false);
+    expect(addressedTo(r.financierB)).toBe(true);
+
+    // And the tags are not nonsense — the financier they *do* name can accept every slot.
+    for (const n of nullifiers) r.financierB.accept(n);
+    for (const n of nullifiers) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+  });
+
+  it('leaves the collateral encumbered until validUntil, then free again', () => {
+    // The cost of the misaddressed pool: the receivables are blocked for the whole window, and a
+    // lender that advanced money against the certificate holds nothing when they fall free.
+    const r = setupRegistry();
+    const inv = acknowledged(r, { invoiceNo: 1n, amount: 100_000n });
+    const n = pure.nullifierOf(inv);
+    const validUntil = r.now + 30n * DAY;
+    r.seller.certify([{ invoice: inv, holderTag: r.financierB.holderTag(n) }], {
+      lenderRef: LENDER_REF,
+      lenderNonce: randomBytes32(),
+      floor: 100_000n,
+      validUntil,
+    });
+
+    expectRefusal(() => r.financierA.accept(n), 'NOT_ADDRESSEE');
+    expectRefusal(() => r.seller.offer(inv, r.financierA.holderTag(n), r.now + 7n * DAY), 'ALREADY_ENCUMBERED');
+
+    r.setTime(validUntil);
+    expectRefusal(() => r.financierB.accept(n), 'OFFER_EXPIRED');
+    r.seller.offer(inv, r.financierA.holderTag(n), validUntil + 7n * DAY);
+    r.financierA.accept(n);
+    expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
   });
 });
 
