@@ -3,6 +3,7 @@
 # Review this in five minutes
 
 Everything below is verifiable without installing anything. Commands are for the optional deeper checks.
+If you would rather watch than click: [three-minute walkthrough](https://youtu.be/rDnDGqp-ekE).
 
 ## 1. See it work (60 seconds, no wallet, no install)
 

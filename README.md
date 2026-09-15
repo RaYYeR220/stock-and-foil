@@ -98,6 +98,7 @@ whom, not for how much, not since when.
 - **[What the chain sees](https://stock-and-foil.vercel.app/app/ledger)** · **[the workspaces](https://stock-and-foil.vercel.app/app/seller)** · **[the evidence](https://stock-and-foil.vercel.app/proof)** · **[the deck](https://stock-and-foil.vercel.app/deck)**
 - **On a public network:** [PROOF.md](./PROOF.md) has the deployed contract on Midnight preview,
   every transaction with explorer links, and the one command that re-verifies them.
+- **Three-minute walkthrough:** [youtu.be/rDnDGqp-ekE](https://youtu.be/rDnDGqp-ekE).
 - **In five minutes:** [JUDGES.md](./JUDGES.md).
 
 ```bash
