@@ -115,8 +115,11 @@ export {
 // Backends
 export { SimulatorBackend, type SimulatorDeployOptions, type SimulatorSnapshot } from './backend/simulator.js';
 export {
+  CIRCUIT_IDS,
   NetworkBackend,
+  VERIFIER_KEYS_PER_TX,
   defaultPrivateStateId,
+  type NetworkBackendOptionsBase,
   type NetworkConnectOptions,
   type NetworkDeployOptions,
 } from './backend/network.js';

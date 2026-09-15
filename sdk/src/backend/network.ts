@@ -7,8 +7,13 @@
 // a call see only that persona's secret — a financier's process never holds the seller's key.
 // And a refusal is raised while the circuit runs locally, before proving and before submission:
 // the fraudulent transaction is never built, let alone paid for.
-import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
+import {
+  createCircuitMaintenanceTxInterfaces,
+  deployContract,
+  findDeployedContract,
+} from '@midnight-ntwrk/midnight-js-contracts';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
+import * as RT from '@midnight-ntwrk/compact-runtime';
 import {
   Contract,
   ledger,
@@ -54,6 +59,14 @@ export interface NetworkDeployOptions extends NetworkBackendOptionsBase {
   constructorArgs: RegistryConstructorArgs;
   /** Private state the deploy transaction runs under. */
   operator: StockAndFoilPrivateState;
+  /**
+   * How many verifier keys one transaction may carry. See `VERIFIER_KEYS_PER_TX`: a Midnight
+   * block caps how many bytes a transaction may write, and all twelve keys of this contract do
+   * not fit in one deploy. Lower it if a deploy is refused as exhausting the block limits.
+   */
+  verifierKeysPerTx?: number;
+  /** Called once per transaction while a staged deployment runs, for CLI progress output. */
+  onProgress?: (step: { stage: 'deploy' | 'verifier-key'; circuit?: string; index: number; total: number }) => void;
 }
 
 export interface NetworkConnectOptions extends NetworkBackendOptionsBase {
@@ -62,12 +75,73 @@ export interface NetworkConnectOptions extends NetworkBackendOptionsBase {
 
 type CompiledStockAndFoil = ReturnType<typeof compileStockAndFoil>;
 
-function compileStockAndFoil(compiledAssetsPath: string) {
-  const base = CompiledContract.make('StockAndFoil', Contract as never);
-  return base.pipe(
+interface InitialState {
+  currentContractState: RT.ContractState;
+}
+
+/** Structural view of the compiled contract class, enough to subset it. */
+interface ContractShape {
+  provableCircuits: Record<string, unknown>;
+  initialState(...args: unknown[]): InitialState;
+}
+
+type AnyContract = new (w: unknown) => ContractShape;
+
+/** Circuit ids in the order the contract declares them. */
+export const CIRCUIT_IDS: readonly string[] = Object.keys(
+  new (Contract as unknown as AnyContract)(witnesses).provableCircuits,
+);
+
+/**
+ * How many of this contract's verifier keys fit in one transaction.
+ *
+ * A Midnight block limits the bytes a transaction may write (50,000 on the networks we target,
+ * and a single transaction may claim only part of that). The twelve verifier keys of Stock &
+ * Foil total about 26 kB, and a deploy carrying all of them is refused by the node with
+ * "Transaction would exhaust the block limits". Six keys deploy comfortably; the rest are added
+ * afterwards with maintenance transactions, which the deployer can do because it is the
+ * contract's maintenance authority.
+ */
+export const VERIFIER_KEYS_PER_TX = 6;
+
+function compileStockAndFoil(compiledAssetsPath: string, circuits: readonly string[] = CIRCUIT_IDS) {
+  const ctor = circuits.length === CIRCUIT_IDS.length ? Contract : subsetContract(circuits);
+  return CompiledContract.make('StockAndFoil', ctor as never).pipe(
     CompiledContract.withWitnesses(witnesses as never),
     CompiledContract.withCompiledFileAssets(compiledAssetsPath as never),
   );
+}
+
+/**
+ * A contract that publishes only some of its circuits at deploy time: `provableCircuits` decides
+ * which verifier keys the deploy transaction carries, and the initial contract state is rebuilt
+ * with only those entry points, because an entry point with no verifier key is not a valid
+ * deployment. The remaining circuits are added afterwards with `VerifierKeyInsert` maintenance
+ * transactions, which create their entry points.
+ */
+function subsetContract(circuits: readonly string[]): AnyContract {
+  const keep = new Set(circuits);
+  const Base = Contract as unknown as AnyContract;
+  return class SubsetContract extends Base {
+    constructor(w: unknown) {
+      super(w);
+      this.provableCircuits = Object.fromEntries(
+        Object.entries(this.provableCircuits).filter(([id]) => keep.has(id)),
+      );
+    }
+
+    override initialState(...args: unknown[]): InitialState {
+      const result = super.initialState(...args);
+      const full = result.currentContractState;
+      const trimmed = new RT.ContractState();
+      trimmed.data = full.data;
+      for (const id of circuits) {
+        const operation = full.operation(id);
+        if (operation) trimmed.setOperation(id, operation);
+      }
+      return { ...result, currentContractState: trimmed };
+    }
+  } as unknown as AnyContract;
 }
 
 export class NetworkBackend implements RegistryBackend {
@@ -93,18 +167,46 @@ export class NetworkBackend implements RegistryBackend {
     this.providers.privateStateProvider.setContractAddress(options.contractAddress);
   }
 
-  /** Deploys a fresh registry and returns a backend bound to it. */
+  /**
+   * Deploys a fresh registry and returns a backend bound to it.
+   *
+   * The deployment is staged: the first transaction carries the constructor and as many verifier
+   * keys as a block will accept, and one maintenance transaction per remaining circuit adds the
+   * rest. By the time this resolves the contract carries all twelve keys, so an ordinary
+   * `findDeployedContract` verifies against it.
+   */
   static async deploy(options: NetworkDeployOptions): Promise<NetworkBackend> {
     const args = options.constructorArgs;
+    const perTx = options.verifierKeysPerTx ?? VERIFIER_KEYS_PER_TX;
+    const first = CIRCUIT_IDS.slice(0, Math.max(1, perTx));
+    const rest = CIRCUIT_IDS.slice(first.length);
+    const progress = options.onProgress ?? (() => {});
+    const total = 1 + rest.length;
+
     const privateStateId = (options.privateStateId ?? defaultPrivateStateId)(options.operator);
+    progress({ stage: 'deploy', index: 1, total });
     const deployed = await deployContract(options.providers as never, {
-      compiledContract: compileStockAndFoil(options.compiledAssetsPath) as never,
+      compiledContract: compileStockAndFoil(options.compiledAssetsPath, first) as never,
       privateStateId,
       initialPrivateState: options.operator,
       args: [args.operatorId, args.disclosurePk, args.keyholderPks, args.auditorPk, args.settlementColor],
     } as never);
     const data = (deployed as unknown as { deployTxData: { public: { contractAddress: string; txId?: string } } })
       .deployTxData.public;
+
+    if (rest.length > 0) {
+      const maintenance = createCircuitMaintenanceTxInterfaces(
+        options.providers as never,
+        compileStockAndFoil(options.compiledAssetsPath) as never,
+        data.contractAddress,
+      ) as unknown as Record<string, { insertVerifierKey(key: Uint8Array): Promise<unknown> }>;
+      for (const [i, circuit] of rest.entries()) {
+        progress({ stage: 'verifier-key', circuit, index: i + 2, total });
+        const key = await options.providers.zkConfigProvider.getVerifierKey(circuit);
+        await maintenance[circuit]!.insertVerifierKey(key);
+      }
+    }
+
     return new NetworkBackend({ ...options, contractAddress: data.contractAddress, deployTxId: data.txId });
   }
 
