@@ -22,6 +22,7 @@ import {
   type PublicLedgerView,
   type RegistryKeys,
   type SimulatorSnapshot,
+  type StockAndFoilPrivateState,
 } from './sdk.js';
 
 /** 2026-09-15T00:00:00Z. A fixed start, so every run of the demo reads the same dates. */
@@ -167,14 +168,14 @@ export class SandboxWorld {
   /** Bumped whenever the world changes, so React can re-read it. */
   revision = 0;
 
-  private constructor(keys: RegistryKeys, backend: SimulatorBackend) {
+  private constructor(keys: RegistryKeys, backend: SimulatorBackend, identities?: SandboxIdentities) {
     this.keys = keys;
     this.backend = backend;
     this.operator = new OperatorClient(backend, keys.operator);
-    this.debtor = new DebtorClient(backend, generatePersona('debtor'));
-    this.seller = new SellerClient(backend, generatePersona('seller'));
-    this.financierA = new FinancierClient(backend, generatePersona('financier'));
-    this.financierB = new FinancierClient(backend, generatePersona('financier'));
+    this.debtor = new DebtorClient(backend, identities?.debtor ?? generatePersona('debtor'));
+    this.seller = new SellerClient(backend, identities?.seller ?? generatePersona('seller'));
+    this.financierA = new FinancierClient(backend, identities?.financierA ?? generatePersona('financier'));
+    this.financierB = new FinancierClient(backend, identities?.financierB ?? generatePersona('financier'));
     this.auditor = new AuditorClient(backend, keys.auditor.persona);
     this.keyholders = keys.keyholders.map(
       (persona, i) => new KeyholderClient(backend, persona, i as 0 | 1 | 2),
@@ -182,14 +183,30 @@ export class SandboxWorld {
     this.book = this.openingBook();
   }
 
-  static create(): SandboxWorld {
-    const keys = generateRegistryKeys();
+  /**
+   * Deploys a registry. Given `identities` — the secrets of a world this tab has already built —
+   * it deploys the same one again: same operator id, same membership leaves, same invoice
+   * fingerprints, which is what makes a stored ledger meaningful after a reload.
+   */
+  static create(identities?: SandboxIdentities): SandboxWorld {
+    const keys = identities?.registry ?? generateRegistryKeys();
     const backend = SimulatorBackend.deploy({
       constructorArgs: keys.constructorArgs,
       operator: keys.operator,
       now: T0,
     });
-    return new SandboxWorld(keys, backend);
+    return new SandboxWorld(keys, backend, identities);
+  }
+
+  /** Every secret this world runs on. Enough, with a ledger snapshot, to rebuild it exactly. */
+  identities(): SandboxIdentities {
+    return {
+      registry: this.keys,
+      debtor: this.debtor.persona,
+      seller: this.seller.persona,
+      financierA: this.financierA.persona,
+      financierB: this.financierB.persona,
+    };
   }
 
   private openingBook(): BookEntry[] {
@@ -301,6 +318,19 @@ export class SandboxWorld {
 export interface WorldSnapshot {
   ledger: SimulatorSnapshot;
   book: BookEntry[];
+}
+
+/**
+ * The secrets behind one sandbox world. The registry keys are sealed into the contract at
+ * deployment; the other four are the parties the ledger only ever holds hashes of, and without
+ * them a restored ledger is a set of markers nobody in the tab can act on.
+ */
+export interface SandboxIdentities {
+  registry: RegistryKeys;
+  debtor: StockAndFoilPrivateState;
+  seller: StockAndFoilPrivateState;
+  financierA: StockAndFoilPrivateState;
+  financierB: StockAndFoilPrivateState;
 }
 
 /** Contract-derived label for a record, used to seed its tally artwork. */

@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from 'react';
 import { isRefusal, REFUSAL_MESSAGES, type PublicLedgerView, type Refusal, type TxReceipt } from '../lib/sdk.js';
+import { forgetWorld, loadWorld, saveWorld } from '../lib/persist.js';
 import { SandboxWorld, T0 } from '../lib/world.js';
 import type { NetworkSession } from '../lib/network.js';
 
@@ -59,9 +60,13 @@ export function RegistryProvider({ children }: { children: ReactNode }) {
     // Yield a frame first so the shell paints before the constructor runs.
     const start = async () => {
       try {
-        const created = SandboxWorld.create();
-        await created.admitParties();
+        // A world this tab built earlier comes back as it was left, admissions included. Only a
+        // first visit runs the admissions, and only a first visit starts from an empty ledger.
+        const restored = loadWorld();
+        const created = restored ?? SandboxWorld.create();
+        if (!restored) await created.admitParties();
         if (cancelled) return;
+        saveWorld(created);
         setWorld(created);
         setView(await created.publicState());
         setNow(created.now());
@@ -79,11 +84,14 @@ export function RegistryProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Every surface refreshes through here after a call, a rewind or a move of the clock, so this
+  // is also where the world is written down for the next page load.
   const refresh = useCallback(async () => {
     if (!world) return;
     setView(await world.publicState());
     setNow(world.now());
     setRevision((r) => r + 1);
+    saveWorld(world);
   }, [world]);
 
   const advance = useCallback(
@@ -106,6 +114,8 @@ export function RegistryProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(async () => {
     if (!world) return;
+    // The stored world goes with the one in memory, so a reload cannot bring back what was reset.
+    forgetWorld();
     world.backend.reset();
     await world.admitParties();
     await refresh();

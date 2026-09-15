@@ -8,6 +8,7 @@
 // clients and the types directly keeps the first paint of this app to the contract runtime, and
 // leaves the whole network stack behind the one dynamic import in `network.ts`.
 export { SimulatorBackend, type SimulatorSnapshot } from '../../../sdk/src/backend/simulator.js';
+export { decodeSnapshot, encodeSnapshot } from '../../../sdk/src/backend/snapshot.js';
 export {
   fromHex,
   hex,
@@ -54,5 +55,6 @@ export {
   type PublicLedgerView,
   type RecordView,
   type RequestView,
+  type StockAndFoilPrivateState,
   type TxReceipt,
 } from '../../../sdk/src/types.js';

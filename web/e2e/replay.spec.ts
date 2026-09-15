@@ -99,6 +99,37 @@ test('resetting the replay puts the registry back to an empty ledger', async ({ 
   await expect(page.locator('.counts div').first()).toContainText('0Debtors');
 });
 
+test('the world survives a reload, and a page opened by its URL', async ({ page }) => {
+  await page.goto('/app/replay');
+  await expect(page.getByTestId('run-step')).toBeEnabled({ timeout: 60_000 });
+  // admit → acknowledge → offer → accept
+  for (let i = 0; i < 4; i += 1) {
+    await page.getByTestId('run-step').click();
+    await expect(page.getByTestId('next-step')).toBeVisible();
+    if (i < 3) await page.getByTestId('next-step').click();
+  }
+
+  // A deep link, not an in-app navigation: this loads a new document, so the registry is rebuilt
+  // from what the tab stored rather than carried over in memory.
+  await page.goto('/app/ledger');
+  await expect(page.getByTestId('counts')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.counts div').nth(3)).toContainText('1Pledge markers');
+  await expect(page.locator('.rec').first()).toContainText('PLEDGED');
+  const marker = (await page.locator('.rec .id').first().innerText()).trim();
+
+  await page.reload();
+  await expect(page.locator('.rec').first()).toContainText('PLEDGED', { timeout: 60_000 });
+  // The same marker, not merely a marker: the keys behind the world came back with the ledger.
+  await expect(page.locator('.rec .id').first()).toHaveText(marker);
+
+  // And resetting clears what was stored, so a reload cannot bring it back.
+  await page.getByRole('button', { name: 'Reset registry' }).click();
+  await expect(page.locator('.rec')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId('counts')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.rec')).toHaveCount(0);
+});
+
 test('the public explorer shows what the chain holds after a pledge', async ({ page }) => {
   await page.goto('/app/replay');
   await expect(page.getByTestId('run-step')).toBeEnabled({ timeout: 60_000 });
