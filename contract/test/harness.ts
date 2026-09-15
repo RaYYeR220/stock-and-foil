@@ -90,6 +90,56 @@ export const sent = (res: CircuitResult, color: Bytes = NATIVE_COLOR): bigint =>
 export const sentTo = (res: CircuitResult, to: { bytes: Bytes }, color: Bytes = NATIVE_COLOR): bigint =>
   sumEffects(res, 'claimedUnshieldedSpends', color, to.bytes);
 
+// ---------------------------------------------------------------------------------------------
+// Public transcript
+//
+// Everything a call reveals on chain is its *transcript*: the ledger operations it performed,
+// with the keys it addressed and the values it pushed and read, all in the clear. Circuit
+// arguments and witnesses are not in it. These helpers read that back out of a simulator result
+// so `docs/PRIVACY-BOUNDARY.md` can be asserted rather than asserted-to.
+
+/**
+ * Every value cell the transcript carries, as lower-case hex. Cells are little-endian with
+ * trailing zero bytes trimmed, which is how a 32-byte key, a `Uint<64>` bound or a field element
+ * appears on chain — so `transcriptValues(res)` is exactly the set of bit patterns a call
+ * published, and "this private value is not in it" is a checkable claim.
+ */
+export function transcriptValues(res: CircuitResult): string[] {
+  const out: string[] = [];
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    const record = node as Record<string, unknown>;
+    if (Array.isArray(record.value) && Array.isArray(record.alignment)) {
+      for (const cell of record.value as Array<Record<string, number>>) {
+        out.push(
+          Object.values(cell ?? {})
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join(''),
+        );
+      }
+      return;
+    }
+    Object.values(record).forEach(walk);
+  };
+  walk((res.proofData as unknown as { publicTranscript: unknown[] }).publicTranscript ?? []);
+  return out;
+}
+
+/** A number as the transcript would carry it: little-endian, trailing zero bytes trimmed. */
+export function leHex(value: bigint): string {
+  let rest = value;
+  let out = '';
+  while (rest > 0n) {
+    out += Number(rest & 0xffn).toString(16).padStart(2, '0');
+    rest >>= 8n;
+  }
+  return out;
+}
+
 export const MASK64 = (1n << 64n) - 1n;
 export const unpack = (packed: bigint) => ({
   invoiceNo: packed >> 128n,

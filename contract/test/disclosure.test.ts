@@ -117,6 +117,30 @@ describe('2-of-3 threshold decryption', () => {
     expect(recomputed).toBe(false);
   });
 
+  it('approvals are per record, not per case: one approval on each of two requests opens it', () => {
+    // A keyholder publishes D_i = s_i·E, and E belongs to the *record*. Two requests naming the
+    // same record therefore yield two independent shares from two different keyholders, and the
+    // auditor combines them across requests. The threshold holds — two distinct keyholders are
+    // still required — but neither request's approval vector reaches two, so the per-request
+    // trail understates how far the record has been opened, and a keyholder that consents to one
+    // case reference cannot withhold the same share from another. See docs/THREAT-MODEL.md.
+    const r = setupRegistry();
+    const caseA = new Uint8Array(32).fill(0xa1);
+    const caseB = new Uint8Array(32).fill(0xb2);
+    const { inv, recordId } = requested(r, caseA);
+    r.auditor.request(recordId, caseB);
+    const reqA = pure.requestIdOf(recordId, caseA);
+    const reqB = pure.requestIdOf(recordId, caseB);
+
+    r.keyholders[0].approve(reqA);
+    r.keyholders[1].approve(reqB);
+    expect(r.ledger().requests.lookup(reqA).approvals).toEqual([true, false, false]);
+    expect(r.ledger().requests.lookup(reqB).approvals).toEqual([false, true, false]);
+
+    const S = combineShares([shareOf(r, reqA, 0), shareOf(r, reqB, 1)]);
+    expect(openRecord(r.ledger().records.lookup(recordId), S).invoice).toEqual(inv);
+  });
+
   it('the disclosure key opens only the record it was asked for', () => {
     const r = setupRegistry();
     const first = offered(r, r.financierA, { invoiceNo: 1n });
