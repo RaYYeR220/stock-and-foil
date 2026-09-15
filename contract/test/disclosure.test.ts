@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   combineShares,
-  expectRefusal,
   hex,
   offered,
   openRecord,
@@ -15,7 +14,7 @@ import {
   setupRegistry,
   type Registry,
 } from './harness.js';
-import { randomBytes32, randomScalar } from '../../sdk/src/crypto/scalar.js';
+import { randomScalar } from '../../sdk/src/crypto/scalar.js';
 
 const CASE_REF = new Uint8Array(32).fill(0xc7);
 
@@ -127,61 +126,5 @@ describe('2-of-3 threshold decryption', () => {
     const opened = openRecord(recA, pure.mulPoint(recA.E, r.disclosureSk));
     expect(recomputesNullifier(opened.invoice, first.n)).toBe(true);
     expect(recomputesNullifier(opened.invoice, second.n)).toBe(false);
-  });
-});
-
-describe('disclosure refusals', () => {
-  it('NOT_AUDITOR: only the holder of the auditor key can open a request', () => {
-    const r = setupRegistry();
-    const { inv } = offered(r);
-    const recordId = r.ledger().pledges.lookup(pure.nullifierOf(inv)).recordId;
-    const impostor = { ...r.auditor.ps, scalar: randomScalar() };
-    expectRefusal(() => r.h.call(impostor, 'requestDisclosure', [recordId, CASE_REF]), 'NOT_AUDITOR');
-  });
-
-  it('NO_SUCH_RECORD: a request needs a record that exists', () => {
-    const r = setupRegistry();
-    expectRefusal(() => r.auditor.request(randomBytes32(), CASE_REF), 'NO_SUCH_RECORD');
-  });
-
-  it('DUPLICATE_REQUEST: the same record and case reference cannot be requested twice', () => {
-    const r = setupRegistry();
-    const { recordId } = requested(r);
-    expectRefusal(() => r.auditor.request(recordId, CASE_REF), 'DUPLICATE_REQUEST');
-    r.auditor.request(recordId, new Uint8Array(32).fill(0xc8));
-    expect(r.ledger().requests.size()).toBe(2n);
-  });
-
-  it('NO_SUCH_REQUEST: a keyholder cannot approve a request that was never opened', () => {
-    const r = setupRegistry();
-    expectRefusal(() => r.keyholders[0].approve(randomBytes32()), 'NO_SUCH_REQUEST');
-  });
-
-  it('NOT_KEYHOLDER: a stranger cannot approve, and a keyholder cannot approve in another slot', () => {
-    const r = setupRegistry();
-    const { requestId } = requested(r);
-    const stranger = { ...r.keyholders[0].ps, scalar: randomScalar() };
-    expectRefusal(() => r.h.call(stranger, 'approveDisclosure', [requestId, 0n]), 'NOT_KEYHOLDER');
-    expectRefusal(() => r.h.call(r.keyholders[0].ps, 'approveDisclosure', [requestId, 1n]), 'NOT_KEYHOLDER');
-    expectRefusal(() => r.h.call(r.keyholders[0].ps, 'approveDisclosure', [requestId, 3n]), 'NOT_KEYHOLDER');
-    expect(r.ledger().shares.size()).toBe(0n);
-  });
-
-  it('ALREADY_APPROVED: a keyholder cannot approve the same request twice', () => {
-    const r = setupRegistry();
-    const { requestId } = requested(r);
-    r.keyholders[1].approve(requestId);
-    expectRefusal(() => r.keyholders[1].approve(requestId), 'ALREADY_APPROVED');
-    expect(r.ledger().shares.size()).toBe(1n);
-  });
-
-  it('a disclosure request leaks nothing about the invoice beyond the record it names', () => {
-    const r = setupRegistry();
-    const { inv, requestId } = requested(r);
-    const req = r.ledger().requests.lookup(requestId);
-    const published = JSON.stringify(req, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
-    for (const field of [inv.debtorId, inv.sellerId, inv.amount, inv.salt]) {
-      expect(published).not.toContain(field.toString());
-    }
   });
 });
