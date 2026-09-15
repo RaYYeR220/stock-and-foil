@@ -18,7 +18,14 @@ export interface PoolSlot {
 export interface CertifyOptions {
   /** Public label of the lender the pool is offered to. */
   lenderRef: Uint8Array;
-  /** Lender-chosen nonce; only that lender can test the resulting borrower commitment. */
+  /**
+   * Lender-chosen nonce, which **must be 32 uniformly random bytes** — use
+   * `FinancierClient.newLenderNonce()`. It is the only secret in the certificate: the ledger key
+   * is `H("cert", lenderRef, lenderNonce)` with a public `lenderRef`, so a guessable nonce (a
+   * counter, a date, a customer reference) is recoverable from that key, and with it anyone who
+   * knows a candidate `sellerId` can confirm the borrower behind `borrowerCommit` — or burn the
+   * certificate id in advance.
+   */
   lenderNonce: Uint8Array;
   /** Amount the pool is claimed to be worth, in minor units. */
   floor: bigint;
@@ -63,7 +70,14 @@ export class SellerClient extends RoleClient {
     };
   }
 
-  /** Offers one acknowledged invoice to the financier that issued `holderTag`. */
+  /**
+   * Offers one acknowledged invoice to the financier that issued `holderTag`.
+   *
+   * The sealing scalar is drawn fresh here. Overriding it through `inputs.ephemeral` is for tests
+   * only: reusing one scalar publishes the same ephemeral point twice, which cancels the masks
+   * and lets anyone read off which fields the two records share — and, when the nullifier is also
+   * the same, silently overwrites the earlier record under the same ledger key.
+   */
   offer(invoice: Invoice, holderTag: bigint, expiry: bigint, inputs: CallInputs = {}): Promise<TxReceipt> {
     return this.call('offer', [holderTag, expiry], { invoice, ephemeral: randomScalar(), ...inputs });
   }
@@ -74,6 +88,8 @@ export class SellerClient extends RoleClient {
    */
   certify(slots: readonly PoolSlot[], o: CertifyOptions, inputs: CallInputs = {}): Promise<TxReceipt> {
     if (slots.length > 4) throw new Error(`a borrowing base holds at most 4 invoices, got ${slots.length}`);
+    if (o.lenderRef.length !== 32) throw new Error(`lenderRef must be 32 bytes, got ${o.lenderRef.length}`);
+    if (o.lenderNonce.length !== 32) throw new Error(`lenderNonce must be 32 bytes, got ${o.lenderNonce.length}`);
     return this.call('certifyBorrowingBase', [o.lenderRef, o.lenderNonce, o.floor, o.validUntil], {
       invoices: pad4(slots.map((s) => s.invoice), ZERO_INVOICE),
       used: pad4(slots.map(() => true), false),
@@ -83,7 +99,12 @@ export class SellerClient extends RoleClient {
     });
   }
 
-  /** Takes the proceeds of a settled invoice no financier holds. */
+  /**
+   * Takes the proceeds of a settled invoice no financier holds.
+   *
+   * Settlement is unshielded: `to` and the amount are public against a public nullifier, so use a
+   * fresh address per claim unless the whole settled book should cluster under one.
+   */
   claim(nullifier: Uint8Array, to: UserAddress): Promise<TxReceipt> {
     return this.call('claimAsSeller', [nullifier, to]);
   }

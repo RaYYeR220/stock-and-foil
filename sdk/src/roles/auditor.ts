@@ -8,12 +8,12 @@
 // nullifier and the record id, and those must equal the ledger keys the record was found under.
 // Nobody has to trust the auditor's transcription.
 import { pureCircuits } from '@stockandfoil/contract';
-import { hex, toBytes32, toHex } from '../bytes.js';
+import { toBytes32, toHex } from '../bytes.js';
 import {
   decryptRecord,
   decryptShare,
   recoverSharedSecret,
-  verifyDisclosure,
+  verifyRecordDisclosure,
   type DecryptionShare,
   type DisclosureVerification,
 } from '../crypto/records.js';
@@ -38,7 +38,10 @@ export interface Disclosure {
   indices: Array<1 | 2 | 3>;
   invoice: Invoice;
   holderTag: bigint;
-  /** Pledge nullifier the record is stored against, when a pledge still references it. */
+  /**
+   * Pledge nullifier the record belongs to: the live pledge's when one still references the
+   * record, otherwise the one recomputed from the opened invoice.
+   */
   nullifier?: string;
   verification: DisclosureVerification;
   /** `recordIdOf(N, E)` recomputed from the opened invoice equals the ledger key. */
@@ -88,13 +91,12 @@ export class AuditorClient extends RoleClient {
     });
 
     const opened = this.tryOpen(record, parts);
-    const nullifier = view.pledges.find((p) => p.recordId === record.recordId)?.nullifier;
-    const verification = nullifier
-      ? verifyDisclosure(opened, nullifier)
-      : ({ verified: false, reason: 'MISMATCH' } as DisclosureVerification);
-    const recordIdMatches =
-      verification.nullifier !== undefined &&
-      hex(pureCircuits.recordIdOf(toBytes32(verification.nullifier), record.E)) === record.recordId;
+    // The record's own ledger key is the binding — `recordId = H("record", N, E)` recomputed from
+    // the plaintext. A pledge nullifier is not: a later offer of the same receivable moves the
+    // pledge to a fresh record and leaves this one unreferenced, and those superseded records are
+    // exactly what an investigation opens.
+    const verification: DisclosureVerification = verifyRecordDisclosure(opened, record);
+    const nullifier = view.pledges.find((p) => p.recordId === record.recordId)?.nullifier ?? verification.nullifier;
 
     return {
       requestId: id,
@@ -106,8 +108,8 @@ export class AuditorClient extends RoleClient {
       holderTag: opened.holderTag,
       nullifier,
       verification,
-      recordIdMatches,
-      verified: verification.verified && recordIdMatches,
+      recordIdMatches: verification.verified,
+      verified: verification.verified,
     };
   }
 

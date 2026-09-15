@@ -134,26 +134,63 @@ export interface DisclosureVerification {
 
 /**
  * Self-verifying disclosure: recompute `F`, `A` and `N` from the opened invoice and compare `N`
- * to the ledger key the record was found under. Opening with the wrong key yields field elements
- * that overflow `Uint<64>`, which the pure circuits reject outright, so that case is caught and
- * reported rather than thrown.
+ * to the pledge nullifier it is claimed to belong to. Opening with the wrong key yields field
+ * elements that overflow `Uint<64>`, which the pure circuits reject outright, so that case is
+ * caught and reported rather than thrown.
+ *
+ * Prefer `verifyRecordDisclosure` when the record itself is in hand: it binds the plaintext to
+ * the record's own ledger key and so still verifies a record a later offer superseded.
  */
 export function verifyDisclosure(
   opened: Pick<OpenedRecord, 'invoice'>,
   expectedNullifier: Uint8Array | string,
 ): DisclosureVerification {
+  const derived = deriveKeys(opened);
+  if (!derived) return { verified: false, reason: 'MALFORMED' };
+  const verified = derived.keys.nullifier === toHex(expectedNullifier);
+  const result: DisclosureVerification = { ...derived.keys, verified };
+  return verified ? result : { ...result, reason: 'MISMATCH' };
+}
+
+/**
+ * The binding that holds for *every* stored record: recompute `F`, `N` and `recordIdOf(N, E)`
+ * from the opened plaintext and compare that to the ledger key the record is filed under. The
+ * circuit computed the same key from the same invoice, so a match proves the plaintext is the
+ * one that was sealed — without needing a pledge to still point at the record.
+ *
+ * That matters because a record is superseded whenever the seller re-offers the receivable: the
+ * pledge moves to the new record and the old one is left unreferenced. Those are precisely the
+ * records an insolvency investigation opens, so verification cannot depend on a live pledge.
+ */
+export function verifyRecordDisclosure(
+  opened: Pick<OpenedRecord, 'invoice'>,
+  record: Pick<RecordView, 'recordId' | 'E'>,
+): DisclosureVerification {
+  const derived = deriveKeys(opened);
+  if (!derived) return { verified: false, reason: 'MALFORMED' };
+  const recordId = hex(pureCircuits.recordIdOf(derived.nullifier, record.E));
+  const verified = recordId === toHex(record.recordId);
+  const result: DisclosureVerification = { ...derived.keys, verified };
+  return verified ? result : { ...result, reason: 'MISMATCH' };
+}
+
+/** Fingerprint, ack leaf and nullifier of an opened plaintext, or nothing if it is not an invoice. */
+function deriveKeys(
+  opened: Pick<OpenedRecord, 'invoice'>,
+): { nullifier: Uint8Array; keys: { fingerprint: string; nullifier: string; ackLeaf: string } } | undefined {
   let fingerprint: Uint8Array;
   try {
     fingerprint = pureCircuits.fingerprint(opened.invoice);
   } catch {
-    return { verified: false, reason: 'MALFORMED' };
+    return undefined;
   }
-  const nullifier = hex(pureCircuits.nullifierFromFingerprint(fingerprint));
-  const result: DisclosureVerification = {
-    verified: nullifier === toHex(expectedNullifier),
-    fingerprint: hex(fingerprint),
+  const nullifier = pureCircuits.nullifierFromFingerprint(fingerprint);
+  return {
     nullifier,
-    ackLeaf: hex(pureCircuits.ackLeafFromFingerprint(fingerprint)),
+    keys: {
+      fingerprint: hex(fingerprint),
+      nullifier: hex(nullifier),
+      ackLeaf: hex(pureCircuits.ackLeafFromFingerprint(fingerprint)),
+    },
   };
-  return result.verified ? result : { ...result, reason: 'MISMATCH' };
 }

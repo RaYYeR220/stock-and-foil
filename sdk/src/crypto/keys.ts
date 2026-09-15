@@ -9,7 +9,7 @@
 // into `S = sk·E`. Once `checkCeremony` passes, the master secret is discarded.
 import { pureCircuits } from '@stockandfoil/contract';
 import { NATIVE_TOKEN_COLOR } from '../bytes.js';
-import type { Point, Role, StockAndFoilPrivateState } from '../types.js';
+import type { Point, RegistryConfig, Role, StockAndFoilPrivateState } from '../types.js';
 import { lagrangeAtZero, randomBytes32, randomScalar, splitSecret, type Share } from './scalar.js';
 
 const SCALAR_ROLES: ReadonlySet<Role> = new Set<Role>(['auditor', 'keyholder']);
@@ -94,6 +94,67 @@ export function checkCeremony(ceremony: DisclosureCeremony): CeremonyCheck {
     return { indices, ok: samePoint(fromShares, ceremony.disclosurePk) };
   });
   return { ok: shares.every((s) => s.ok) && pairs.every((p) => p.ok), shares, pairs };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Checking a registry somebody else deployed
+
+/** What is wrong with a registry's sealed keys, if anything. */
+export interface RegistryConfigCheck {
+  ok: boolean;
+  /** One line per broken property, in the order they were checked. */
+  problems: string[];
+}
+
+const IDENTITY: Point = { x: 0n, y: 1n };
+
+/**
+ * Checks the sealed keys of a *deployed* registry, from the public ledger view alone.
+ *
+ * Every confidentiality claim the product makes rests on the setup ceremony, and a wrong ceremony
+ * is silent: with a degenerate or duplicated key one party can open every record on its own, and
+ * with an inconsistent sharing no two keyholders can ever open one — which is only discovered
+ * when an investigation needs it. The contract refuses such a deployment (`BAD_DISCLOSURE_KEY`,
+ * `BAD_AUDITOR_KEY`, `BAD_KEYHOLDER_KEY`, `BAD_KEY_SHARING`), and this is the same check any
+ * participant can run before trusting a registry they did not deploy.
+ */
+export function verifyRegistryConfig(
+  config: Pick<RegistryConfig, 'disclosurePk' | 'keyholderPks' | 'auditorPk'>,
+): RegistryConfigCheck {
+  const { disclosurePk, keyholderPks, auditorPk } = config;
+  const problems: string[] = [];
+  const at = (i: number): string => `keyholderPks[${i}]`;
+
+  if (samePoint(disclosurePk, IDENTITY)) problems.push('disclosurePk is the curve identity: every record is readable by anyone');
+  if (samePoint(auditorPk, IDENTITY)) problems.push('auditorPk is the curve identity');
+  if (samePoint(auditorPk, disclosurePk)) problems.push('auditorPk equals disclosurePk: the auditor alone can open every record');
+  keyholderPks.forEach((pk, i) => {
+    if (samePoint(pk, IDENTITY)) problems.push(`${at(i)} is the curve identity`);
+    if (samePoint(pk, disclosurePk)) problems.push(`${at(i)} equals disclosurePk: that keyholder holds the whole disclosure key`);
+    if (samePoint(pk, auditorPk)) problems.push(`${at(i)} equals auditorPk: the auditor counts twice towards the threshold`);
+  });
+
+  // Feldman consistency: any two shares must reconstruct the disclosure key in point form.
+  for (const [a, b] of [
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ] as Array<[number, number]>) {
+    const combined = safeCombine([a + 1, b + 1], [keyholderPks[a]!, keyholderPks[b]!]);
+    if (!combined || !samePoint(combined, disclosurePk)) {
+      problems.push(`${at(a)} and ${at(b)} do not reconstruct disclosurePk: the sharing is not a 2-of-3 of this key`);
+    }
+  }
+  return { ok: problems.length === 0, problems };
+}
+
+/** A malformed point makes `ecMul` throw; that is a failed check, not a crash. */
+function safeCombine(indices: number[], points: Point[]): Point | undefined {
+  try {
+    return combinePublicShares(indices, points);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Constructor arguments, in the order `Contract.initialState` takes them. */

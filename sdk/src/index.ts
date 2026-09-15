@@ -86,9 +86,11 @@ export {
   generatePersona,
   generateRegistryKeys,
   runDisclosureCeremony,
+  verifyRegistryConfig,
   type AuditorKey,
   type CeremonyCheck,
   type DisclosureCeremony,
+  type RegistryConfigCheck,
   type RegistryConstructorArgs,
   type RegistryKeys,
 } from './crypto/keys.js';
@@ -106,11 +108,21 @@ export {
   unpackFields,
   unpackRecordFields,
   verifyDisclosure,
+  verifyRecordDisclosure,
   type DecryptionShare,
   type DisclosureVerification,
   type OpenedRecord,
   type RecordFields,
 } from './crypto/records.js';
+
+// Public-ledger audit checks
+export {
+  openableRecords,
+  recordDisclosureState,
+  reusedSealingKeys,
+  type RecordDisclosureState,
+  type ReusedSealingKey,
+} from './audit.js';
 
 // Backends
 export { SimulatorBackend, type SimulatorDeployOptions, type SimulatorSnapshot } from './backend/simulator.js';

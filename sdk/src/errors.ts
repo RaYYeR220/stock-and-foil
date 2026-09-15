@@ -8,6 +8,10 @@
  * Every assert message the contract can emit, taken from `contract/test/refusals.test.ts`
  * and `contract/README.md`. `BAD_EPHEMERAL` is not in the design spec: it guards against a
  * degenerate sealing scalar, which would leave a record with no secrecy at all.
+ *
+ * The four `BAD_*_KEY*` codes are raised by the **constructor**, so they refuse a deployment
+ * rather than a call: a registry whose disclosure ceremony is degenerate or inconsistent cannot
+ * be created in the first place.
  */
 export const REFUSAL_CODES = [
   'ALREADY_ACKNOWLEDGED',
@@ -15,8 +19,12 @@ export const REFUSAL_CODES = [
   'ALREADY_CLAIMED',
   'ALREADY_ENCUMBERED',
   'ALREADY_SETTLED',
+  'BAD_AUDITOR_KEY',
+  'BAD_DISCLOSURE_KEY',
   'BAD_EPHEMERAL',
   'BAD_EXPIRY',
+  'BAD_KEYHOLDER_KEY',
+  'BAD_KEY_SHARING',
   'BELOW_FLOOR',
   'DUPLICATE_CERTIFICATE',
   'DUPLICATE_INVOICE',
@@ -51,8 +59,12 @@ export const REFUSAL_MESSAGES: Record<RefusalCode, string> = {
   ALREADY_CLAIMED: 'The proceeds of this invoice have already been paid out.',
   ALREADY_ENCUMBERED: 'This receivable is already pledged to a financier.',
   ALREADY_SETTLED: 'This invoice has already been settled through the registry.',
+  BAD_AUDITOR_KEY: 'The auditor key is degenerate or duplicates another registry key.',
+  BAD_DISCLOSURE_KEY: 'The disclosure key is degenerate; records sealed to it would have no secrecy.',
   BAD_EPHEMERAL: 'The sealing key for this record was degenerate; retry with fresh randomness.',
   BAD_EXPIRY: 'The expiry date has already passed.',
+  BAD_KEYHOLDER_KEY: 'A keyholder key is degenerate or duplicates another registry key.',
+  BAD_KEY_SHARING: 'The keyholder keys are not a 2-of-3 sharing of this disclosure key.',
   BELOW_FLOOR: 'The pooled invoices are worth less than the floor the certificate claims.',
   DUPLICATE_CERTIFICATE: 'A certificate with that lender reference and nonce already exists.',
   DUPLICATE_INVOICE: 'The same invoice cannot fill two slots of one borrowing base.',

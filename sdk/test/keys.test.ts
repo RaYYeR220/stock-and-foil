@@ -13,6 +13,7 @@ import {
   generatePersona,
   generateRegistryKeys,
   runDisclosureCeremony,
+  verifyRegistryConfig,
 } from '../src/crypto/keys.js';
 import { JUBJUB_ORDER, modL, randomScalar } from '../src/crypto/scalar.js';
 
@@ -87,6 +88,65 @@ describe('disclosure key ceremony', () => {
     const check = checkCeremony({ ...ceremony, disclosurePk: pureCircuits.pubKeyOf(randomScalar()) });
     expect(check.ok).toBe(false);
     expect(check.pairs.every((p) => !p.ok)).toBe(true);
+  });
+});
+
+describe('checking a deployed registry from public state alone', () => {
+  const config = () => {
+    const keys = generateRegistryKeys();
+    return {
+      disclosurePk: keys.constructorArgs.disclosurePk,
+      keyholderPks: keys.constructorArgs.keyholderPks,
+      auditorPk: keys.constructorArgs.auditorPk,
+    };
+  };
+  const identity = { x: 0n, y: 1n };
+
+  it('accepts a registry whose ceremony is sound', () => {
+    expect(verifyRegistryConfig(config())).toEqual({ ok: true, problems: [] });
+  });
+
+  it('names a disclosure key that would make every record readable', () => {
+    const check = verifyRegistryConfig({ ...config(), disclosurePk: identity });
+    expect(check.ok).toBe(false);
+    expect(check.problems[0]).toMatch(/identity/);
+  });
+
+  it('names an auditor key that is really the disclosure key', () => {
+    const c = config();
+    const check = verifyRegistryConfig({ ...c, auditorPk: c.disclosurePk });
+    expect(check.ok).toBe(false);
+    expect(check.problems.join(' ')).toMatch(/auditor alone can open every record/);
+  });
+
+  it('names keyholder keys that are not a 2-of-3 sharing of this disclosure key', () => {
+    const c = config();
+    const unrelated = [randomScalar(), randomScalar(), randomScalar()].map((s) => pureCircuits.pubKeyOf(s)) as [
+      typeof identity,
+      typeof identity,
+      typeof identity,
+    ];
+    const check = verifyRegistryConfig({ ...c, keyholderPks: unrelated });
+    expect(check.ok).toBe(false);
+    expect(check.problems.filter((p) => p.includes('do not reconstruct disclosurePk'))).toHaveLength(3);
+  });
+
+  it('names keyholder keys presented out of Shamir-index order', () => {
+    const c = config();
+    const permuted = [c.keyholderPks[1], c.keyholderPks[0], c.keyholderPks[2]] as typeof c.keyholderPks;
+    expect(verifyRegistryConfig({ ...c, keyholderPks: permuted }).ok).toBe(false);
+  });
+
+  it('agrees with the contract: exactly the configurations it refuses are the ones it flags', () => {
+    // The constructor asserts `BAD_DISCLOSURE_KEY`, `BAD_AUDITOR_KEY`, `BAD_KEYHOLDER_KEY` and
+    // `BAD_KEY_SHARING`; this is the same predicate for registries deployed by somebody else.
+    const c = config();
+    expect(verifyRegistryConfig({ ...c, keyholderPks: [c.disclosurePk, c.keyholderPks[1], c.keyholderPks[2]] }).ok).toBe(
+      false,
+    );
+    expect(verifyRegistryConfig({ ...c, keyholderPks: [c.auditorPk, c.keyholderPks[1], c.keyholderPks[2]] }).ok).toBe(
+      false,
+    );
   });
 });
 
