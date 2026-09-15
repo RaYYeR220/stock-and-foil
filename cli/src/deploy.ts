@@ -86,7 +86,6 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
   const submitted: string[] = [];
   const recording: WalletAdapter = {
     ...wallet.adapter,
-    balanceTx: (...a: Parameters<WalletAdapter['balanceTx']>) => wallet.adapter.balanceTx(...a),
     async submitTx(tx) {
       const txId = await wallet.adapter.submitTx(tx);
       submitted.push(txId);
