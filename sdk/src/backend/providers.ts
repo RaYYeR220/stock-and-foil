@@ -44,8 +44,8 @@ export interface NetworkEndpoints {
 }
 
 /**
- * Defaults per network. `undeployed` is the local devnet from `infra/`; the public ones point at
- * the Midnight-operated services, and a caller can override any field.
+ * Defaults per network. `undeployed` is a devnet running on this machine; the public ones point
+ * at the Midnight-operated services. A caller can override any field.
  */
 export const NETWORKS: Record<ChainNetwork, NetworkEndpoints> = {
   undeployed: {
@@ -109,8 +109,11 @@ export interface CreateProvidersOptions {
   privateStateProvider?: PrivateStateProvider<PrivateStateId, StockAndFoilPrivateState>;
   endpoints?: Partial<NetworkEndpoints>;
   proofTimeoutMs?: number;
-  /** Supply a WebSocket implementation when the runtime has none (Node). */
-  webSocket?: never;
+  /**
+   * WebSocket implementation for the indexer subscription. Browsers have one; Node does not, so
+   * `createHeadlessWallet` installs `ws` globally — pass one here for any other Node caller.
+   */
+  webSocket?: typeof WebSocket;
 }
 
 /**
@@ -123,7 +126,11 @@ export function createProviders(options: CreateProvidersOptions): RegistryProvid
   const zkConfigProvider = options.zkConfigProvider;
   return {
     privateStateProvider: options.privateStateProvider ?? inMemoryPrivateStateProvider(),
-    publicDataProvider: indexerPublicDataProvider(endpoints.indexerHttpUrl, endpoints.indexerWsUrl),
+    publicDataProvider: indexerPublicDataProvider(
+      endpoints.indexerHttpUrl,
+      endpoints.indexerWsUrl,
+      options.webSocket as never,
+    ),
     zkConfigProvider,
     proofProvider: httpClientProofProvider(endpoints.proofServerUrl, zkConfigProvider, {
       timeout: options.proofTimeoutMs ?? DEFAULT_PROOF_TIMEOUT_MS,

@@ -3,7 +3,10 @@
 // Node-only helpers: a headless wallet, filesystem ZK artifacts and LevelDB-backed private state.
 // Nothing else in the SDK imports this module, so a browser bundle never pulls in `fs` or `ws`.
 // Import it as `@stockandfoil/sdk/node`.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+//
+// The wallet-sdk facade types its configuration and its wallet parts loosely, so the calls that
+// cross into it are the one place in the SDK that uses `any`; everything this module hands back
+// is fully typed.
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import * as ledgerApi from '@midnight-ntwrk/midnight-js-protocol/ledger';
@@ -64,7 +67,7 @@ export const levelPrivateState = (
   } as any);
 
 export interface HeadlessWalletOptions {
-  /** 64-byte hex seed, as `infra/.secrets/local-accounts.json` stores it. */
+  /** 64-byte hex seed of the account that pays the fees. */
   seedHex: string;
   network: ChainNetwork;
   endpoints?: Partial<NetworkEndpoints>;
