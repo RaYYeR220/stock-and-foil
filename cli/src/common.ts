@@ -255,14 +255,25 @@ export const settlementColorHex = (): string => hex(SETTLEMENT_COLOR);
  * URL templates for a network's block explorer, so a front end does not have to guess them.
  *
  * `{txHash}` is the transaction **hash**, not the midnight-js transaction *identifier* that
- * `deployTx` and `maintenanceTxs[].txId` carry — the explorer indexes by hash. Every evidence
- * step and every deployment anchor in an evidence file carries `txHash` alongside the identifier
- * for exactly this reason. All three patterns were checked against the live preview explorer.
+ * `deployTx` and `maintenanceTxs[].txId` carry: Midnight Explorer indexes by hash and answers a
+ * lookup by identifier with a 404. That is why every evidence step and every deployment anchor
+ * carries `txHash` alongside the identifier, and why a reader must substitute the hash here.
+ *
+ * Subscan gets only a block template. It resolves `/block/<height>` — the page differs from the
+ * one a nonexistent height returns — but `/extrinsic/<ledger tx hash>` renders the same empty
+ * shell for a real hash as for thirty-two zero bytes: a Midnight *ledger* transaction hash is not
+ * the Substrate extrinsic hash Subscan keys on, so there is no honest per-transaction link there.
+ * Checked against preview on 2026-09-15; preprod is the same software and the same shapes.
  */
 export interface ExplorerTemplates {
+  /** Midnight Explorer, keyed by transaction hash. */
   tx: string;
+  /** Midnight Explorer, keyed by contract address. */
   contract: string;
+  /** Midnight Explorer, keyed by block height. */
   block: string;
+  /** Subscan, keyed by block height — the only Subscan shape that resolves for this chain. */
+  subscanBlock: string;
 }
 
 export const EXPLORERS: Record<ChainNetwork, ExplorerTemplates | undefined> = {
@@ -272,11 +283,13 @@ export const EXPLORERS: Record<ChainNetwork, ExplorerTemplates | undefined> = {
     tx: 'https://preview.midnightexplorer.com/transactions/{txHash}',
     contract: 'https://preview.midnightexplorer.com/contracts/{address}',
     block: 'https://preview.midnightexplorer.com/blocks/{height}',
+    subscanBlock: 'https://midnight-preview.subscan.io/block/{height}',
   },
   preprod: {
     tx: 'https://preprod.midnightexplorer.com/transactions/{txHash}',
     contract: 'https://preprod.midnightexplorer.com/contracts/{address}',
     block: 'https://preprod.midnightexplorer.com/blocks/{height}',
+    subscanBlock: 'https://midnight-preprod.subscan.io/block/{height}',
   },
 };
 
@@ -288,7 +301,9 @@ export interface DeploymentFile {
   network: ChainNetwork;
   contractAddress: string;
   deployTx: string;
-  maintenanceTxs: Array<{ circuit: string; txId: string }>;
+  /** Explorer key of `deployTx`, resolved through the indexer; absent if it could not be read. */
+  deployTxHash?: string;
+  maintenanceTxs: Array<{ circuit: string; txId: string; txHash?: string }>;
   deployedAt: string;
   keyholderPks: [PointJson, PointJson, PointJson];
   auditorPk: PointJson;

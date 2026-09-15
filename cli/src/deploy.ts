@@ -12,6 +12,7 @@
 import { existsSync } from 'node:fs';
 import {
   createProviders,
+  NETWORKS,
   NetworkBackend,
   VERIFIER_KEYS_PER_TX,
   type ChainNetwork,
@@ -38,6 +39,7 @@ import {
   privateStatePassword,
   privateStatePath,
   requireNetwork,
+  resolveTransactions,
   say,
   seedHexOf,
   settlementColorHex,
@@ -140,9 +142,15 @@ export async function deploy(args: Args): Promise<number> {
 
     const deployTx = backend.deployTxId ?? session.submitted[0];
     if (!deployTx) throw new Error('the deploy transaction produced no transaction id');
+    const maintenanceIds = maintenanceCircuits.map((_, i) => session.submitted[i + 1] ?? '');
+
+    // Explorers key transactions by hash, midnight-js reports identifiers. Resolving them here
+    // makes the deployment file linkable on its own, without reading an evidence file next to it.
+    const anchors = await resolveTransactions(NETWORKS[network].indexerHttpUrl, [deployTx, ...maintenanceIds]);
     const maintenanceTxs = maintenanceCircuits.map((circuit, i) => ({
       circuit,
-      txId: session.submitted[i + 1] ?? '',
+      txId: maintenanceIds[i]!,
+      txHash: anchors.get(maintenanceIds[i]!)?.txHash,
     }));
 
     const publicMaterial = session.keys.file.publicMaterial;
@@ -150,6 +158,7 @@ export async function deploy(args: Args): Promise<number> {
       network,
       contractAddress: backend.contractAddress,
       deployTx,
+      deployTxHash: anchors.get(deployTx)?.txHash,
       maintenanceTxs,
       deployedAt: new Date().toISOString(),
       keyholderPks: publicMaterial.keyholderPks,
