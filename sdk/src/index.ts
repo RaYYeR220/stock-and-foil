@@ -142,11 +142,18 @@ export {
   type StagedDeployResume,
 } from './backend/network.js';
 export {
+  AddressDecodeError,
+  hexOnlyCodec,
+  loadAddressCodecs,
+  type AddressCodecs,
+} from './backend/address.js';
+export {
   createProviders,
   dappConnectorWalletAdapter,
   DEFAULT_PROOF_TIMEOUT_MS,
   fetchZkConfigProvider,
   inMemoryPrivateStateProvider,
+  WalletResponseError,
   type CreateProvidersOptions,
   type DAppConnectorOptions,
   type DAppConnectorWallet,
