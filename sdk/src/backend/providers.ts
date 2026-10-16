@@ -32,41 +32,33 @@ import type {
 } from '@midnight-ntwrk/midnight-js-types';
 import type { StockAndFoilPrivateState } from '@stockandfoil/contract';
 import { fromHex, hex, type UserAddress } from '../bytes.js';
+import {
+  resolveEndpoints,
+  type ChainNetwork,
+  type Environment,
+  type NetworkEndpoints,
+} from './endpoints.js';
 
-/** Networks the SDK knows how to reach. `simulator` needs no providers at all. */
-export type ChainNetwork = 'undeployed' | 'preview' | 'preprod';
-
-export interface NetworkEndpoints {
-  indexerHttpUrl: string;
-  indexerWsUrl: string;
-  nodeUrl: string;
-  proofServerUrl: string;
-}
-
-/**
- * Defaults per network. `undeployed` is a devnet running on this machine; the public ones point
- * at the Midnight-operated services. A caller can override any field.
- */
-export const NETWORKS: Record<ChainNetwork, NetworkEndpoints> = {
-  undeployed: {
-    indexerHttpUrl: 'http://127.0.0.1:8088/api/v4/graphql',
-    indexerWsUrl: 'ws://127.0.0.1:8088/api/v4/graphql/ws',
-    nodeUrl: 'ws://127.0.0.1:9944',
-    proofServerUrl: 'http://127.0.0.1:6300',
-  },
-  preview: {
-    indexerHttpUrl: 'https://indexer.preview.midnight.network/api/v4/graphql',
-    indexerWsUrl: 'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
-    nodeUrl: 'wss://rpc.preview.midnight.network',
-    proofServerUrl: 'http://127.0.0.1:6300',
-  },
-  preprod: {
-    indexerHttpUrl: 'https://indexer.preprod.midnight.network/api/v4/graphql',
-    indexerWsUrl: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
-    nodeUrl: 'wss://rpc.preprod.midnight.network',
-    proofServerUrl: 'http://127.0.0.1:6300',
-  },
-};
+// The network table moved to ./endpoints.ts when preprod and mainnet went behind Blockfrost.
+// Re-exported here so that `import { NETWORKS } from '@stockandfoil/sdk'` keeps working.
+export {
+  blockfrostTokenFor,
+  BlockfrostTokenMismatchError,
+  CHAIN_NETWORKS,
+  isChainNetwork,
+  MissingBlockfrostTokenError,
+  NETWORK_DESCRIPTORS,
+  NETWORKS,
+  redactEndpoint,
+  redactEndpoints,
+  requiresBlockfrostToken,
+  resolveEndpoints,
+  type ChainNetwork,
+  type Environment,
+  type NetworkDescriptor,
+  type NetworkEndpoints,
+  type ResolveEndpointsOptions,
+} from './endpoints.js';
 
 /** `certifyBorrowingBase` needs 25–30 s of proving, so the 300 s default is not enough headroom. */
 export const DEFAULT_PROOF_TIMEOUT_MS = 1_800_000;
@@ -87,6 +79,16 @@ export interface WalletAdapter extends WalletProvider {
   userAddress?(): Promise<UserAddress>;
   /** Releases wallet resources, if any. */
   close?(): Promise<void>;
+  /**
+   * Whether `balanceTx` also pays the DUST fee.
+   *
+   * `true` (the default reading when it is absent) is an ordinary self-funded wallet. `false`
+   * means the adapter balanced only the shielded and unshielded token kinds and the transaction
+   * still owes its fee — the shape a sponsor expects, and the only shape
+   * `sponsoredWalletAdapter` will wrap. Making it part of the type is what stops a zero-DUST
+   * demo from silently becoming a self-funded one.
+   */
+  readonly paysDustFees?: boolean;
 }
 
 /** The provider bundle a `NetworkBackend` runs on. */
@@ -108,6 +110,10 @@ export interface CreateProvidersOptions {
   /** Where per-persona private state is kept. Defaults to an in-memory store. */
   privateStateProvider?: PrivateStateProvider<PrivateStateId, StockAndFoilPrivateState>;
   endpoints?: Partial<NetworkEndpoints>;
+  /** Blockfrost project token, required on `preprod` and `mainnet` unless `endpoints` carries one. */
+  blockfrostToken?: string;
+  /** Environment to read the token from when it was not passed; a Node caller passes `process.env`. */
+  env?: Environment;
   proofTimeoutMs?: number;
   /**
    * WebSocket implementation for the indexer subscription. Browsers have one; Node does not, so
@@ -119,9 +125,17 @@ export interface CreateProvidersOptions {
 /**
  * Builds the provider bundle and pins the global network id, which the ledger uses to encode
  * addresses. Call this once per process or page.
+ *
+ * On `preprod` and `mainnet` the indexer and node URLs are Blockfrost's and carry a project
+ * token; `resolveEndpoints` raises `MissingBlockfrostTokenError` here rather than letting a
+ * provider discover a 403 halfway through a deploy.
  */
 export function createProviders(options: CreateProvidersOptions): RegistryProviders {
-  const endpoints = { ...NETWORKS[options.network], ...options.endpoints };
+  const endpoints = resolveEndpoints(options.network, {
+    blockfrostToken: options.blockfrostToken,
+    env: options.env,
+    overrides: options.endpoints,
+  });
   setNetworkId(options.network as NetworkId);
   const zkConfigProvider = options.zkConfigProvider;
   return {
@@ -209,6 +223,15 @@ export interface DAppConnectorOptions {
   decodeKey?: (bech32m: string) => string;
   /** Turns the wallet's Bech32m unshielded address into the 32 bytes a claim circuit pays to. */
   decodeAddress?: (bech32m: string) => Uint8Array;
+  /**
+   * Whether the connected wallet pays the DUST fee. Default `true`.
+   *
+   * Set it to `false` for a sponsored flow: the connector is asked to balance with
+   * `payFees: false`, so it funds the shielded and unshielded sides, signs and binds, and leaves
+   * the fee to the sponsor. A wallet holding zero DUST can get this far and no further on its
+   * own; wrap the result with `sponsoredWalletAdapter` to submit it.
+   */
+  payFees?: boolean;
 }
 
 /**
@@ -222,11 +245,13 @@ export function dappConnectorWalletAdapter(
   options: DAppConnectorOptions = {},
 ): WalletAdapter {
   const decodeKey = options.decodeKey ?? ((value: string) => value);
+  const payFees = options.payFees ?? true;
   return {
+    paysDustFees: payFees,
     getCoinPublicKey: () => decodeKey(keys.coinPublicKey),
     getEncryptionPublicKey: () => decodeKey(keys.encryptionPublicKey),
     async balanceTx(tx: UnboundTransaction): Promise<FinalizedTransaction> {
-      const balanced = await wallet.balanceUnsealedTransaction(hex(tx.serialize()));
+      const balanced = await wallet.balanceUnsealedTransaction(hex(tx.serialize()), { payFees });
       return Transaction.deserialize<SignatureEnabled, Proof, Binding>(
         'signature',
         'proof',

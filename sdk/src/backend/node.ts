@@ -10,6 +10,7 @@
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import * as ledgerApi from '@midnight-ntwrk/midnight-js-protocol/ledger';
+import type { FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type {
   PrivateStateId,
   PrivateStateProvider,
@@ -18,6 +19,7 @@ import type {
 import { ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
 import {
   createKeystore,
+  DustAddress,
   DustWallet,
   HDWallet,
   InMemoryTransactionHistoryStorage,
@@ -33,7 +35,14 @@ import type { StockAndFoilPrivateState } from '@stockandfoil/contract';
 import * as Rx from 'rxjs';
 import { WebSocket } from 'ws';
 import { userAddress, type UserAddress } from '../bytes.js';
-import { NETWORKS, type ChainNetwork, type NetworkEndpoints, type WalletAdapter } from './providers.js';
+import {
+  resolveEndpoints,
+  type ChainNetwork,
+  type Environment,
+  type NetworkEndpoints,
+} from './endpoints.js';
+import { SPECK_PER_DUST } from './indexer.js';
+import { type WalletAdapter } from './providers.js';
 
 /** The wallet SDK talks to the node over a WebSocket the Node runtime does not provide. */
 export function installWebSocket(): void {
@@ -71,18 +80,82 @@ export interface HeadlessWalletOptions {
   seedHex: string;
   network: ChainNetwork;
   endpoints?: Partial<NetworkEndpoints>;
-  /** How long to wait for the wallet to sync and hold DUST. */
+  /** Blockfrost project token; required on `preprod` and `mainnet`. */
+  blockfrostToken?: string;
+  /** Environment the token is read from when it was not passed; usually `process.env`. */
+  env?: Environment;
+  /** How long to wait for the wallet to sync. */
   syncTimeoutMs?: number;
+  /**
+   * Whether this wallet pays its own DUST fees. Default `true`.
+   *
+   * `false` balances only `['shielded','unshielded']`, which is the user half of the
+   * sponsorship pattern: the transaction is funded, signed and bound but still owes its fee.
+   * Such a wallet is not required to hold any DUST, so `requireDust` defaults to `false` too.
+   */
+  payDustFees?: boolean;
+  /**
+   * Whether to wait for the wallet to actually hold a DUST coin before returning. Defaults to
+   * `payDustFees`. Set it `false` to inspect a wallet that is still waiting for DUST to
+   * generate — `balance` does exactly that, which is the whole point of the command.
+   */
+  requireDust?: boolean;
+  /** Skip waiting for a complete sync. Balances are then whatever has been applied so far. */
+  requireSync?: boolean;
+}
+
+/** What a wallet holds, in the units the chain uses and in human ones. */
+export interface WalletBalances {
+  network: ChainNetwork;
+  /** NIGHT in its atomic unit (STAR, 10^6 per NIGHT). */
+  nightStar: bigint;
+  night: string;
+  /** Spendable DUST in SPECK (10^15 per DUST) at the time of reading. */
+  dustSpeck: bigint;
+  dust: string;
+  dustCoins: number;
+  /** NIGHT UTXOs already registered for DUST generation, and those not yet registered. */
+  nightUtxosRegistered: number;
+  nightUtxosUnregistered: number;
+  synced: boolean;
+  readAt: string;
 }
 
 export interface HeadlessWallet {
   adapter: WalletAdapter;
   /** Bech32m unshielded address of the fee payer. */
   address: string;
+  /** Bech32m DUST address — what a cNIGHT registration points at. */
+  dustAddress: string;
   /** Unshielded address bytes, which is what a claim circuit pays to. */
   payTo: UserAddress;
+  /** A snapshot of NIGHT and DUST right now. */
+  balances(): Promise<WalletBalances>;
+  /**
+   * The DUST this transaction alone would cost, in SPECK. Accurate only for proven transactions,
+   * which is what the cost estimate feeds it.
+   */
+  calculateFee(tx: FinalizedTransaction): Promise<bigint>;
+  /** The DUST cost including the balancing transaction the fee itself needs. */
+  estimateFee(tx: FinalizedTransaction): Promise<bigint>;
+  /**
+   * Sponsor side of DUST sponsorship: take somebody else's bound, fee-less transaction, balance
+   * only `['dust']` against this wallet, sign and finalize it. The result is submittable and
+   * still carries the user's own binding, so nothing about the call can have changed.
+   */
+  addDustFees(tx: FinalizedTransaction): Promise<FinalizedTransaction>;
+  /** Submits a finalized transaction and returns its identifier. */
+  submit(tx: FinalizedTransaction): Promise<string>;
   close(): Promise<void>;
 }
+
+/** `1234567` STAR rendered as `1.234567`. */
+const formatUnits = (value: bigint, decimals: number): string => {
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  const fraction = (value % base).toString().padStart(decimals, '0').replace(/0+$/, '');
+  return fraction === '' ? `${whole}` : `${whole}.${fraction}`;
+};
 
 /**
  * Starts a wallet-sdk 1.2.0 facade and exposes it as a `WalletAdapter`.
@@ -93,7 +166,14 @@ export interface HeadlessWallet {
  */
 export async function createHeadlessWallet(options: HeadlessWalletOptions): Promise<HeadlessWallet> {
   installWebSocket();
-  const endpoints = { ...NETWORKS[options.network], ...options.endpoints };
+  const endpoints = resolveEndpoints(options.network, {
+    blockfrostToken: options.blockfrostToken,
+    env: options.env,
+    overrides: options.endpoints,
+  });
+  const payDustFees = options.payDustFees ?? true;
+  const requireDust = options.requireDust ?? payDustFees;
+  const requireSync = options.requireSync ?? true;
 
   const hd = HDWallet.fromSeed(Buffer.from(options.seedHex, 'hex'));
   if (hd.type !== 'seedOk') throw new Error('the wallet seed is not a valid 64-byte hex string');
@@ -129,24 +209,33 @@ export async function createHeadlessWallet(options: HeadlessWalletOptions): Prom
 
   const complete = (progress: any): boolean =>
     typeof progress?.isStrictlyComplete === 'function' && progress.isStrictlyComplete();
-  await Rx.firstValueFrom(
-    wallet.state().pipe(
-      Rx.filter(
-        (s: any) =>
-          complete(s.shielded.progress) &&
-          complete(s.unshielded.progress) &&
-          complete(s.dust.progress) &&
-          s.dust.availableCoins.length > 0,
+  const isSynced = (s: any): boolean =>
+    complete(s.shielded.progress) && complete(s.unshielded.progress) && complete(s.dust.progress);
+
+  if (requireSync) {
+    await Rx.firstValueFrom(
+      wallet.state().pipe(
+        Rx.filter((s: any) => isSynced(s) && (!requireDust || s.dust.availableCoins.length > 0)),
+        Rx.timeout(options.syncTimeoutMs ?? 600_000),
       ),
-      Rx.timeout(options.syncTimeoutMs ?? 600_000),
-    ),
-  );
+    );
+  }
+
+  const currentState = (): Promise<any> =>
+    Rx.firstValueFrom(wallet.state().pipe(Rx.timeout(options.syncTimeoutMs ?? 600_000)));
 
   const adapter: WalletAdapter = {
+    paysDustFees: payDustFees,
     getCoinPublicKey: () => shieldedSecretKeys.coinPublicKey,
     getEncryptionPublicKey: () => shieldedSecretKeys.encryptionPublicKey,
     async balanceTx(tx: any, ttl: Date = ttlOneHour()) {
-      const recipe = await wallet.balanceUnboundTransaction(tx, { shieldedSecretKeys, dustSecretKey }, { ttl });
+      // `tokenKindsToBalance` is the whole of DUST sponsorship. Leaving DUST out produces a
+      // transaction that is complete and bound but unpaid — exactly what a sponsor completes.
+      const recipe = await wallet.balanceUnboundTransaction(
+        tx,
+        { shieldedSecretKeys, dustSecretKey },
+        { ttl, tokenKindsToBalance: payDustFees ? 'all' : ['shielded', 'unshielded'] } as any,
+      );
       const signed = await wallet.signRecipe(recipe, (data: any) => keystore.signData(data));
       return wallet.finalizeRecipe(signed) as any;
     },
@@ -159,10 +248,53 @@ export async function createHeadlessWallet(options: HeadlessWalletOptions): Prom
 
   const raw = keystore.getAddress() as unknown;
   const payTo = userAddress(typeof raw === 'string' ? raw : new Uint8Array((raw as { bytes: Uint8Array }).bytes));
+
   return {
     adapter,
     address: keystore.getBech32Address().asString(),
+    dustAddress: DustAddress.encodePublicKey(options.network as any, dustSecretKey.publicKey) as unknown as string,
     payTo,
+    async balances(): Promise<WalletBalances> {
+      const s = await currentState();
+      const now = new Date();
+      const nightStar: bigint = s.unshielded.balances[ledgerApi.unshieldedToken().raw] ?? 0n;
+      let dustSpeck = 0n;
+      // `balance(now)` projects generation forward and throws while the dust tree is still
+      // catching up. A wallet with no DUST yet is the normal case for this call, not an error.
+      try {
+        dustSpeck = s.dust.balance(now) as bigint;
+      } catch {
+        dustSpeck = 0n;
+      }
+      const coins: Array<{ meta: { registeredForDustGeneration: boolean } }> = s.unshielded.availableCoins ?? [];
+      const unregistered = coins.filter((c) => !c.meta.registeredForDustGeneration).length;
+      return {
+        network: options.network,
+        nightStar,
+        night: formatUnits(nightStar, 6),
+        dustSpeck,
+        dust: formatUnits(dustSpeck, 15),
+        dustCoins: s.dust.availableCoins?.length ?? 0,
+        nightUtxosRegistered: coins.length - unregistered,
+        nightUtxosUnregistered: unregistered,
+        synced: isSynced(s),
+        readAt: now.toISOString(),
+      };
+    },
+    calculateFee: (tx) => wallet.calculateTransactionFee(tx as any) as Promise<bigint>,
+    estimateFee: (tx) => wallet.estimateTransactionFee(tx as any, dustSecretKey) as Promise<bigint>,
+    async addDustFees(tx: FinalizedTransaction): Promise<FinalizedTransaction> {
+      const recipe = await wallet.balanceFinalizedTransaction(
+        tx as any,
+        { shieldedSecretKeys, dustSecretKey },
+        { ttl: ttlOneHour(), tokenKindsToBalance: ['dust'] } as any,
+      );
+      const signed = await wallet.signRecipe(recipe, (data: any) => keystore.signData(data));
+      return (await wallet.finalizeRecipe(signed)) as FinalizedTransaction;
+    },
+    submit: (tx) => wallet.submitTransaction(tx as any) as Promise<string>,
     close: () => wallet.stop(),
   };
 }
+
+export { SPECK_PER_DUST };

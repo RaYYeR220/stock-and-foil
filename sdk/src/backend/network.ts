@@ -27,7 +27,9 @@ import { hex } from '../bytes.js';
 import type { RegistryConstructorArgs } from '../crypto/keys.js';
 import { rethrowAsRefusal } from '../errors.js';
 import type { MerklePath, NetworkName, PublicLedgerView, RegistryBackend, TxReceipt } from '../types.js';
-import { NETWORKS, type ChainNetwork, type NetworkEndpoints, type RegistryProviders } from './providers.js';
+import { chainTimeSeconds } from './indexer.js';
+import { redactEndpoints, resolveEndpoints, type ChainNetwork, type Environment, type NetworkEndpoints } from './endpoints.js';
+import { type RegistryProviders } from './providers.js';
 import { toPublicLedgerView } from './view.js';
 
 /** A contract instance bound to one persona's private state. */
@@ -51,6 +53,13 @@ export interface NetworkBackendOptionsBase {
    */
   compiledAssetsPath: string;
   endpoints?: Partial<NetworkEndpoints>;
+  /**
+   * Blockfrost project token, required on `preprod` and `mainnet`. Only used for the backend's
+   * own indexer reads — the providers were already built with their own copy.
+   */
+  blockfrostToken?: string;
+  /** Environment the token is read from when it was not passed; a Node caller passes `process.env`. */
+  env?: Environment;
   /** Override how a persona maps to a private-state id. */
   privateStateId?: (persona: StockAndFoilPrivateState) => string;
 }
@@ -162,7 +171,11 @@ export class NetworkBackend implements RegistryBackend {
     this.deployTxId = options.deployTxId;
     this.providers = options.providers;
     this.compiled = compileStockAndFoil(options.compiledAssetsPath);
-    this.endpoints = { ...NETWORKS[options.network], ...options.endpoints };
+    this.endpoints = resolveEndpoints(options.network, {
+      blockfrostToken: options.blockfrostToken,
+      env: options.env,
+      overrides: options.endpoints,
+    });
     this.privateStateIdOf = options.privateStateId ?? defaultPrivateStateId;
     this.providers.privateStateProvider.setContractAddress(options.contractAddress);
   }
@@ -260,16 +273,12 @@ export class NetworkBackend implements RegistryBackend {
 
   /** Block time the chain is at, in unix seconds, read from the indexer's latest block. */
   async now(): Promise<bigint> {
-    const response = await fetch(this.endpoints.indexerHttpUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '{ block { timestamp } }' }),
-    });
-    if (!response.ok) throw new Error(`indexer returned ${response.status} for the latest block`);
-    const body = (await response.json()) as { data?: { block?: { timestamp?: number } } };
-    const timestamp = body.data?.block?.timestamp;
-    if (timestamp === undefined) throw new Error('indexer returned no block timestamp');
-    return BigInt(Math.floor(timestamp / 1000));
+    return chainTimeSeconds(this.endpoints.indexerHttpUrl);
+  }
+
+  /** The endpoints this backend is talking to, with any Blockfrost token removed. */
+  get publicEndpoints(): NetworkEndpoints {
+    return redactEndpoints(this.endpoints);
   }
 
   // ------------------------------------------------------------------------------- Network extras

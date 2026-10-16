@@ -175,6 +175,7 @@ export {
 export {
   chainTimeSeconds,
   clearIndexerSchemaCache,
+  fetchRawTransactions,
   formatDust,
   indexerFeeShape,
   indexerQuery,
