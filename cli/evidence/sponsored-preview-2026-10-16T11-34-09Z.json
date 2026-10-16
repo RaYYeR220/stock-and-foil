@@ -1,0 +1,42 @@
+{
+  "project": "Stock & Foil",
+  "kind": "dust-sponsorship-proof",
+  "network": "preview",
+  "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+  "compactVersion": "0.31.1",
+  "at": "2026-10-16T11:34:09.465Z",
+  "explorer": {
+    "tx": "https://preview.midnightexplorer.com/transactions/{txHash}",
+    "contract": "https://preview.midnightexplorer.com/contracts/{address}",
+    "block": "https://preview.midnightexplorer.com/blocks/{height}",
+    "subscanBlock": "https://midnight-preview.subscan.io/block/{height}"
+  },
+  "claim": "The acting wallet held 0 SPECK of DUST before and after this run, and could not have paid a fee. It proved, balanced the shielded and unshielded sides, signed and bound the transaction; a sponsor balanced the DUST and submitted it. The registry authenticates by secret knowledge, not by fee payer, so the sponsor bought a block slot and nothing else.",
+  "actingWallet": {
+    "address": "mn_addr_preview1h757pw885u2sytzdjpmnwjpta2g7tad0qhqjz7sg5khlrhlsfacsy42wwl",
+    "dustSpeckBefore": "0",
+    "dustSpeckAfter": "0",
+    "nightStar": "0",
+    "registeredForDustGeneration": 0
+  },
+  "sponsor": {
+    "endpoint": "http://127.0.0.1:7391"
+  },
+  "steps": [
+    {
+      "id": "sponsored-acknowledge",
+      "circuit": "acknowledge",
+      "persona": "debtor (zero DUST)",
+      "label": "A debtor holding no DUST acknowledges invoice #424959",
+      "txId": "00c773809bf11ab9da3d753eef86f8f951a4a0b63b5300b5fdbd59f8d99be02dbf",
+      "blockHeight": 1321650,
+      "durationMs": 24326,
+      "sponsorReportedFeeSpeck": "1001",
+      "txHash": "a46d2c3a01b49d1ebca0ef7c9bb65d0f3c5927623cfedad116550daeffd06e07",
+      "blockTimestamp": "2026-10-16T11:33:54.000Z",
+      "feeSpeck": "1"
+    }
+  ],
+  "totalSponsoredFeeSpeck": "1",
+  "totalSponsoredFeeDust": "0.000000"
+}

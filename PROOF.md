@@ -163,6 +163,37 @@ The two nullifiers are equal, which is the point: the auditor did not receive an
 take somebody's word for it - the plaintext it recovered rehashes to the exact public marker
 the registry has been tracking since the offer.
 
+### A party holding zero DUST transacted anyway
+
+Every Midnight transaction pays its fee in DUST; DUST is generated only by registered NIGHT,
+is non-transferable, and a contract cannot hold it. A debtor confirming an invoice their
+employer owes is a finance clerk, not a crypto user, and will not be made to acquire NIGHT
+first. The official sponsorship pattern removes that step without weakening anything: the
+contract authenticates by secret knowledge, so the sponsor's money buys a block slot and
+nothing else.
+
+| | |
+|---|---|
+| Acting wallet | `mn_addr_preview1h757pw885u2sytzdjpmnwjpta2g7tad0qhqjz7sg5khlrhlsfacsy42wwl` |
+| Its DUST before | **0 SPECK** |
+| Its DUST after | **0 SPECK** |
+| Its NIGHT | 0 STAR, 0 UTXO(s) registered for DUST generation |
+| Run at | 2026-10-16 11:34:09 UTC |
+| Evidence | [`cli/evidence/sponsored-preview-2026-10-16T11-34-09Z.json`](./cli/evidence/sponsored-preview-2026-10-16T11-34-09Z.json) |
+
+| Circuit | Transaction | Block | Fee paid by the sponsor |
+|---|---|---|---|
+| `acknowledge` | [`a46d2c3a01b4...`](https://preview.midnightexplorer.com/transactions/a46d2c3a01b49d1ebca0ef7c9bb65d0f3c5927623cfedad116550daeffd06e07) | 1321650 | 1 SPECK |
+
+Total paid by the sponsor: **1 SPECK** (0.000000 DUST).
+
+The acting wallet was created from a seed of its own, never funded and never registered for
+DUST generation. Its balance was read from the chain *before* the run and the command aborts
+unless it is exactly zero — the claim is not that it ought to be empty but that it was, at the
+moment it transacted. It proved, balanced only the shielded and unshielded sides, signed and
+bound the transaction; the sponsor balanced the DUST and submitted. Its balance was read again
+afterwards and is still zero, because it never paid.
+
 <!-- END GENERATED preview -->
 
 ## Local devnet: the same run, with the deployment repeated
