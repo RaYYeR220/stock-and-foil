@@ -1,41 +1,61 @@
 {
   "network": "preview",
-  "contractAddress": "9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7",
-  "deployTx": "00025599f194f88e6e2f50345c77d60ddf6ee991b22c32a0543ed03fb0dd172fe9",
-  "deployTxHash": "d8732da6763ed09c52a7013ebef9d76534264c1e900ba3a8c6c25a7906d13f68",
+  "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+  "deployTx": "004a032125dbea06ee8864a26d85f7a20bbf8b7fe39646447fc7d87303ac116405",
+  "deployTxHash": "c61e4a58e6f76cbe637816c0b471c0a6cb2e488749ad7351da6200230c3e286d",
   "maintenanceTxs": [
     {
+      "circuit": "acceptBatch",
+      "txId": "00863e724bd7fec2a0eadfa7a84f91da48fef20ea498196efa1ca3d9f76e29be08",
+      "txHash": "c7cd79f03fabf75a9e518c041fbd8cb61dcc81befeff76e9fda87afc047b6516"
+    },
+    {
+      "circuit": "release",
+      "txId": "001d9dc1ae65697d778b4125a0b16a64d798354c9855750fabf1895fd156e2de02",
+      "txHash": "9d0acdbe126c901a7baec460fcae21983771f5395e5b45fcc1b473ca429c82ed"
+    },
+    {
       "circuit": "certifyBorrowingBase",
-      "txId": "002cd8251642498d421b80dd7ef3221a6bc18ab2fd3faf9563de4eeeb8430bf08c",
-      "txHash": "cef559b00c25d87a55ffb0dff632eaed3bf7cfc0198fc4a04caa4b6f5e72672d"
+      "txId": "0016c470ab46d998602ef472886247fe62ab6a13b6e026cfdd71f8df1f11c7908b",
+      "txHash": "9657d5113adc76adebeb40f76e6efb501979db1bc62a7a4e608bf5ceccefb5a8"
     },
     {
       "circuit": "payInvoice",
-      "txId": "009d36e3a47bb31263dfad67ee6b178ac234fdd45e65b876088ccf22ec2a3e9d48",
-      "txHash": "1fb3decc45ee01509369091e1046f8aebd64f7980616c0f3e0209cf04bf00850"
+      "txId": "003bd6cf145392d6205c69b83dd070aac40e3ffe5d47cedb6a433e621c98df5a44",
+      "txHash": "bdc92188c1a6f6570c7dcaa09fb0c9e960802658e2e57fd822828d36f23caf50"
     },
     {
       "circuit": "claimAsHolder",
-      "txId": "004777f5335fc5bbd013c3d437913a2c54dcf1d79a1408efa655696874db701816",
-      "txHash": "627cdb34c8e176826b67b4ff872f2d23237ae725f64eaf44f6ddfb31d2474046"
+      "txId": "00fe804295daee105fb255a3e2bbb4a38a29e074a41dc674876af2e19d08c17036",
+      "txHash": "e1ef579e06816539c4362700ec3a877762cf80d4b10675af9321719ba81a752f"
     },
     {
       "circuit": "claimAsSeller",
-      "txId": "0099a92ab050e6e2b179a117a59ed712e204ce93fbf4bae0e08fe9f7c1e4861942",
-      "txHash": "82c84ce6838c626c457384505d71be43d38a4ad0734df2640fab58a1605ca0f8"
+      "txId": "009a37b3062537a3e982a0500c7e77bee8d059aa0942bcc9ff6951fdbc2c58ca0b",
+      "txHash": "13b7b72b3f6d9de14fcfb8e39ce47897a285b3d08e8ee69ab1f0a11014abb6a5"
     },
     {
       "circuit": "requestDisclosure",
-      "txId": "00f6bc088a162f16484a9d02831fa4d3c8129e20df7e22ea50d4bd14a22496263b",
-      "txHash": "b8f3dd94100863fe16ce5ae554b7bb3077a10d5f698cf7e10f16490ffbaf9590"
+      "txId": "0027fdbf34ed40b064a85ed4d474afd78e58562ea2ef4e56bb4495350269f49582",
+      "txHash": "3ece211d960cb1a89614c02f742771cea05701f56440c6da1ea421f9cc8a79bc"
     },
     {
       "circuit": "approveDisclosure",
-      "txId": "0027bb48b0edda8a1fb31281cc7a1417d8eaa8297c35848ab79f4dccecc8ff9e72",
-      "txHash": "060fc88f792e7e71270c75cb1f138c3e22e832c6e482690d639696623d48f96d"
+      "txId": "008e72d459c11caefcb07f5d668b31f5ff641838874aa44ef1e8bed07f069f2c50",
+      "txHash": "859ecd9148ce552b8d05c029013f159e05bcff1a5319efed643c2d9b253e4966"
+    },
+    {
+      "circuit": "openCase",
+      "txId": "009983c81a5bed765cb5df7bfe2407de437cf3fa1acd8285a35f85cbd485b5ceec",
+      "txHash": "55439bcaa44119a476cc27a2f020954799165588a659769f7fba50ead6c5aa72"
+    },
+    {
+      "circuit": "approveCase",
+      "txId": "00ba55bc255b7a44ca92ece08966dbd7497d1f78fd69e93470b98e0010db2d0a40",
+      "txHash": "5e0d1e383627a2f6745281b4fd4c1ae8c21db42d55e8b82c43c9020bde2e6d36"
     }
   ],
-  "deployedAt": "2026-09-15T17:40:31.092Z",
+  "deployedAt": "2026-10-16T10:24:50.943Z",
   "keyholderPks": [
     {
       "x": "16399305735512160948718228855070862199308278067720241121342997533178628253002",
