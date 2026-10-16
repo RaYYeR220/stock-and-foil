@@ -23,7 +23,7 @@ account of that, and `contract/test/transcript.test.ts` asserts it.
 
 | Party | Holds | Trusted for | **Not** trusted for |
 |---|---|---|---|
-| **Operator** (registry consortium) | `opSk` | admitting real, KYB'd debtors and financiers; deploying a sound ceremony; retaining the contract's maintenance authority | reading records, pledging, settling, or opening a disclosure — it has no cryptographic power over any of those |
+| **Operator** (registry consortium) | `opSk` | admitting real, KYB'd debtors and financiers; deploying a sound ceremony; declaring peer registries it has actually checked off chain; retaining the contract's maintenance authority | reading records, pledging, settling, or opening a disclosure — it has no cryptographic power over any of those; and **a peer declaration is not a verification** (§3.7) |
 | **Debtor** (buyer) | `debtorSk`, the invoices it acknowledged, including salts | the truth of what it acknowledges; paying through the contract | nothing else — it cannot pledge, claim or read a record |
 | **Seller** (supplier) | `sellerSk`, invoices incl. salts, holder tags received off-chain | drawing a fresh sealing scalar per record | the invoice's truth (the debtor's acknowledgment carries that); which lender a certificate's slots are actually addressed to (§3.1) |
 | **Financier** (factor) | `finSk`, its holder tags | issuing a tag only for a receivable it intends to fund | anything about other financiers' books |
@@ -241,6 +241,19 @@ with no on-chain request at all. That is inherent to 2-of-3 and is a published l
 - Admit a debtor or financier that should not be admitted, which is the root of the collusion
   case in 3.3.
 - Exhaust the member trees: 2¹⁰ = 1024 debtors and 1024 financiers.
+- **Declare any address as a peer registry, including one that holds no registry, a hostile one,
+  or one it controls itself.** `registerPeer` writes an operator's claim; the contract checks
+  nothing about the target, and on ledger 8 it could not — there are no cross-contract calls, and
+  even with them "this address holds an honest registry" is not a provable property. The damage
+  is bounded by what a peer answer is worth: a lender asks each registry the *encumbrance*
+  question itself (`FinancierClient.checkEncumbranceAcross`), and a registry can only ever answer
+  "free" when it holds no marker. So a fake or hostile peer can withhold a true "encumbered" —
+  the same thing a registry that simply does not exist does — but it cannot make a receivable
+  look encumbered in *this* registry, and it cannot learn anything by being asked beyond the
+  marker, which the asker already holds. Treat a peer list as a directory the operator is
+  accountable for, never as an endorsement. There is also no `removePeer`: a declaration is
+  permanent, like an admission. `refusals.test.ts` "federation refusals",
+  `lifecycle.test.ts` "a peer declaration is not a verification".
 - **Replace or remove verifier keys**, because it holds the maintenance authority (§1). This is
   the largest single trust assumption in the deployment and is not visible in the Compact source.
 - **Not** deploy a broken ceremony: the constructor refuses it (P8), and any participant can
@@ -266,7 +279,7 @@ with no on-chain request at all. That is inherent to 2-of-3 and is a published l
 - Settlement transparency: amounts and addresses are public, because contract custody of shielded
   coins is blocked upstream.
 - Timing correlation between an acknowledgment and a later offer.
-- The operator's admission decisions and its maintenance authority (§1).
+- The operator's admission decisions, its peer declarations and its maintenance authority (§1, §3.7).
 - A seller that reuses its own sealing scalar (3.1).
 - A certificate whose slots are not addressed to the lender it names (3.1). The lender checks it
   itself, with `FinancierClient.checkCertificate` or by accepting every slot.

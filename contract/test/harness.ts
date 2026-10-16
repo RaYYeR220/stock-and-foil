@@ -59,6 +59,9 @@ export function expectRefusal(fn: () => unknown, code: string): void {
 /** Deterministic stand-in for a wallet address; settlement only ever moves unshielded funds. */
 export const userAddress = (fill: number): { bytes: Bytes } => ({ bytes: new Uint8Array(32).fill(fill) });
 
+/** Deterministic stand-in for another registry's contract address. */
+export const contractAddress = (fill: number): { bytes: Bytes } => ({ bytes: new Uint8Array(32).fill(fill) });
+
 type Token = { raw: string };
 type Recipient = { address: string };
 
@@ -282,6 +285,9 @@ export class Operator extends Persona {
   }
   admitFinancier(leaf: Bytes) {
     return this.call('admitFinancier', [leaf]);
+  }
+  registerPeer(peer: { bytes: Bytes }, label: Bytes, labelSalt: Bytes) {
+    return this.call('registerPeer', [peer, label, labelSalt]);
   }
 }
 

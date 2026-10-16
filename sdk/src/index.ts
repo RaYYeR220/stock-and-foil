@@ -39,6 +39,7 @@ export {
   findCertificate,
   findPledge,
   findRecord,
+  findPeer,
   findRequest,
   findShare,
   pledgeStatusName,
@@ -51,6 +52,7 @@ export {
   type Invoice,
   type MerklePath,
   type NetworkName,
+  type PeerView,
   type PledgeStatusName,
   type PledgeView,
   type Point,
@@ -142,15 +144,69 @@ export {
   DEFAULT_PROOF_TIMEOUT_MS,
   fetchZkConfigProvider,
   inMemoryPrivateStateProvider,
-  NETWORKS,
-  type ChainNetwork,
   type CreateProvidersOptions,
   type DAppConnectorOptions,
   type DAppConnectorWallet,
-  type NetworkEndpoints,
   type RegistryProviders,
   type WalletAdapter,
 } from './backend/providers.js';
+
+// Where each network lives, and how a Blockfrost token reaches it
+export {
+  blockfrostTokenFor,
+  BlockfrostTokenMismatchError,
+  CHAIN_NETWORKS,
+  isChainNetwork,
+  MissingBlockfrostTokenError,
+  NETWORK_DESCRIPTORS,
+  NETWORKS,
+  redactEndpoint,
+  redactEndpoints,
+  requiresBlockfrostToken,
+  resolveEndpoints,
+  type ChainNetwork,
+  type Environment,
+  type NetworkDescriptor,
+  type NetworkEndpoints,
+  type ResolveEndpointsOptions,
+} from './backend/endpoints.js';
+
+// Indexer reads midnight-js does not expose: chain time, explorer anchors, fees paid
+export {
+  chainTimeSeconds,
+  clearIndexerSchemaCache,
+  formatDust,
+  indexerFeeShape,
+  indexerQuery,
+  IndexerError,
+  latestBlock,
+  resolveTransactions,
+  SPECK_PER_DUST,
+  totalFeeSpeck,
+  type FeeShape,
+  type TxAnchor,
+} from './backend/indexer.js';
+
+// DUST fee sponsorship
+export {
+  describeTransaction,
+  deserializeSponsoredTx,
+  requestSponsorship,
+  serializeSponsoredTx,
+  SPONSOR_PATH,
+  SPONSOR_PROTOCOL_VERSION,
+  SponsorError,
+  sponsoredWalletAdapter,
+  type SponsorClientOptions,
+  type SponsoredWalletOptions,
+  type SponsorErrorBody,
+  type SponsorRefusalCode,
+  type SponsorRequest,
+  type SponsorResponse,
+  type TransactionAction,
+  type TransactionDescription,
+} from './backend/sponsor.js';
+
 export { toPublicLedgerView } from './backend/view.js';
 
 // Role clients
@@ -165,7 +221,11 @@ export {
   type CertificateCheck,
   type CertificateSlot,
   type CertifyOptions,
+  type ContractAddressValue,
   type Disclosure,
+  type FederatedEncumbrance,
   type KeyholderIndex,
+  type PeerDeclaration,
   type PoolSlot,
+  type RegistryEncumbrance,
 } from './roles/index.js';

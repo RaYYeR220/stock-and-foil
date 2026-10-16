@@ -18,6 +18,7 @@ src/modules/Identity.compact    domain-separated identity and tag hashes (pure)
 src/modules/Invoice.compact     Invoice struct, fingerprint / ack leaf / nullifier, field packing (pure)
 src/modules/Cipher.compact      ECDH sealing, Jubjub helpers, record and share keys (pure)
 src/modules/BorrowingBase.compact  certificate struct and pool arithmetic (pure)
+src/modules/Federation.compact  peer-registry struct and label commitment (pure)
 src/managed/stock-and-foil/     compiler output; the JS under contract/ and compiler/ is committed
 src/witnesses.ts                witness implementations over StockAndFoilPrivateState
 src/private-state.ts            private state and per-call witness inputs
@@ -49,7 +50,8 @@ committed; the generated JavaScript is, so `npm test` runs without Docker.
 
 One `snf:v1:<purpose>` domain per hash purpose, so a value derived for one role can never be
 replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `invoice`, `ack`,
-`pledge`, `holder`, `sellerpayee`, `record`, `request`, `share`, `cert`, `borrower`.
+`pledge`, `holder`, `sellerpayee`, `record`, `request`, `share`, `cert`, `borrower`,
+`peerlabel`.
 
 ## Refusal codes
 
@@ -57,6 +59,7 @@ replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `inv
 |---|---|
 | *constructor (deploy time)* | `BAD_DISCLOSURE_KEY`, `BAD_AUDITOR_KEY`, `BAD_KEYHOLDER_KEY`, `BAD_KEY_SHARING` |
 | `admitDebtor`, `admitFinancier` | `NOT_OPERATOR` |
+| `registerPeer` | `NOT_OPERATOR`, `DUPLICATE_PEER` |
 | `acknowledge` | `NOT_REGISTERED_DEBTOR`, `NOT_YOUR_INVOICE`, `ALREADY_ACKNOWLEDGED` |
 | `offer` | `NOT_INVOICE_OWNER`, `NOT_ACKNOWLEDGED`, `BAD_EXPIRY`, `INVOICE_OVERDUE`, `ALREADY_SETTLED`, `ALREADY_ENCUMBERED`, `BAD_EPHEMERAL` |
 | `accept` | `NOT_LICENSED`, `NO_SUCH_OFFER`, `NOT_ADDRESSEE`, `OFFER_EXPIRED` |
@@ -95,8 +98,8 @@ identity too and the record has no secrecy at all. Every sealing circuit asserts
 
 **Extra pure circuits.** Beyond the planned list, `pureCircuits` also exports
 `ackLeafFromFingerprint`, `nullifierFromFingerprint`, `packFields`, `cipherVersion`,
-`identityPoint`, `shareKeyOf`, `certIdOf`, `borrowerCommitOf`, `poolCount`, `poolTotal` and
-`poolDistinct`. `operatorIdOf` and `debtorIdOf` are there as planned. The SDK needs `shareKeyOf`
+`identityPoint`, `shareKeyOf`, `certIdOf`, `borrowerCommitOf`, `poolCount`, `poolTotal`,
+`poolDistinct` and `peerLabelCommitOf`. `operatorIdOf` and `debtorIdOf` are there as planned. The SDK needs `shareKeyOf`
 and `certIdOf` in particular: they are the ledger keys of shares and certificates.
 
 **Shares live in their own map.** The plan put `shares: Vector<3, CipherShare>` inside
@@ -127,6 +130,21 @@ addressed to**. The locked markers are public, so the lender verifies it from pu
 every slot fails with `NOT_ADDRESSEE` the same way. No ABI or product-semantics change; the limit
 is reproduced by `test/limits.test.ts` "locks the pool to whatever tags the seller supplies" and
 documented in `../docs/THREAT-MODEL.md` §3.1.
+
+**`registerPeer` publishes a declaration, not a verification.** The federation answer rests on a
+fact about the *marker*, not about the contract: `N = H("pledge", F)` is a function of the invoice
+alone, so the same receivable has the same marker in every Stock & Foil registry and one lender
+can ask all of them. `registerPeer(peer: ContractAddress, label: Bytes<32>, labelSalt: Bytes<32>)`
+only records which addresses this operator says it recognises, keyed by `peer.bytes` in
+`peers: Map<Bytes<32>, PeerRegistry>`. The contract performs **no** check on the peer: ledger 8
+has no cross-contract calls, and even with them it could not tell whether the address holds a
+registry, whether that registry is honest, or whether it still exists. The cross-registry check
+is `FinancierClient.checkEncumbranceAcross(invoice, backends)` in the SDK, which puts the
+encumbrance question to each peer's public state and reports an unreachable peer as *unknown*,
+never as *free*. `label` and `labelSalt` are private arguments; only `peerLabelCommitOf(label,
+labelSalt) = H("peerlabel", label, salt)` reaches the ledger, so the registry does not become a
+scrapable directory of trade names that reads like an endorsement. There is no `removePeer`: a
+declaration is permanent, exactly like an admission.
 
 **Two member-path witnesses, not one.** `debtorPathFor` and `financierPathFor` instead of a single
 `memberPathFor(tree, leaf)`, because a witness cannot pick a tree at runtime. The ack tree has its

@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
+  contractAddress,
   DAY,
   Debtor,
   deployRegistry,
@@ -35,6 +36,32 @@ describe('membership refusals', () => {
     const r = deployRegistry();
     const impostor = new Operator(r, { role: 'operator', secretKey: r.financierA.sk });
     expectRefusal(() => impostor.admitFinancier(r.financierA.leaf), 'NOT_OPERATOR');
+  });
+});
+
+describe('federation refusals', () => {
+  const PEER = contractAddress(0xf1);
+  const LABEL = new Uint8Array(32).fill(0x4c);
+
+  it('NOT_OPERATOR: a stranger cannot declare a peer registry', () => {
+    const r = deployRegistry();
+    const impostor = new Operator(r, { role: 'operator', secretKey: randomBytes32() });
+    expectRefusal(() => impostor.registerPeer(PEER, LABEL, randomBytes32()), 'NOT_OPERATOR');
+    expect(r.ledger().peers.size()).toBe(0n);
+  });
+
+  it('DUPLICATE_PEER: the same peer registry cannot be declared twice, under any label', () => {
+    const r = deployRegistry();
+    r.operator.registerPeer(PEER, LABEL, randomBytes32());
+    expectRefusal(() => r.operator.registerPeer(PEER, LABEL, randomBytes32()), 'DUPLICATE_PEER');
+    // A different label does not make it a different peer: the address is the key.
+    expectRefusal(
+      () => r.operator.registerPeer(PEER, new Uint8Array(32).fill(0x4d), randomBytes32()),
+      'DUPLICATE_PEER',
+    );
+    // A different registry is a new declaration.
+    r.operator.registerPeer(contractAddress(0xf2), LABEL, randomBytes32());
+    expect(r.ledger().peers.size()).toBe(2n);
   });
 });
 

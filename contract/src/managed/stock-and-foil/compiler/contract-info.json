@@ -759,6 +759,31 @@
       }
     },
     {
+      "name": "peerLabelCommitOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "label",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "salt",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "admitDebtor",
       "pure": false,
       "proof": true,
@@ -784,6 +809,48 @@
       "arguments": [
         {
           "name": "leaf",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "registerPeer",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "peer",
+          "type": {
+            "type-name": "Struct",
+            "name": "ContractAddress",
+            "elements": [
+              {
+                "name": "bytes",
+                "type": {
+                  "type-name": "Bytes",
+                  "length": 32
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "label",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "labelSalt",
           "type": {
             "type-name": "Bytes",
             "length": 32
@@ -1395,7 +1462,10 @@
   "ledger": [
     {
       "name": "operatorId",
-      "index": 0,
+      "index": [
+        0,
+        0
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1405,7 +1475,10 @@
     },
     {
       "name": "disclosurePk",
-      "index": 1,
+      "index": [
+        1,
+        0
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1419,7 +1492,10 @@
     },
     {
       "name": "keyholderPks",
-      "index": 2,
+      "index": [
+        1,
+        1
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1437,7 +1513,10 @@
     },
     {
       "name": "threshold",
-      "index": 3,
+      "index": [
+        1,
+        2
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1447,7 +1526,10 @@
     },
     {
       "name": "auditorPk",
-      "index": 4,
+      "index": [
+        1,
+        3
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1461,7 +1543,10 @@
     },
     {
       "name": "settlementColor",
-      "index": 5,
+      "index": [
+        1,
+        4
+      ],
       "exported": true,
       "storage": "Cell",
       "type": {
@@ -1471,7 +1556,10 @@
     },
     {
       "name": "debtors",
-      "index": 6,
+      "index": [
+        1,
+        5
+      ],
       "exported": true,
       "storage": "HistoricMerkleTree",
       "depth": 10,
@@ -1482,7 +1570,10 @@
     },
     {
       "name": "financiers",
-      "index": 7,
+      "index": [
+        1,
+        6
+      ],
       "exported": true,
       "storage": "HistoricMerkleTree",
       "depth": 10,
@@ -1493,7 +1584,10 @@
     },
     {
       "name": "acks",
-      "index": 8,
+      "index": [
+        1,
+        7
+      ],
       "exported": true,
       "storage": "HistoricMerkleTree",
       "depth": 16,
@@ -1504,7 +1598,10 @@
     },
     {
       "name": "ackNullifiers",
-      "index": 9,
+      "index": [
+        1,
+        8
+      ],
       "exported": true,
       "storage": "Set",
       "type": {
@@ -1514,7 +1611,10 @@
     },
     {
       "name": "pledges",
-      "index": 10,
+      "index": [
+        1,
+        9
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1582,7 +1682,10 @@
     },
     {
       "name": "records",
-      "index": 11,
+      "index": [
+        1,
+        10
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1626,7 +1729,10 @@
     },
     {
       "name": "certificates",
-      "index": 12,
+      "index": [
+        1,
+        11
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1688,7 +1794,10 @@
     },
     {
       "name": "requests",
-      "index": 13,
+      "index": [
+        1,
+        12
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1728,7 +1837,10 @@
     },
     {
       "name": "shares",
-      "index": 14,
+      "index": [
+        1,
+        13
+      ],
       "exported": true,
       "storage": "Map",
       "key": {
@@ -1765,6 +1877,39 @@
               "type": {
                 "type-name": "Field"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "peers",
+      "index": [
+        1,
+        14
+      ],
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "PeerRegistry",
+        "elements": [
+          {
+            "name": "address",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "labelCommit",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
             }
           }
         ]

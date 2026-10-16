@@ -19,6 +19,7 @@ import {
   type Registry,
 } from './harness.js';
 import { PledgeStatus, type Invoice } from '../src/index.js';
+import { randomBytes32 } from '../../sdk/src/crypto/scalar.js';
 
 type Status = 'NONE' | 'OFFERED' | 'PLEDGED' | 'RELEASED' | 'SETTLED';
 type Payee = 'A' | 'B' | 'seller';
@@ -46,6 +47,8 @@ interface Model {
   /** Certificates attempted so far; used to keep every lender nonce fresh. */
   certs: number;
   invoices: InvoiceModel[];
+  /** Peer registries the operator has declared, by address byte. */
+  peers: Set<number>;
 }
 
 interface Real {
@@ -422,6 +425,32 @@ class Certify extends RegistryCommand {
   }
 }
 
+/**
+ * Federation is operator state and touches no receivable, but it shares the ledger with one, so
+ * the model carries it: a peer address may be declared exactly once, whatever label it is given.
+ */
+class RegisterPeer extends RegistryCommand {
+  constructor(readonly peer: number) {
+    super(0, false);
+  }
+  protected wants(): boolean {
+    return false;
+  }
+  run(m: Model, s: Real): void {
+    const expected = m.peers.has(this.peer) ? 'DUPLICATE_PEER' : null;
+    const address = { bytes: new Uint8Array(32).fill(this.peer) };
+    expectOutcome(this.toString(), expected, () =>
+      s.r.operator.registerPeer(address, new Uint8Array(32).fill(this.peer ^ 0xff), randomBytes32()),
+    );
+    if (!expected) m.peers.add(this.peer);
+    expect(s.r.ledger().peers.size()).toBe(BigInt(m.peers.size));
+    checkLedger(m, s);
+  }
+  toString(): string {
+    return `RegisterPeer(${this.peer})`;
+  }
+}
+
 class AdvanceTime extends RegistryCommand {
   constructor(readonly days: bigint) {
     super(0, false);
@@ -461,6 +490,7 @@ const commands = [
   fc
     .tuple(index, focus, fc.integer({ min: 0, max: 7 }), financier, offerDays, fc.boolean())
     .map(([i, k, mask, f, d, greedy]) => new Certify(i, k, mask, f, d, greedy)),
+  fc.integer({ min: 1, max: 3 }).map((p) => new RegisterPeer(p)),
   days.map((d) => new AdvanceTime(d)),
 ];
 
@@ -494,6 +524,8 @@ const REQUIRED_COVERAGE = [
   'Certify:INVOICE_OVERDUE',
   'Certify:ALREADY_ENCUMBERED',
   'Certify:ALREADY_SETTLED',
+  'RegisterPeer:OK',
+  'RegisterPeer:DUPLICATE_PEER',
 ];
 
 it('random lifecycles agree with the reference model and keep the registry invariants', { timeout: 600_000 }, () => {
@@ -513,6 +545,7 @@ it('random lifecycles agree with the reference model and keep the registry invar
           time: r.now,
           start: r.now,
           certs: 0,
+          peers: new Set<number>(),
           invoices: invoices.map((inv) => ({
             acked: false,
             status: 'NONE',

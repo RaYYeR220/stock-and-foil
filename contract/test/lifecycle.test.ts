@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
   borrowingBase,
+  contractAddress,
   DAY,
   deployRegistry,
   hex,
@@ -44,6 +45,29 @@ describe('deployment and membership', () => {
     expect(L.debtors.firstFree()).toBe(1n);
     expect(L.financiers.firstFree()).toBe(1n);
     expect(L.financiers.findPathForLeaf(r.debtor.leaf)).toBeUndefined();
+  });
+
+  it('operator declares a peer registry, and the label stays committed', () => {
+    const r = deployRegistry();
+    const peer = contractAddress(0xf1);
+    const label = new Uint8Array(32).fill(0x4c);
+    const salt = randomBytes32();
+    r.operator.registerPeer(peer, label, salt);
+    const stored = r.ledger().peers.lookup(peer.bytes);
+    expect(hex(stored.address)).toBe(hex(peer.bytes));
+    expect(hex(stored.labelCommit)).toBe(hex(pure.peerLabelCommitOf(label, salt)));
+    // Hiding: the same label under a fresh salt commits to a different value.
+    expect(hex(pure.peerLabelCommitOf(label, randomBytes32()))).not.toBe(hex(stored.labelCommit));
+    expect(r.ledger().peers.size()).toBe(1n);
+  });
+
+  it('a peer declaration is not a verification: the contract checks nothing about the peer', () => {
+    const r = deployRegistry();
+    // Any 32 bytes are accepted, including an address no contract was ever deployed to. The
+    // federation check itself is the SDK recomputing one marker against every peer it knows.
+    r.operator.registerPeer(contractAddress(0x00), new Uint8Array(32), randomBytes32());
+    r.operator.registerPeer(contractAddress(0xff), new Uint8Array(32).fill(0xff), randomBytes32());
+    expect(r.ledger().peers.size()).toBe(2n);
   });
 
   it('derives identities under distinct domains', () => {

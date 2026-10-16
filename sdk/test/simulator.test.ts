@@ -18,7 +18,7 @@ import {
   OperatorClient,
   SellerClient,
 } from '../src/roles/index.js';
-import { encumbranceOf, findPledge, type Invoice } from '../src/types.js';
+import { encumbranceOf, findPeer, findPledge, type Invoice } from '../src/types.js';
 
 const DAY = 86_400n;
 /** 2026-09-21T00:00:00Z. */
@@ -310,6 +310,95 @@ describe('guided replay: borrowing-base certificate', () => {
       }),
       'DUPLICATE_INVOICE',
     );
+  });
+});
+
+describe('federation: one marker, many registries', () => {
+  /** A second, entirely separate registry — new operator and new ceremony, same participants. */
+  async function secondRegistry(): Promise<World> {
+    const keys = generateRegistryKeys();
+    const backend = SimulatorBackend.deploy({
+      constructorArgs: keys.constructorArgs,
+      operator: keys.operator,
+      now: T0,
+    });
+    const other: World = {
+      keys,
+      backend,
+      operator: new OperatorClient(backend, keys.operator),
+      debtor: new DebtorClient(backend, w.debtor.persona),
+      seller: new SellerClient(backend, w.seller.persona),
+      financierA: new FinancierClient(backend, w.financierA.persona),
+      financierB: new FinancierClient(backend, w.financierB.persona),
+      auditor: new AuditorClient(backend, keys.auditor.persona),
+      keyholders: keys.keyholders.map((p, i) => new KeyholderClient(backend, p, i as 0 | 1 | 2)) as World['keyholders'],
+    };
+    await other.operator.admitDebtor(other.debtor.leaf);
+    await other.operator.admitFinancier(other.financierB.leaf);
+    return other;
+  }
+
+  it('the operator declares a peer, and the ledger carries the address but not the label', async () => {
+    const peer = new Uint8Array(32).fill(0xf1);
+    const label = new Uint8Array(32).fill(0x4c);
+    const declaration = await w.operator.registerPeer(peer, label);
+    const view = await w.backend.publicState();
+    expect(view.counts.peers).toBe(1);
+    expect(findPeer(view, peer)).toEqual({
+      address: hex(peer),
+      labelCommit: hex(pureCircuits.peerLabelCommitOf(label, declaration.labelSalt)),
+    });
+    expect(view.peers[0]!.labelCommit).not.toBe(hex(label));
+    await expectRefusal(w.operator.registerPeer(peer, label), 'DUPLICATE_PEER', 'registerPeer');
+  });
+
+  /**
+   * The judge's objection, answered: no consortium, no shared instance, no agreement between
+   * the two operators — just the same marker, because a marker is a function of the invoice.
+   */
+  it('a lender sees the pledge made in a registry it has never joined', async () => {
+    const two = await secondRegistry();
+    const inv = invoiceOf(w, { invoiceNo: 1001n, amount: 230_000n });
+    const n = pureCircuits.nullifierOf(inv);
+
+    // The whole life of this receivable happens in registry two.
+    await two.debtor.acknowledge(inv);
+    await two.seller.offer(inv, two.financierB.holderTag(n), T0 + 7n * DAY);
+    await two.financierB.accept(n);
+
+    // Registry one has never heard of it.
+    expect(await w.financierA.checkEncumbrance(inv)).toBe('FREE');
+
+    await w.operator.registerPeer(new Uint8Array(32).fill(0xf2), new Uint8Array(32).fill(0x02));
+    const across = await w.financierA.checkEncumbranceAcross(inv, [two.backend]);
+    expect(across.nullifier).toBe(hex(n));
+    expect(across.here.encumbrance).toBe('FREE');
+    expect(across.peers).toHaveLength(1);
+    expect(across.peers[0]).toMatchObject({ encumbrance: 'ENCUMBERED', unreachable: false });
+    expect(across.encumberedAnywhere).toBe(true);
+    expect(across.complete).toBe(true);
+
+    // And the peer gives up nothing else: holder, amount and parties stay inside registry two.
+    const peerView = await two.backend.publicState();
+    expect(findPledge(peerView, n)?.amount).toBe(0n);
+    expect(findPledge(peerView, n)?.holderTag).not.toBe(String(w.financierA.holderTag(n)));
+  });
+
+  it('a peer that cannot be read is reported as unknown, never as free', async () => {
+    const inv = invoiceOf(w, { invoiceNo: 1002n, amount: 1_000n });
+    const broken = {
+      network: 'simulator' as const,
+      contractAddress: 'deadbeef',
+      call: () => Promise.reject(new Error('unreachable')),
+      publicState: () => Promise.reject(new Error('indexer down')),
+      pathForAck: () => Promise.resolve(undefined),
+      pathForMember: () => Promise.resolve(undefined),
+      now: () => Promise.resolve(T0),
+    };
+    const across = await w.financierA.checkEncumbranceAcross(inv, [broken]);
+    expect(across.peers[0]).toMatchObject({ unreachable: true, error: 'indexer down' });
+    expect(across.complete).toBe(false);
+    expect(across.encumberedAnywhere).toBe(false);
   });
 });
 

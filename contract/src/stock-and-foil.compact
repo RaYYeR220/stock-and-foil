@@ -12,8 +12,10 @@ import "modules/Identity";
 import "modules/Invoice";
 import "modules/Cipher";
 import "modules/BorrowingBase";
+import "modules/Federation";
 
 export { Invoice };
+export { PeerRegistry, peerLabelCommitOf };
 export { operatorIdOf, debtorLeaf, debtorIdOf, sellerIdOf, financierLeaf, ackNullifierOf };
 export { holderTagOf, sellerPayeeTagOf };
 export { Certificate, certIdOf, borrowerCommitOf, poolCount, poolTotal, poolDistinct };
@@ -68,6 +70,7 @@ export ledger records: Map<Bytes<32>, CipherRecord>;
 export ledger certificates: Map<Bytes<32>, Certificate>;
 export ledger requests: Map<Bytes<32>, DisclosureRequest>;
 export ledger shares: Map<Bytes<32>, CipherShare>;
+export ledger peers: Map<Bytes<32>, PeerRegistry>;
 
 // ------------------------------------------------------------------------------------------
 // Witnesses (untrusted inputs; every property is re-checked by asserts)
@@ -134,6 +137,31 @@ export circuit admitDebtor(leaf: Bytes<32>): [] {
 export circuit admitFinancier(leaf: Bytes<32>): [] {
   assertOperator();
   financiers.insert(disclose(leaf));
+}
+
+// ------------------------------------------------------------------------------------------
+// Federation
+//
+// The objection this answers: "a registry only works once many competing financiers join the
+// same one." They do not have to. A marker `N = H("pledge", F)` is a function of the invoice
+// and of nothing else, so the same receivable has the same marker in every Stock & Foil
+// registry, and one lender can put the encumbrance question to all of them. `registerPeer`
+// publishes which registries this operator recognises, so a lender that finds one finds the
+// others; the cross-registry check itself is `FinancierClient.checkEncumbranceAcross` in the
+// SDK, which queries each peer's public state.
+//
+// This is a declaration, not a verification. The contract cannot call another contract on
+// ledger 8, and would not want to: it has no way to know whether the address holds a registry,
+// whether that registry is honest, or whether it still exists. What is on chain is exactly
+// "the operator of this registry says it recognises that address", signed by the operator key
+// and nothing more. See docs/THREAT-MODEL.md §3.7 and contract/README.md.
+
+export circuit registerPeer(peer: ContractAddress, label: Bytes<32>, labelSalt: Bytes<32>): [] {
+  assertOperator();
+  const key = disclose(peer.bytes);
+  assert(!peers.member(key), "DUPLICATE_PEER");
+  peers.insert(key, PeerRegistry { address: key,
+                                   labelCommit: disclose(peerLabelCommitOf(label, labelSalt)) });
 }
 
 // ------------------------------------------------------------------------------------------

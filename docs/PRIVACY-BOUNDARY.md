@@ -55,6 +55,27 @@ is effectively public**, which is exactly why record masks must be uniform over 
 (a `degradeToTransient` mask is < 2²⁴⁸ and would let an observer eliminate candidate debtors per
 record). `sellerId` has no tree and is not published anywhere.
 
+### `registerPeer(peer, label, labelSalt)`
+
+| | |
+|---|---|
+| **Public** | a read of `operatorId`; the peer's contract address, as the key of `peers`; the stored `{address, labelCommit}` |
+| **Private** | `opSk`; the label and its salt — only `H("peerlabel", label, salt)` is written |
+| **Effects** | none |
+
+The address has to be public: it is the thing a lender needs in order to put the encumbrance
+question to that registry. The label does not, so it is committed rather than published — a
+plaintext trade name would turn the ledger into a scrapable list of who an operator claims to
+recognise, and reads from outside like an endorsement. The operator keeps `(label, salt)` and can
+open the commitment to a counterparty or a regulator.
+
+What a peer list leaks is the declaration itself: anyone can see how many registries this
+operator recognises and which addresses they are, and can follow each one into its own public
+state. That is the point — federation only works if the peers are findable — but it does mean a
+competitor learns which registries an operator considers part of its world. Nothing about a
+*receivable* crosses: the cross-registry check is the lender recomputing one marker and asking
+each registry about that one marker, which reveals only a value the lender already holds.
+
 ### `acknowledge()`
 
 | | |
@@ -162,6 +183,7 @@ A disclosure cannot be quiet: asking is a public act, even though the answer is 
 | `certificates[certId]` | `borrowerCommit`, `lenderRef`, `floor`, `count`, `validUntil`, up to four markers |
 | `requests[requestId]` | `recordId`, `caseRef`, three approval booleans |
 | `shares[shareKey]` | `version`, `E2`, two masked field elements |
+| `peers[address]` | the peer registry's contract address and a hiding commitment to the operator's label for it |
 
 Every count is therefore public: participants, acknowledgments, live pledges, settlements,
 certificates and disclosure requests.
@@ -253,4 +275,5 @@ Asserted in `contract/test/transcript.test.ts`, for every circuit that touches a
 - no member-tree leaf — membership is proved against roots;
 - no ack leaf — a Merkle insert stores the hash of the value;
 - nothing at all about an unused certificate slot;
-- no lender nonce — only its two hashes.
+- no lender nonce — only its two hashes;
+- no peer label and no peer-label salt — only `H("peerlabel", label, salt)`.

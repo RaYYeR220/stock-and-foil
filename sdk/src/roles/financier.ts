@@ -15,10 +15,33 @@ import {
   findPledge,
   type Encumbrance,
   type Invoice,
+  type NetworkName,
   type PledgeStatusName,
+  type RegistryBackend,
   type TxReceipt,
 } from '../types.js';
 import { RoleClient } from './base.js';
+
+/** One registry's answer to the encumbrance question about a single receivable. */
+export interface RegistryEncumbrance {
+  contractAddress: string;
+  network: NetworkName;
+  encumbrance: Encumbrance;
+  /** The registry could not be read. `encumbrance` is then meaningless, not "free". */
+  unreachable: boolean;
+  error?: string;
+}
+
+/** The encumbrance question answered by this registry and by every peer that was asked. */
+export interface FederatedEncumbrance {
+  nullifier: string;
+  here: RegistryEncumbrance;
+  peers: RegistryEncumbrance[];
+  /** At least one registry holds a live or settled marker for this receivable. */
+  encumberedAnywhere: boolean;
+  /** Every registry answered. A `false` here means "unknown", not "free". */
+  complete: boolean;
+}
 
 /** One slot of a certificate, as the lender it claims to be addressed to sees it. */
 export interface CertificateSlot {
@@ -79,6 +102,56 @@ export class FinancierClient extends RoleClient {
     const nullifier = pureCircuits.nullifierOf(invoice);
     const [view, now] = await Promise.all([this.backend.publicState(), this.backend.now()]);
     return encumbranceOf(findPledge(view, nullifier), now);
+  }
+
+  /**
+   * The same question, put to this registry **and to every other registry handed in**.
+   *
+   * This is the answer to "a registry only works once all your competitors join it". A marker
+   * `N = H("pledge", F)` is a function of the invoice and of nothing else — no registry
+   * identity, no operator key, no deployment salt — so the same receivable produces the same
+   * marker everywhere, and a single lender can check every registry it knows of without any of
+   * them federating, sharing state or agreeing to anything. A second registry answers
+   * "encumbered: yes" about a receivable in its own book while revealing no holder, no amount
+   * and no party, exactly as the first one does.
+   *
+   * `registries` are backends for the peers — `OperatorClient.registerPeer` publishes their
+   * addresses, and `view.peers` lists them. Each is queried independently; a peer that cannot be
+   * reached is reported as `unreachable` rather than silently treated as "free", because
+   * "nobody answered" and "nobody has it" are the two things a lender must not confuse.
+   */
+  async checkEncumbranceAcross(
+    invoice: Invoice,
+    registries: readonly RegistryBackend[] = [],
+  ): Promise<FederatedEncumbrance> {
+    const nullifier = pureCircuits.nullifierOf(invoice);
+    const ask = async (backend: RegistryBackend): Promise<RegistryEncumbrance> => {
+      try {
+        const [view, now] = await Promise.all([backend.publicState(), backend.now()]);
+        return {
+          contractAddress: backend.contractAddress,
+          network: backend.network,
+          encumbrance: encumbranceOf(findPledge(view, nullifier), now),
+          unreachable: false,
+        };
+      } catch (error) {
+        return {
+          contractAddress: backend.contractAddress,
+          network: backend.network,
+          encumbrance: 'FREE',
+          unreachable: true,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    };
+    const [here, ...peers] = await Promise.all([this.backend, ...registries].map(ask));
+    return {
+      nullifier: toHex(nullifier),
+      here: here!,
+      peers,
+      encumberedAnywhere: [here!, ...peers].some((r) => r.encumbrance !== 'FREE'),
+      complete: peers.every((r) => !r.unreachable) && !here!.unreachable,
+    };
   }
 
   /**

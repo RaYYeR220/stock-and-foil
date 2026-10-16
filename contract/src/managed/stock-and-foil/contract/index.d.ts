@@ -34,6 +34,8 @@ export type Certificate = { borrowerCommit: Uint8Array;
                             nullifiers: Uint8Array[]
                           };
 
+export type PeerRegistry = { address: Uint8Array; labelCommit: Uint8Array };
+
 export type Invoice = { debtorId: bigint;
                         sellerId: bigint;
                         invoiceNo: bigint;
@@ -76,6 +78,10 @@ export type ImpureCircuits<PS> = {
   admitDebtor(context: __compactRuntime.CircuitContext<PS>, leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   admitFinancier(context: __compactRuntime.CircuitContext<PS>,
                  leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  registerPeer(context: __compactRuntime.CircuitContext<PS>,
+               peer_0: { bytes: Uint8Array },
+               label_0: Uint8Array,
+               labelSalt_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   acknowledge(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   offer(context: __compactRuntime.CircuitContext<PS>,
         holderTag_0: bigint,
@@ -106,6 +112,10 @@ export type ProvableCircuits<PS> = {
   admitDebtor(context: __compactRuntime.CircuitContext<PS>, leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   admitFinancier(context: __compactRuntime.CircuitContext<PS>,
                  leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  registerPeer(context: __compactRuntime.CircuitContext<PS>,
+               peer_0: { bytes: Uint8Array },
+               label_0: Uint8Array,
+               labelSalt_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   acknowledge(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   offer(context: __compactRuntime.CircuitContext<PS>,
         holderTag_0: bigint,
@@ -161,6 +171,7 @@ export type PureCircuits = {
   poolCount(used_0: boolean[]): bigint;
   poolTotal(amounts_0: bigint[]): bigint;
   poolDistinct(used_0: boolean[], ns_0: Uint8Array[]): boolean;
+  peerLabelCommitOf(label_0: Uint8Array, salt_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
@@ -222,9 +233,16 @@ export type Circuits<PS> = {
   poolDistinct(context: __compactRuntime.CircuitContext<PS>,
                used_0: boolean[],
                ns_0: Uint8Array[]): __compactRuntime.CircuitResults<PS, boolean>;
+  peerLabelCommitOf(context: __compactRuntime.CircuitContext<PS>,
+                    label_0: Uint8Array,
+                    salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   admitDebtor(context: __compactRuntime.CircuitContext<PS>, leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   admitFinancier(context: __compactRuntime.CircuitContext<PS>,
                  leaf_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  registerPeer(context: __compactRuntime.CircuitContext<PS>,
+               peer_0: { bytes: Uint8Array },
+               label_0: Uint8Array,
+               labelSalt_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   acknowledge(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   offer(context: __compactRuntime.CircuitContext<PS>,
         holderTag_0: bigint,
@@ -325,6 +343,13 @@ export type Ledger = {
     member(key_0: Uint8Array): boolean;
     lookup(key_0: Uint8Array): CipherShare;
     [Symbol.iterator](): Iterator<[Uint8Array, CipherShare]>
+  };
+  peers: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): PeerRegistry;
+    [Symbol.iterator](): Iterator<[Uint8Array, PeerRegistry]>
   };
 }
 

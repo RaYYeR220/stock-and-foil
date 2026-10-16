@@ -8,6 +8,7 @@ import { hex } from '../bytes.js';
 import {
   pledgeStatusName,
   type CertificateView,
+  type PeerView,
   type PledgeView,
   type Point,
   type PublicLedgerView,
@@ -68,6 +69,11 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
     shares.push({ shareKey: hex(key), version: Number(s.version), E2: point(s.E2), ct: [...s.ct] });
   }
 
+  const peers: PeerView[] = [];
+  for (const [key, p] of ledger.peers) {
+    peers.push({ address: hex(key), labelCommit: hex(p.labelCommit) });
+  }
+
   return {
     counts: {
       debtors: Number(ledger.debtors.firstFree()),
@@ -79,6 +85,7 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
       certificates: certificates.length,
       requests: requests.length,
       shares: shares.length,
+      peers: peers.length,
     },
     config: {
       operatorId: hex(ledger.operatorId),
@@ -93,5 +100,6 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
     certificates,
     requests,
     shares,
+    peers,
   };
 }

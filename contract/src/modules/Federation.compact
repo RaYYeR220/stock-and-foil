@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Federation: the registry's declared peers.
+//
+// A pledge marker `N = H("pledge", F)` is a deterministic function of the invoice alone — it
+// carries no registry identity. The same invoice therefore has the *same* marker in every
+// Stock & Foil registry that exists, so one lender can ask "is this receivable encumbered?" of
+// every registry it knows about and get a sound answer from each. Nobody has to join anything:
+// there is no shared instance, no consortium sale, and no operator that sees all the traffic.
+//
+// What this module adds is the on-chain half of that story: an operator publishes which other
+// registries it recognises, so a lender reading one registry can discover the rest. It is a
+// *declaration*, not a verification — see `registerPeer` in the contract.
+pragma language_version >= 0.23.0;
+
+module Federation {
+  import CompactStandardLibrary;
+
+  /**
+   * One peer registry, as the ledger holds it: its contract address, and a hiding commitment to
+   * whatever the operator calls it.
+   *
+   * The address has to be public — it is the thing a lender needs in order to query the peer.
+   * The label does not: a plaintext trade name on the ledger turns the registry into a scrapable
+   * directory of who an operator claims to recognise, and reads to an outsider like an
+   * endorsement. The commitment keeps the naming an off-chain matter the operator can open to a
+   * counterparty or a regulator later, and costs one hash.
+   */
+  export struct PeerRegistry {
+    address: Bytes<32>;
+    labelCommit: Bytes<32>;
+  }
+
+  /**
+   * H("peerlabel", label, salt) — hiding under a fresh 32-byte salt, binding because the label
+   * is inside the hash. The operator keeps `(label, salt)` and can open the commitment to anyone;
+   * without the salt a 32-byte label is still guessable, so the salt must be random.
+   */
+  export pure circuit peerLabelCommitOf(label: Bytes<32>, salt: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>([pad(32, "snf:v1:peerlabel"), label, salt]);
+  }
+}

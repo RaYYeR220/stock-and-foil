@@ -24,7 +24,7 @@ export type Point = JubjubPoint;
 export type MerklePath = MerkleTreePath<Uint8Array>;
 
 /** Where a backend runs. `simulator` is in-process; the rest are Midnight network ids. */
-export type NetworkName = 'simulator' | 'undeployed' | 'preview' | 'preprod';
+export type NetworkName = 'simulator' | 'undeployed' | 'preview' | 'preprod' | 'mainnet';
 
 /** Public statuses, as strings, so views and evidence files never carry enum ordinals. */
 export type PledgeStatusName = 'OFFERED' | 'PLEDGED' | 'RELEASED' | 'SETTLED';
@@ -93,6 +93,15 @@ export interface RequestView {
   approvals: [boolean, boolean, boolean];
 }
 
+/**
+ * One peer registry this operator declares it recognises. The address is public because a lender
+ * needs it to query the peer; the label is a hiding commitment the operator can open off chain.
+ */
+export interface PeerView {
+  address: string;
+  labelCommit: string;
+}
+
 /** One keyholder's sealed decryption share, addressed by `shareKeyOf(requestId, index)`. */
 export interface ShareView {
   shareKey: string;
@@ -113,6 +122,7 @@ export interface PublicLedgerView {
     certificates: number;
     requests: number;
     shares: number;
+    peers: number;
   };
   config: RegistryConfig;
   pledges: PledgeView[];
@@ -120,6 +130,7 @@ export interface PublicLedgerView {
   certificates: CertificateView[];
   requests: RequestView[];
   shares: ShareView[];
+  peers: PeerView[];
 }
 
 /**
@@ -160,6 +171,9 @@ export const findRequest = (view: PublicLedgerView, requestId: Uint8Array | stri
 
 export const findShare = (view: PublicLedgerView, shareKey: Uint8Array | string): ShareView | undefined =>
   view.shares.find((s) => s.shareKey === toHex(shareKey));
+
+export const findPeer = (view: PublicLedgerView, address: Uint8Array | string): PeerView | undefined =>
+  view.peers.find((p) => p.address === toHex(address));
 
 /** Whether a receivable is available to pledge, tying up collateral, or already settled. */
 export type Encumbrance = 'FREE' | 'ENCUMBERED' | 'SETTLED';

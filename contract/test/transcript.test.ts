@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acknowledged,
+  contractAddress,
   DAY,
   keyHex,
   leHex,
@@ -46,6 +47,24 @@ function expectNoInvoiceFields(res: CircuitResult, inv: Parameters<typeof privat
     expect(values.has(leHex(value)), `${name} appeared in the public transcript`).toBe(false);
   }
 }
+
+describe('registerPeer', () => {
+  it('publishes the peer address and the label commitment, never the label or its salt', () => {
+    const r = setupRegistry();
+    const peer = contractAddress(0xf1);
+    const label = new Uint8Array(32).fill(0x4c);
+    const salt = randomBytes32();
+    const res = r.operator.registerPeer(peer, label, salt);
+    const values = published(res);
+    // The address has to be public: it is what a lender needs in order to query the peer.
+    expect(values.has(keyHex(peer.bytes))).toBe(true);
+    expect(values.has(keyHex(pure.peerLabelCommitOf(label, salt)))).toBe(true);
+    // The operator's own name for the peer, and the salt that hides it, stay off the chain.
+    expect(values.has(keyHex(label))).toBe(false);
+    expect(values.has(keyHex(salt))).toBe(false);
+    expect(values.has(keyHex(r.operator.sk))).toBe(false);
+  });
+});
 
 describe('acknowledge', () => {
   it('publishes the members root, the ack nullifier and the ack leaf — and no invoice field', () => {
