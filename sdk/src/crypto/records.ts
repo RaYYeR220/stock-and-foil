@@ -79,9 +79,9 @@ export function unpackRecordFields(fields: readonly bigint[]): OpenedRecord {
 export const sealFields = (fields: readonly bigint[], S: Point): bigint[] =>
   fields.map((f, j) => modP(f + pureCircuits.maskOf(S, BigInt(j))));
 
-/** Removes them again. */
-export const openFields = (ct: readonly bigint[], S: Point): bigint[] =>
-  ct.map((c, j) => modP(c - pureCircuits.maskOf(S, BigInt(j))));
+/** Removes them again. `offset` is the first mask index, for values that do not start at 0. */
+export const openFields = (ct: readonly bigint[], S: Point, offset = 0): bigint[] =>
+  ct.map((c, j) => modP(c - pureCircuits.maskOf(S, BigInt(j + offset))));
 
 const checkVersion = (version: number | bigint): void => {
   if (Number(version) !== CIPHER_VERSION) throw new CipherVersionError(Number(version));
@@ -93,11 +93,22 @@ export function decryptRecord(record: Pick<RecordView, 'version' | 'ct'>, S: Poi
   return unpackRecordFields(openFields(record.ct, S));
 }
 
-/** Opens one keyholder's sealed decryption share with the auditor scalar, returning `D_i = s_i·E`. */
-export function decryptShare(share: Pick<ShareView, 'version' | 'E2' | 'ct'>, auditorScalar: bigint): Point {
+/**
+ * Opens one keyholder's sealed decryption share with the auditor scalar, returning `D_i = s_i·E`.
+ *
+ * `slot` is the case slot the share belongs to. A case approval seals up to four shares under a
+ * single shared point in one call, so slot j is masked at indices 2j and 2j+1 — reusing 0 and 1
+ * for all four would cancel the masks between slots and show an observer with no key which slots
+ * name the same record. A request share, and the first slot of a case, are slot 0.
+ */
+export function decryptShare(
+  share: Pick<ShareView, 'version' | 'E2' | 'ct'>,
+  auditorScalar: bigint,
+  slot = 0,
+): Point {
   checkVersion(share.version);
   const S2 = pureCircuits.mulPoint(share.E2, auditorScalar);
-  const [x, y] = openFields(share.ct, S2);
+  const [x, y] = openFields(share.ct, S2, slot * 2);
   return { x: x ?? 0n, y: y ?? 0n };
 }
 

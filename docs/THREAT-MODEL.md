@@ -27,8 +27,8 @@ account of that, and `contract/test/transcript.test.ts` asserts it.
 | **Debtor** (buyer) | `debtorSk`, the invoices it acknowledged, including salts | the truth of what it acknowledges; paying through the contract | nothing else — it cannot pledge, claim or read a record |
 | **Seller** (supplier) | `sellerSk`, invoices incl. salts, holder tags received off-chain | drawing a fresh sealing scalar per record | the invoice's truth (the debtor's acknowledgment carries that); which lender a certificate's slots are actually addressed to (§3.1) |
 | **Financier** (factor) | `finSk`, its holder tags | issuing a tag only for a receivable it intends to fund | anything about other financiers' books |
-| **Auditor / trustee** | `audSk` | asking for one record, for a stated case | opening anything without two keyholders |
-| **Keyholder** ×3 | one Shamir share `s_i` | not colluding with a second keyholder | the contents of anything — a keyholder never sees a plaintext |
+| **Auditor / trustee** | `audSk` | asking for one record, or for a case of up to four, under a stated reference | opening anything without two keyholders |
+| **Keyholder** ×3 | one Shamir share `s_i` | not colluding with a second keyholder; **reading what a case covers before approving it** | the contents of anything — a keyholder never sees a plaintext |
 | **Public** | nothing | — | — |
 
 Sellers are **not** admitted to a member tree. Anyone can be a seller; what makes an offer
@@ -63,7 +63,7 @@ them:
 | P3 | `SETTLED` is terminal: a settled receivable can never be pledged or paid again. | `assert(p.status != SETTLED)` in `assertFree` and `payInvoice` | `refusals.test.ts` "ALREADY_SETTLED"; `model.property.test.ts` invariant 2 |
 | P4 | Proceeds leave the registry exactly once, to whoever proves the payee tag. | `claimed` flag + the payee-tag assert in `claim` | `refusals.test.ts` "NOT_PAYEE", "ALREADY_CLAIMED"; `model.property.test.ts` invariant 3 |
 | P5 | A pledged receivable pays its financier, not the seller. | `payeeTag = p.status == PLEDGED ? p.holderTag : sellerPayee` | `lifecycle.test.ts` "debtor pays a pledged invoice and the holder claims the proceeds, not the seller" |
-| P6 | Only two of three keyholders together can open a sealed record. | Shamir 2-of-3 over the Jubjub scalar field; `approveDisclosure` binds `D_i = s_i·E` in circuit | `disclosure.test.ts` "2-of-3 threshold decryption" incl. the single-share and wrong-key controls |
+| P6 | Only two of three keyholders together can open a sealed record — by the per-record path or by a case. | Shamir 2-of-3 over the Jubjub scalar field; `approveDisclosure` and `approveCase` both bind `D_i = s_i·E` in circuit | `disclosure.test.ts` "2-of-3 threshold decryption" and "case-scoped disclosure", incl. the single-share and wrong-key controls |
 | P7 | An opened record proves itself against the ledger. | `recordId = H("record", N, E)` recomputed from the plaintext | `sdk/test/audit.test.ts` "verifies against the record's own ledger key" |
 | P8 | A registry whose disclosure ceremony is degenerate or inconsistent cannot exist. | four constructor asserts | `ceremony.test.ts` (whole file) |
 | P9 | No invoice field, salt or secret key reaches the public transcript. | disclosure typing in Compact; sealed records | `transcript.test.ts` (whole file) |
@@ -202,11 +202,24 @@ The central adversary: the First Brands fraud pattern.
 
 **Can**
 - **Escape the case binding.** A keyholder's share `D_i = s_i·E` is bound to the *record*, not to
-  the request. Two requests naming one record, with one approval each from two different
-  keyholders, open it — while neither request's `approvals` vector ever reaches two.
-  `disclosure.test.ts` "approvals are per record, not per case". The 2-of-3 threshold still
-  holds; what fails is the per-request audit trail and a keyholder's ability to scope its consent
-  to one case. Count approvals per record (`recordDisclosureState` in the SDK) — `sdk/test/audit.test.ts`.
+  the request or the case. Two requests naming one record, with one approval each from two
+  different keyholders, open it — while neither request's `approvals` vector ever reaches two —
+  and one request approval plus one case approval do the same.
+  `disclosure.test.ts` "approvals are per record, not per case" and "the per-record path is
+  untouched". The 2-of-3 threshold still holds; what fails is the per-request audit trail and a
+  keyholder's ability to scope its consent to one reference. Count approvals per record
+  (`recordDisclosureState` in the SDK, which reads requests and cases together) —
+  `sdk/test/audit.test.ts`, `sdk/test/simulator.test.ts`.
+- **Ask for four records at once, and get them on one signature each.** A case
+  (`openCase` / `approveCase`) is the fix for an insolvency needing N approvals per keyholder
+  for N records, and its cost is that **a case approval is broader than a record approval**: the
+  keyholder consents to every record in the case, up front, and cannot withhold one afterwards.
+  The threshold does not move — two distinct keyholders are still required for each record — and
+  the case's size and exact record ids are on the ledger *before* anyone approves, so an auditor
+  cannot widen a case after the fact or hide what it covers. A keyholder's defence is to read the
+  case and refuse; the registry's defence is that the request is public. This is the trade-off an
+  insolvency practitioner needs and a privacy reviewer must see stated, not a flaw to be
+  engineered away. `disclosure.test.ts` "case-scoped disclosure"; `docs/audit-report.md` F-08.
 - **Link a seller's whole settled book from one opened record.** The record reveals `sellerId`,
   and `payeeTag = H("sellerpayee", sellerId, N)` with a public `N`, so every
   settled-but-unfinanced receivable of that seller becomes recognisable without any further
@@ -227,8 +240,11 @@ The central adversary: the First Brands fraud pattern.
 - Learn a record's contents: it never sees a plaintext, only `E`.
 
 **Can**
-- Refuse. 2-of-3 tolerates exactly one refusal.
+- Refuse. 2-of-3 tolerates exactly one refusal — of a request or of a whole case.
 - Approve a record for a case it was never shown — see 3.5.
+- Approve more than it meant to, by approving a *case* without reading what it covers. The
+  records are on the ledger before the approval, so this is a procedural failure rather than a
+  cryptographic one, and `KeyholderClient.approveCase` documents it at the call site.
 
 Two colluding keyholders reconstruct the disclosure key off-chain and can read **every** record
 with no on-chain request at all. That is inherent to 2-of-3 and is a published limit.
@@ -289,6 +305,9 @@ with no on-chain request at all. That is inherent to 2-of-3 and is a published l
 - A certificate whose slots are not addressed to the lender it names (3.1). The lender checks it
   itself, with `FinancierClient.checkCertificate` or by accepting every slot.
 - `sellerId`-based linkability of settled, unfinanced receivables (3.5).
+- The breadth of a case approval, and the fact that a case publishes the shape of an
+  investigation — its size, its records and which keyholders agreed (3.5,
+  `docs/PRIVACY-BOUNDARY.md` §3.8).
 
 Each of these has a test that reproduces it, so "not defended" is a measured statement rather than
 an assumption. The full audit, with severities and the reasons the accepted items were accepted,

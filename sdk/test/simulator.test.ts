@@ -18,7 +18,8 @@ import {
   OperatorClient,
   SellerClient,
 } from '../src/roles/index.js';
-import { encumbranceOf, findPeer, findPledge, type Invoice } from '../src/types.js';
+import { openableRecords, recordDisclosureState } from '../src/audit.js';
+import { encumbranceOf, findCase, findPeer, findPledge, type Invoice } from '../src/types.js';
 
 const DAY = 86_400n;
 /** 2026-09-21T00:00:00Z. */
@@ -494,6 +495,98 @@ describe('guided replay: threshold disclosure', () => {
 
     await w.keyholders[0].approve(requestId);
     await expectRefusal(w.keyholders[0].approve(requestId), 'ALREADY_APPROVED', 'approveDisclosure');
+  });
+});
+
+describe('guided replay: case-scoped disclosure', () => {
+  const CASE_A = new Uint8Array(32).fill(0xa5);
+
+  /** Offers `count` invoices and returns them with the record ids they sealed. */
+  async function sealed(count: number) {
+    const out = [];
+    for (const k of [...Array(count).keys()]) {
+      const invoice = invoiceOf(w, { invoiceNo: BigInt(3000 + k), amount: 10_000n * BigInt(k + 1) });
+      await w.debtor.acknowledge(invoice);
+      const n = pureCircuits.nullifierOf(invoice);
+      await w.seller.offer(invoice, w.financierA.holderTag(n), T0 + 7n * DAY);
+      const recordId = findPledge(await w.backend.publicState(), n)!.recordId;
+      out.push({ invoice, n, recordId });
+    }
+    return out;
+  }
+
+  it('two signatures open three records: the insolvency case the per-record path could not serve', async () => {
+    const items = await sealed(3);
+    await w.auditor.openCase(CASE_A, items.map((i) => i.recordId));
+
+    const opened = findCase(await w.backend.publicState(), CASE_A)!;
+    expect(opened).toMatchObject({ count: 3, approvals: [false, false, false] });
+    expect(opened.recordIds).toEqual(items.map((i) => i.recordId));
+
+    await w.keyholders[0].approveCase(CASE_A);
+    await w.keyholders[2].approveCase(CASE_A);
+    const view = await w.backend.publicState();
+    expect(findCase(view, CASE_A)!.approvals).toEqual([true, false, true]);
+    // Two approvals, six shares — one per keyholder per record. The old path needed six approvals.
+    expect(view.counts.shares).toBe(6);
+    expect(view.counts.cases).toBe(1);
+
+    const disclosures = await w.auditor.openWholeCase(CASE_A);
+    expect(disclosures).toHaveLength(3);
+    disclosures.forEach((d, slot) => {
+      expect(d.verified).toBe(true);
+      expect(d.invoice).toEqual(items[slot]!.invoice);
+      expect(d.nullifier).toBe(hex(items[slot]!.n));
+      expect(d.indices).toEqual([1, 3]);
+    });
+  });
+
+  it('one keyholder is not enough, for any record in the case', async () => {
+    const items = await sealed(2);
+    await w.auditor.openCase(CASE_A, items.map((i) => i.recordId));
+    await w.keyholders[1].approveCase(CASE_A);
+    for (const slot of [0, 1]) {
+      const d = await w.auditor.openFromCase(CASE_A, slot);
+      expect(d.verified).toBe(false);
+      expect(d.indices).toEqual([2]);
+      expect(d.invoice).not.toEqual(items[slot]!.invoice);
+    }
+  });
+
+  it('disclosure state is counted per record across requests and cases alike', async () => {
+    const [item] = await sealed(1);
+    await w.auditor.request(item!.recordId, CASE_A);
+    await w.auditor.openCase(CASE_A, [item!.recordId]);
+    await w.keyholders[0].approve(w.auditor.requestIdOf(item!.recordId, CASE_A));
+    const half = await w.backend.publicState();
+    expect(recordDisclosureState(half, item!.recordId)).toMatchObject({ approvals: 1, openable: false });
+
+    await w.keyholders[1].approveCase(CASE_A);
+    const full = await w.backend.publicState();
+    const state = recordDisclosureState(full, item!.recordId);
+    expect(state).toMatchObject({ approvals: 2, openable: true, approvedSlots: [true, true, false] });
+    expect(state.requests).toHaveLength(1);
+    expect(state.cases).toHaveLength(1);
+    expect(openableRecords(full).map((r) => r.recordId)).toEqual([item!.recordId]);
+  });
+
+  it('the refusals a case can raise', async () => {
+    const [item] = await sealed(1);
+    const impostor = new AuditorClient(w.backend, generatePersona('auditor'));
+    await expectRefusal(impostor.openCase(CASE_A, [item!.recordId]), 'NOT_AUDITOR', 'openCase');
+    await expectRefusal(w.auditor.openCase(CASE_A, []), 'EMPTY_CASE', 'openCase');
+    await expectRefusal(
+      w.auditor.openCase(CASE_A, [item!.recordId, new Uint8Array(32).fill(0xee)]),
+      'NO_SUCH_RECORD',
+      'openCase',
+    );
+    await expectRefusal(w.keyholders[0].approveCase(CASE_A), 'NO_SUCH_CASE', 'approveCase');
+
+    await w.auditor.openCase(CASE_A, [item!.recordId]);
+    await expectRefusal(w.auditor.openCase(CASE_A, [item!.recordId]), 'DUPLICATE_CASE', 'openCase');
+    await w.keyholders[0].approveCase(CASE_A);
+    await expectRefusal(w.keyholders[0].approveCase(CASE_A), 'ALREADY_APPROVED', 'approveCase');
+    expect(() => w.auditor.openCase(CASE_A, Array(5).fill(item!.recordId))).toThrow(/at most 4/);
   });
 });
 

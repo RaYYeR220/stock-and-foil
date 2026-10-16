@@ -9,6 +9,7 @@ import fc, { type Command } from 'fast-check';
 import { expect, it } from 'vitest';
 import {
   DAY,
+  hex,
   pure,
   received,
   sent,
@@ -20,6 +21,7 @@ import {
 } from './harness.js';
 import { PledgeStatus, type Invoice } from '../src/index.js';
 import { randomBytes32 } from '../../sdk/src/crypto/scalar.js';
+import { fromHex } from '../../sdk/src/bytes.js';
 
 type Status = 'NONE' | 'OFFERED' | 'PLEDGED' | 'RELEASED' | 'SETTLED';
 type Payee = 'A' | 'B' | 'seller';
@@ -41,6 +43,12 @@ interface InvoiceModel {
   paidOut: bigint;
 }
 
+/** An open disclosure case: the records it covers, and which keyholders have approved it. */
+interface CaseModel {
+  slots: string[];
+  approvals: [boolean, boolean, boolean];
+}
+
 interface Model {
   time: bigint;
   start: bigint;
@@ -49,6 +57,20 @@ interface Model {
   invoices: InvoiceModel[];
   /** Peer registries the operator has declared, by address byte. */
   peers: Set<number>;
+  /** Record ids the ledger holds, in the order they were sealed. */
+  records: string[];
+  /** Open disclosure cases, by case reference byte. */
+  cases: Map<number, CaseModel>;
+  /** Sealed shares on the ledger; only case approvals write them in this model. */
+  shares: number;
+}
+
+/** Learns the record ids a successful offer or certificate just sealed. */
+function learnRecords(m: Model, s: Real): void {
+  for (const [key] of s.r.ledger().records) {
+    const id = hex(key);
+    if (!m.records.includes(id)) m.records.push(id);
+  }
 }
 
 interface Real {
@@ -209,6 +231,7 @@ class Offer extends RegistryCommand {
       inv.status = 'OFFERED';
       inv.holder = this.f;
       inv.expiry = expiry;
+      learnRecords(m, s);
     }
     checkLedger(m, s);
   }
@@ -476,6 +499,7 @@ class Certify extends RegistryCommand {
         inv.holder = this.f;
         inv.expiry = validUntil;
       }
+      learnRecords(m, s);
     }
     checkLedger(m, s);
   }
@@ -507,6 +531,76 @@ class RegisterPeer extends RegistryCommand {
   }
   toString(): string {
     return `RegisterPeer(${this.peer})`;
+  }
+}
+
+/**
+ * Case-scoped disclosure. The auditor opens a case over up to four records that exist, and a
+ * keyholder approves the whole case once — the fix for having to sign per record. Slot 3 of the
+ * generated case is sometimes a record id nobody sealed, which is the `NO_SUCH_RECORD` path.
+ */
+class OpenCase extends RegistryCommand {
+  constructor(
+    readonly ref: number,
+    readonly mask: number,
+    readonly stray: boolean,
+  ) {
+    super(0, false);
+  }
+  protected wants(): boolean {
+    return false;
+  }
+  run(m: Model, s: Real): void {
+    const known = [0, 1, 2].filter((k) => (this.mask >> k) & 1).flatMap((k) => (m.records[k] ? [m.records[k]!] : []));
+    const unknown = new Uint8Array(32).fill(0xee);
+    const slots = this.stray ? [...known, hex(unknown)] : known;
+    const caseRef = new Uint8Array(32).fill(this.ref);
+
+    const expected = m.cases.has(this.ref)
+      ? 'DUPLICATE_CASE'
+      : slots.length === 0
+        ? 'EMPTY_CASE'
+        : slots.some((id) => !m.records.includes(id))
+          ? 'NO_SUCH_RECORD'
+          : null;
+    expectOutcome(this.toString(), expected, () =>
+      s.r.auditor.openCase(caseRef, slots.map((id) => fromHex(id))),
+    );
+    if (!expected) m.cases.set(this.ref, { slots, approvals: [false, false, false] });
+    expect(s.r.ledger().cases.size()).toBe(BigInt(m.cases.size));
+    checkLedger(m, s);
+  }
+  toString(): string {
+    return `OpenCase(${this.ref}, ${this.mask.toString(2)}${this.stray ? ', stray' : ''})`;
+  }
+}
+
+class ApproveCase extends RegistryCommand {
+  constructor(
+    readonly ref: number,
+    readonly who: 0 | 1 | 2,
+  ) {
+    super(0, false);
+  }
+  protected wants(): boolean {
+    return false;
+  }
+  run(m: Model, s: Real): void {
+    const open = m.cases.get(this.ref);
+    const expected = !open ? 'NO_SUCH_CASE' : open.approvals[this.who] ? 'ALREADY_APPROVED' : null;
+    expectOutcome(this.toString(), expected, () =>
+      s.r.keyholders[this.who].approveCase(new Uint8Array(32).fill(this.ref)),
+    );
+    if (!expected && open) {
+      open.approvals[this.who] = true;
+      // One approval seals one share per record the case covers — that is the whole point.
+      m.shares += open.slots.length;
+    }
+    expect(s.r.ledger().shares.size()).toBe(BigInt(m.shares));
+    checkLedger(m, s);
+  }
+  toString(): string {
+    return `ApproveCase(${this.ref}, keyholder ${this.who})`;
   }
 }
 
@@ -553,6 +647,18 @@ const commands = [
     .tuple(index, focus, fc.integer({ min: 0, max: 7 }), financier, offerDays, fc.boolean())
     .map(([i, k, mask, f, d, greedy]) => new Certify(i, k, mask, f, d, greedy)),
   fc.integer({ min: 1, max: 3 }).map((p) => new RegisterPeer(p)),
+  fc
+    .tuple(
+      fc.integer({ min: 1, max: 2 }),
+      fc.integer({ min: 1, max: 7 }),
+      // A case over a record nobody sealed is the NO_SUCH_RECORD path, but it should not be the
+      // usual shape of a case, or approvals would almost never be reached.
+      fc.oneof({ arbitrary: fc.constant(false), weight: 3 }, { arbitrary: fc.constant(true), weight: 1 }),
+    )
+    .map(([ref, mask, stray]) => new OpenCase(ref, mask, stray)),
+  fc
+    .tuple(fc.integer({ min: 1, max: 2 }), fc.constantFrom(0 as const, 1 as const, 2 as const))
+    .map(([ref, who]) => new ApproveCase(ref, who)),
   days.map((d) => new AdvanceTime(d)),
 ];
 
@@ -593,11 +699,18 @@ const REQUIRED_COVERAGE = [
   'Certify:ALREADY_SETTLED',
   'RegisterPeer:OK',
   'RegisterPeer:DUPLICATE_PEER',
+  'OpenCase:OK',
+  'OpenCase:EMPTY_CASE',
+  'OpenCase:DUPLICATE_CASE',
+  'OpenCase:NO_SUCH_RECORD',
+  'ApproveCase:OK',
+  'ApproveCase:NO_SUCH_CASE',
+  'ApproveCase:ALREADY_APPROVED',
 ];
 
 it('random lifecycles agree with the reference model and keep the registry invariants', { timeout: 600_000 }, () => {
   fc.assert(
-    fc.property(fc.commands(commands, { maxCommands: 32, size: 'max' }), (cmds) => {
+    fc.property(fc.commands(commands, { maxCommands: 48, size: 'max' }), (cmds) => {
       fc.modelRun(() => {
         const r = setupRegistry();
         const invoices = [1n, 2n, 3n].map((no, k) =>
@@ -613,6 +726,9 @@ it('random lifecycles agree with the reference model and keep the registry invar
           start: r.now,
           certs: 0,
           peers: new Set<number>(),
+          records: [],
+          cases: new Map<number, CaseModel>(),
+          shares: 0,
           invoices: invoices.map((inv) => ({
             acked: false,
             status: 'NONE',

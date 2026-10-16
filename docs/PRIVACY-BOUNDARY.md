@@ -183,6 +183,36 @@ A disclosure cannot be quiet: asking is a public act, even though the answer is 
 
 `contract/test/transcript.test.ts` asserts that neither `s_i` nor `D.x`/`D.y` appears.
 
+### `openCase(caseRef, recordIds, used)`
+
+| | |
+|---|---|
+| **Public** | a read of `auditorPk`; per used slot, that the record exists; the stored `{caseRef, count, recordIds[4], [false,false,false]}` under the key `caseRef` |
+| **Private** | `audSk`; what the case is about; **everything about an unused slot** |
+
+A case is louder than a request, deliberately. Its size and the exact records it covers are on
+the ledger *before* any keyholder approves, because that is what a keyholder is being asked to
+consent to and the breadth of a case approval is the trade-off it has to see (§`approveCase`
+below, `docs/THREAT-MODEL.md` §3.5). The reference is the map key, so one reference opens one
+case, and a second investigation into the same records is a second reference.
+
+### `approveCase(caseRef, index)`
+
+| | |
+|---|---|
+| **Public** | a read of `keyholderPks`; the case and its approvals; a read of each covered record's `E`; a read of `auditorPk`; **one sealed share per covered record**, under `caseShareKeyOf(caseRef, index, slot)`; the approvals vector written back — so **which keyholder approved is public** |
+| **Private** | the Shamir share `s_i`, every point `D = s_i·E`, the ephemeral scalar, the records' contents |
+
+One approval, one call, up to four sealed shares. They are sealed under a single shared point,
+so slot j is masked at indices 2j and 2j+1 — with one mask pair for all four, subtracting two
+ciphertexts would cancel the masks and reveal which slots name the same record (§3.3, inside a
+single call). `contract/test/disclosure.test.ts` "every slot gets its own mask" asserts it.
+
+What a case approval does **not** change is the threshold: a share is still `D_i = s_i·E` for
+that record's own `E`, so two distinct keyholders are still required before anything opens. What
+it changes is the *breadth* of one consent, which is the honest cost of fixing the per-record
+treadmill.
+
 ---
 
 ## 2. Standing public state
@@ -198,6 +228,7 @@ A disclosure cannot be quiet: asking is a public act, even though the answer is 
 | `requests[requestId]` | `recordId`, `caseRef`, three approval booleans |
 | `shares[shareKey]` | `version`, `E2`, two masked field elements |
 | `peers[address]` | the peer registry's contract address and a hiding commitment to the operator's label for it |
+| `cases[caseRef]` | the case's size, the record ids it covers and three approval booleans |
 
 Every count is therefore public: participants, acknowledgments, live pledges, settlements,
 certificates and disclosure requests.
@@ -271,11 +302,23 @@ An acknowledgment and the offer that follows it are separate transactions minute
 both public. Correlating them narrows which ack leaf belongs to which marker. Nothing in the
 contract mitigates this; batching or delay is a client-side matter.
 
-### 3.7 Disclosure state is per record, not per request
+### 3.7 Disclosure state is per record, not per request or per case
 
 A keyholder's share `D_i = s_i·E` is bound to the record. Two requests naming one record with one
-approval each therefore open it, while neither request's approvals vector reaches two. Count per
-record with `recordDisclosureState(view, recordId)`. See `docs/THREAT-MODEL.md` §3.5.
+approval each therefore open it, while neither request's approvals vector reaches two — and with
+cases there is a second way to reach the same place: one request approval and one case approval
+from two different keyholders open a record that both name. Count per record with
+`recordDisclosureState(view, recordId)`, which reads requests and cases together, and
+`openableRecords(view)` for all of them. See `docs/THREAT-MODEL.md` §3.5.
+
+### 3.8 A case publishes the shape of an investigation
+
+`cases[caseRef]` names up to four record ids together, so an observer learns that those records
+are being looked at as one matter, how many there are, and which keyholders agreed. Combined with
+§3.1 — anyone holding a `sellerId` can recognise that seller's settled, unfinanced markers — a
+case over records of one seller is attributable by a party that already knows the seller. The
+contents stay sealed; the fact and the scope of the investigation do not. Asking is a public act,
+by design: a disclosure that leaves no trail is not a disclosure regime.
 
 ---
 
@@ -289,5 +332,6 @@ Asserted in `contract/test/transcript.test.ts`, for every circuit that touches a
 - no member-tree leaf — membership is proved against roots;
 - no ack leaf — a Merkle insert stores the hash of the value;
 - nothing at all about an unused certificate, batch or case slot;
+- no decryption point `D` from a case approval, for any slot;
 - no lender nonce — only its two hashes;
 - no peer label and no peer-label salt — only `H("peerlabel", label, salt)`.

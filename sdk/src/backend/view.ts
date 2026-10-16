@@ -7,6 +7,7 @@ import type { Ledger } from '@stockandfoil/contract';
 import { hex } from '../bytes.js';
 import {
   pledgeStatusName,
+  type CaseView,
   type CertificateView,
   type PeerView,
   type PledgeView,
@@ -74,6 +75,16 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
     peers.push({ address: hex(key), labelCommit: hex(p.labelCommit) });
   }
 
+  const cases: CaseView[] = [];
+  for (const [key, c] of ledger.cases) {
+    cases.push({
+      caseRef: hex(key),
+      count: Number(c.count),
+      recordIds: c.recordIds.map(hex).filter((id) => id !== ZERO_HEX),
+      approvals: triple(c.approvals, false),
+    });
+  }
+
   return {
     counts: {
       debtors: Number(ledger.debtors.firstFree()),
@@ -86,6 +97,7 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
       requests: requests.length,
       shares: shares.length,
       peers: peers.length,
+      cases: cases.length,
     },
     config: {
       operatorId: hex(ledger.operatorId),
@@ -101,5 +113,6 @@ export function toPublicLedgerView(ledger: Ledger): PublicLedgerView {
     requests,
     shares,
     peers,
+    cases,
   };
 }

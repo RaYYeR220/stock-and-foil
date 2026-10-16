@@ -51,7 +51,7 @@ committed; the generated JavaScript is, so `npm test` runs without Docker.
 One `snf:v1:<purpose>` domain per hash purpose, so a value derived for one role can never be
 replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `invoice`, `ack`,
 `pledge`, `holder`, `sellerpayee`, `record`, `request`, `share`, `cert`, `borrower`,
-`peerlabel`.
+`peerlabel`, `caseshare`.
 
 ## Refusal codes
 
@@ -70,6 +70,8 @@ replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `inv
 | `claimAsHolder`, `claimAsSeller` | `NOT_SETTLED`, `NOT_PAYEE`, `ALREADY_CLAIMED` |
 | `requestDisclosure` | `NOT_AUDITOR`, `NO_SUCH_RECORD`, `DUPLICATE_REQUEST` |
 | `approveDisclosure` | `NOT_KEYHOLDER`, `NO_SUCH_REQUEST`, `ALREADY_APPROVED`, `BAD_EPHEMERAL` |
+| `openCase` | `NOT_AUDITOR`, `DUPLICATE_CASE`, `EMPTY_CASE`, `NO_SUCH_RECORD` |
+| `approveCase` | `NOT_KEYHOLDER`, `NO_SUCH_CASE`, `ALREADY_APPROVED`, `BAD_EPHEMERAL` |
 
 Asserts run in the order listed, which is what the property model and the SDK rely on. In
 `certifyBorrowingBase`, distinctness and the floor are proved *before* any slot is locked, so a
@@ -102,6 +104,37 @@ identity too and the record has no secrecy at all. Every sealing circuit asserts
 `identityPoint`, `shareKeyOf`, `certIdOf`, `borrowerCommitOf`, `poolCount`, `poolTotal`,
 `poolDistinct` and `peerLabelCommitOf`. `operatorIdOf` and `debtorIdOf` are there as planned. The SDK needs `shareKeyOf`
 and `certIdOf` in particular: they are the ledger keys of shares and certificates.
+
+**A case is approved once, and its shares share one map.** Case-scoped disclosure answers audit
+finding F-08's practical half: an insolvency over N records needed N approvals from each
+keyholder. `openCase(caseRef, recordIds: Vector<4, Bytes<32>>, used: Vector<4, Boolean>)` records
+a `DisclosureCase { caseRef, count, recordIds, approvals }` in `cases: Map<Bytes<32>,
+DisclosureCase>`, **keyed by `caseRef` itself** — one reference opens one case — and
+`approveCase(caseRef, index)` seals one share per covered record in a single call. The per-record
+`requestDisclosure` / `approveDisclosure` path is unchanged and still the right one for a single
+receivable.
+
+Three things the SDK has to know:
+
+* **Case shares live in the same `shares` map** as request shares, under
+  `caseShareKeyOf(caseRef, index, slot) = H("caseshare", caseRef, i, slot)`. The separate domain
+  is what keeps the key spaces disjoint, so a case reference that happens to equal a request id
+  can never collide.
+* **Slot j is masked at indices 2j and 2j+1.** All four shares of one approval are sealed under a
+  single shared point `S2`, so reusing mask indices 0 and 1 for every slot would cancel the masks
+  between slots and show an observer with no key which slots name the same record — the §3.3
+  leak, inside one call. `decryptShare(share, auditorScalar, slot)` takes the slot for that
+  reason; a request share is slot 0.
+* **Four slots, because `approveCase` pays one `ecMul` and one `persistentHash` per slot** inside
+  the proof, and because a borrowing base is four slots wide, so "the pool that was financed" and
+  "the case that investigates it" are the same shape. A larger investigation is a second case;
+  approvals are per case, so N records cost ⌈N/4⌉ approvals per keyholder instead of N.
+
+The honest limit, stated in `../docs/THREAT-MODEL.md` §3.5 and `../docs/PRIVACY-BOUNDARY.md`: a
+case approval is **broader** than a record approval. A keyholder consents to all four records at
+once, up front, and cannot withhold one afterwards. The 2-of-3 threshold is untouched — every
+record still needs two distinct keyholders — and the case's size and record ids are public before
+anyone approves, so the breadth is visible to the party granting it.
 
 **Shares live in their own map.** The plan put `shares: Vector<3, CipherShare>` inside
 `DisclosureRequest`. Compact `Map` iteration order is not insertion order, so a share is instead
@@ -206,8 +239,9 @@ scalar at or above `ℓ`. Opening a record with the wrong key produces plaintext
 try/catch (see `recomputesNullifier` in the test harness).
 
 **No public counters.** Spec §4 mentions `Counter`s for public stats. They are not implemented:
-`pledges.size()`, `records.size()`, `certificates.size()`, `requests.size()` and
-`acks.firstFree()` already give the same numbers without extra ledger writes per call.
+`pledges.size()`, `records.size()`, `certificates.size()`, `requests.size()`, `cases.size()`,
+`peers.size()` and `acks.firstFree()` already give the same numbers without extra ledger writes
+per call.
 
 **One Compact file for stateful circuits.** Spec §4 describes eight modules. Ledger state declared
 inside a Compact module is private to that module and does not appear in the public ledger

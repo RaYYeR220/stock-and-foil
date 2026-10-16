@@ -521,6 +521,15 @@ describe('disclosure refusals', () => {
     expect(r.ledger().shares.size()).toBe(0n);
   });
 
+  it('BAD_EPHEMERAL: a share cannot be sealed to the auditor with a degenerate ephemeral key', () => {
+    const r = setupRegistry();
+    const { n } = offered(r);
+    const recordId = r.ledger().pledges.lookup(n).recordId;
+    r.auditor.request(recordId, CASE_REF);
+    const requestId = pure.requestIdOf(recordId, CASE_REF);
+    expectRefusal(() => r.keyholders[0].approve(requestId, { ephemeral: 0n }), 'BAD_EPHEMERAL');
+  });
+
   it('ALREADY_APPROVED: a keyholder cannot approve the same request twice', () => {
     const r = setupRegistry();
     const { n } = offered(r);
@@ -530,5 +539,83 @@ describe('disclosure refusals', () => {
     r.keyholders[1].approve(requestId);
     expectRefusal(() => r.keyholders[1].approve(requestId), 'ALREADY_APPROVED');
     expect(r.ledger().shares.size()).toBe(1n);
+  });
+});
+
+describe('case-scoped disclosure refusals', () => {
+  const CASE_A = new Uint8Array(32).fill(0xa5);
+
+  /** Offers one invoice and returns the id of the record it sealed. */
+  function recordId(r: ReturnType<typeof setupRegistry>, invoiceNo = 1n): Uint8Array {
+    const { n } = offered(r, r.financierA, { invoiceNo });
+    return r.ledger().pledges.lookup(n).recordId;
+  }
+
+  it('NOT_AUDITOR: only the holder of the auditor key can open a case', () => {
+    const r = setupRegistry();
+    const id = recordId(r);
+    const impostor = { ...r.auditor.ps, scalar: randomScalar() };
+    expectRefusal(
+      () => r.h.call(impostor, 'openCase', [CASE_A, [id, id, id, id], [true, false, false, false]]),
+      'NOT_AUDITOR',
+    );
+    expect(r.ledger().cases.size()).toBe(0n);
+  });
+
+  it('EMPTY_CASE: a case has to cover at least one record', () => {
+    const r = setupRegistry();
+    recordId(r);
+    expectRefusal(() => r.auditor.openCase(CASE_A, []), 'EMPTY_CASE');
+    expect(r.ledger().cases.size()).toBe(0n);
+  });
+
+  it('DUPLICATE_CASE: one case reference opens one case, whatever it covers', () => {
+    const r = setupRegistry();
+    const first = recordId(r, 1n);
+    const second = recordId(r, 2n);
+    r.auditor.openCase(CASE_A, [first]);
+    expectRefusal(() => r.auditor.openCase(CASE_A, [second]), 'DUPLICATE_CASE');
+    r.auditor.openCase(new Uint8Array(32).fill(0xa6), [second]);
+    expect(r.ledger().cases.size()).toBe(2n);
+  });
+
+  it('NO_SUCH_RECORD: every used slot of a case must name a record that exists', () => {
+    const r = setupRegistry();
+    const id = recordId(r);
+    expectRefusal(() => r.auditor.openCase(CASE_A, [id, randomBytes32()]), 'NO_SUCH_RECORD');
+    expect(r.ledger().cases.size()).toBe(0n);
+    // An unused slot is not checked at all, so a stray value parked in one is harmless.
+    r.auditor.openCaseRaw(CASE_A, [id, randomBytes32(), randomBytes32(), randomBytes32()], [true, false, false, false]);
+    expect(r.ledger().cases.lookup(CASE_A).count).toBe(1n);
+  });
+
+  it('NO_SUCH_CASE: a keyholder cannot approve a case that was never opened', () => {
+    const r = setupRegistry();
+    expectRefusal(() => r.keyholders[0].approveCase(CASE_A), 'NO_SUCH_CASE');
+  });
+
+  it('NOT_KEYHOLDER: a stranger cannot approve a case, and nor can a keyholder in another slot', () => {
+    const r = setupRegistry();
+    r.auditor.openCase(CASE_A, [recordId(r)]);
+    const stranger = { ...r.keyholders[0].ps, scalar: randomScalar() };
+    expectRefusal(() => r.h.call(stranger, 'approveCase', [CASE_A, 0n]), 'NOT_KEYHOLDER');
+    expectRefusal(() => r.h.call(r.keyholders[0].ps, 'approveCase', [CASE_A, 2n]), 'NOT_KEYHOLDER');
+    expectRefusal(() => r.h.call(r.keyholders[0].ps, 'approveCase', [CASE_A, 3n]), 'NOT_KEYHOLDER');
+    expect(r.ledger().shares.size()).toBe(0n);
+  });
+
+  it('ALREADY_APPROVED: a keyholder approves a case once, and that one approval covers it', () => {
+    const r = setupRegistry();
+    r.auditor.openCase(CASE_A, [recordId(r, 1n), recordId(r, 2n)]);
+    r.keyholders[1].approveCase(CASE_A);
+    expectRefusal(() => r.keyholders[1].approveCase(CASE_A), 'ALREADY_APPROVED');
+    expect(r.ledger().shares.size()).toBe(2n);
+  });
+
+  it('BAD_EPHEMERAL: a case approval cannot seal its shares with a degenerate ephemeral key', () => {
+    const r = setupRegistry();
+    r.auditor.openCase(CASE_A, [recordId(r)]);
+    expectRefusal(() => r.keyholders[0].approveCase(CASE_A, { ephemeral: 0n }), 'BAD_EPHEMERAL');
+    expect(r.ledger().shares.size()).toBe(0n);
   });
 });

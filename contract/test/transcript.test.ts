@@ -28,6 +28,7 @@ import { randomBytes32 } from '../../sdk/src/crypto/scalar.js';
 
 const LENDER_REF = new Uint8Array(32).fill(0x1d);
 const CASE_REF = new Uint8Array(32).fill(0xc7);
+const CASE_A = new Uint8Array(32).fill(0xa5);
 
 const published = (res: CircuitResult): Set<string> => new Set(transcriptValues(res));
 
@@ -239,6 +240,46 @@ describe('disclosure', () => {
     expect(values.has(keyHex(CASE_REF))).toBe(true);
     expect(values.has(keyHex(pure.requestIdOf(recordId, CASE_REF)))).toBe(true);
     expectNoInvoiceFields(res, inv);
+  });
+
+  it('a case publishes its reference, its size and the records it covers — nothing of the invoices', () => {
+    const r = setupRegistry();
+    const first = offered(r, r.financierA, { invoiceNo: 6_111_222_333n, amount: 111_222_333n });
+    const second = offered(r, r.financierA, { invoiceNo: 6_444_555_666n, amount: 444_555_666n });
+    const parked = offered(r, r.financierA, { invoiceNo: 6_777_888_999n, amount: 777_888_999n });
+    const L = r.ledger();
+    const ids = [first, second, parked].map((o) => L.pledges.lookup(o.n).recordId);
+    const res = r.auditor.openCaseRaw(CASE_A, [ids[0]!, ids[1]!, ids[2]!, ZERO32], [true, true, false, false]);
+    const values = published(res);
+
+    expect(values.has(keyHex(CASE_A))).toBe(true);
+    expect(values.has(keyHex(ids[0]!))).toBe(true);
+    expect(values.has(keyHex(ids[1]!))).toBe(true);
+    // The third record is in an unused slot: the circuit reads nothing and writes nothing for it.
+    expect(values.has(keyHex(ids[2]!))).toBe(false);
+    // The case is public: its size is what a keyholder is being asked to consent to.
+    expect(r.ledger().cases.lookup(CASE_A).count).toBe(2n);
+    for (const o of [first, second, parked]) expectNoInvoiceFields(res, o.inv);
+  });
+
+  it('a case approval publishes one sealed share per record, never the share or any D', () => {
+    const r = setupRegistry();
+    const first = offered(r, r.financierA, { invoiceNo: 1n });
+    const second = offered(r, r.financierA, { invoiceNo: 2n });
+    const L = r.ledger();
+    const ids = [first, second].map((o) => L.pledges.lookup(o.n).recordId);
+    r.auditor.openCase(CASE_A, ids);
+    const res = r.keyholders[2].approveCase(CASE_A);
+    const values = published(res);
+
+    expect(values.has(keyHex(pure.caseShareKeyOf(CASE_A, 2n, 0n)))).toBe(true);
+    expect(values.has(keyHex(pure.caseShareKeyOf(CASE_A, 2n, 1n)))).toBe(true);
+    expect(values.has(leHex(r.keyholders[2].share.value))).toBe(false);
+    for (const recordId of ids) {
+      const D = pure.mulPoint(r.ledger().records.lookup(recordId).E, r.keyholders[2].share.value);
+      expect(values.has(leHex(D.x))).toBe(false);
+      expect(values.has(leHex(D.y))).toBe(false);
+    }
   });
 
   it('an approval publishes the keyholder slot and a sealed share, never the share itself', () => {

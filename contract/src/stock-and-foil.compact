@@ -22,6 +22,7 @@ export { Certificate, certIdOf, borrowerCommitOf, poolCount, poolTotal, poolDist
 export { fingerprint, ackLeafFromFingerprint, nullifierFromFingerprint, ackLeafOf, nullifierOf, packFields };
 export { CipherRecord, CipherShare };
 export { cipherVersion, pubKeyOf, mulPoint, addPoints, identityPoint, maskOf, recordIdOf, requestIdOf, shareKeyOf };
+export { caseShareKeyOf };
 
 // ------------------------------------------------------------------------------------------
 // Public data
@@ -50,6 +51,17 @@ export struct DisclosureRequest {
   approvals: Vector<3, Boolean>;
 }
 
+/**
+ * An investigation over a fixed set of records, approved once rather than once per record.
+ * Unused slots carry the zero record id, and `count` is the number in use.
+ */
+export struct DisclosureCase {
+  caseRef: Bytes<32>;
+  count: Uint<8>;
+  recordIds: Vector<4, Bytes<32>>;
+  approvals: Vector<3, Boolean>;
+}
+
 // ------------------------------------------------------------------------------------------
 // Public ledger
 
@@ -71,6 +83,7 @@ export ledger certificates: Map<Bytes<32>, Certificate>;
 export ledger requests: Map<Bytes<32>, DisclosureRequest>;
 export ledger shares: Map<Bytes<32>, CipherShare>;
 export ledger peers: Map<Bytes<32>, PeerRegistry>;
+export ledger cases: Map<Bytes<32>, DisclosureCase>;
 
 // ------------------------------------------------------------------------------------------
 // Witnesses (untrusted inputs; every property is re-checked by asserts)
@@ -488,4 +501,93 @@ export circuit approveDisclosure(requestId: Bytes<32>, index: Uint<8>): [] {
   shares.insert(shareKeyOf(rid, i), CipherShare { version: cipherVersion(), E2: disclose(E2), ct: disclose(ct) });
   requests.insert(rid, DisclosureRequest { ...req,
                                            approvals: [done[0] || i == 0, done[1] || i == 1, done[2] || i == 2] });
+}
+
+// ------------------------------------------------------------------------------------------
+// Case-scoped disclosure
+//
+// The per-record path above is right for one receivable and wrong for an insolvency: an
+// investigation over N records made every keyholder sign N times, which is where consent
+// fatigue — and rubber-stamping — starts. A *case* names up to four records up front; a
+// keyholder approves the case once and the circuit publishes one sealed share per record in it.
+//
+// The threshold does not move: a share is still D_i = s_i·E for that record's own E, so two
+// distinct keyholders are still required to open any of them, and the per-record path still
+// works unchanged beside this one.
+//
+// What does move is the *breadth* of consent, and that is the trade-off to state rather than
+// hide. Approving a case approves all four records at once, up front, and a keyholder cannot
+// take one of them back afterwards. An insolvency practitioner needs exactly that; a privacy
+// reviewer needs to see it written down. It is in docs/THREAT-MODEL.md §3.5 and
+// docs/PRIVACY-BOUNDARY.md, and the bound is four because `approveCase` does one `ecMul` and
+// one `persistentHash` per slot inside the proof — a bigger case is a second case.
+
+/** A used slot must name a record that exists; an unused slot reads nothing and stores zero. */
+circuit caseSlot(recordId: Bytes<32>, used: Boolean): Bytes<32> {
+  const u = disclose(used);
+  const rid = disclose(recordId);
+  if (u) {
+    assert(records.member(rid), "NO_SUCH_RECORD");
+  }
+  return u ? rid : pad(32, "");
+}
+
+export circuit openCase(caseRef: Bytes<32>,
+                        recordIds: Vector<4, Bytes<32>>,
+                        used: Vector<4, Boolean>): [] {
+  assert(ecMulGenerator(localScalar()) == auditorPk, "NOT_AUDITOR");
+  const key = disclose(caseRef);
+  assert(!cases.member(key), "DUPLICATE_CASE");
+  const count = poolCount(used);
+  assert(count > 0, "EMPTY_CASE");
+  const ids = [caseSlot(recordIds[0], used[0]),
+               caseSlot(recordIds[1], used[1]),
+               caseSlot(recordIds[2], used[2]),
+               caseSlot(recordIds[3], used[3])];
+  cases.insert(key, DisclosureCase { caseRef: key,
+                                     count: disclose(count),
+                                     recordIds: ids,
+                                     approvals: [false, false, false] });
+}
+
+/**
+ * Seals this keyholder's share for one slot of a case.
+ *
+ * All four shares of one approval are sealed under a single shared point S2, so each slot must
+ * use its own mask indices — otherwise subtracting two of them would cancel the masks and show
+ * an observer with no key which slots name the same record. Slot j uses 2j and 2j+1.
+ */
+circuit sealCaseShare(key: Bytes<32>, i: Uint<8>, slot: Uint<8>, rid: Bytes<32>,
+                      s: Field, E2: JubjubPoint, S2: JubjubPoint): [] {
+  if (rid != pad(32, "")) {
+    const D = ecMul(records.lookup(rid).E, s);
+    const j = (slot as Field) * 2;
+    const ct = [jubjubPointX(D) + maskOf(S2, j), jubjubPointY(D) + maskOf(S2, j + 1)];
+    shares.insert(caseShareKeyOf(key, i, slot), CipherShare { version: cipherVersion(), E2: E2, ct: disclose(ct) });
+  }
+}
+
+export circuit approveCase(caseRef: Bytes<32>, index: Uint<8>): [] {
+  const s = localScalar();
+  const i = disclose(index);
+  assert(i < 3, "NOT_KEYHOLDER");
+  const pks = keyholderPks;
+  assert(ecMulGenerator(s) == (i == 0 ? pks[0] : (i == 1 ? pks[1] : pks[2])), "NOT_KEYHOLDER");
+  const key = disclose(caseRef);
+  assert(cases.member(key), "NO_SUCH_CASE");
+  const c = cases.lookup(key);
+  const done = c.approvals;
+  assert(!(i == 0 ? done[0] : (i == 1 ? done[1] : done[2])), "ALREADY_APPROVED");
+
+  const e2 = ephemeralScalar();
+  const E2 = ecMulGenerator(e2);
+  assert(E2 != identityPoint(), "BAD_EPHEMERAL");
+  const S2 = ecMul(auditorPk, e2);
+  const ids = c.recordIds;
+  sealCaseShare(key, i, 0, ids[0], s, disclose(E2), S2);
+  sealCaseShare(key, i, 1, ids[1], s, disclose(E2), S2);
+  sealCaseShare(key, i, 2, ids[2], s, disclose(E2), S2);
+  sealCaseShare(key, i, 3, ids[3], s, disclose(E2), S2);
+  cases.insert(key, DisclosureCase { ...c,
+                                     approvals: [done[0] || i == 0, done[1] || i == 1, done[2] || i == 2] });
 }

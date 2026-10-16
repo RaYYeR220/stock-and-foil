@@ -46,4 +46,25 @@ export class KeyholderClient extends RoleClient {
       ...inputs,
     });
   }
+
+  /** The ledger key its sealed share will take for one slot of a case. */
+  caseShareKeyOf(caseRef: Uint8Array, slot: number): Uint8Array {
+    return pureCircuits.caseShareKeyOf(caseRef, BigInt(this.index), BigInt(slot));
+  }
+
+  /**
+   * Approves a whole **case** at once: one signature, one sealed share per record the case
+   * covers. It is the answer to having had to approve an insolvency record by record.
+   *
+   * Read what the case covers before calling — `findCase(view, caseRef).recordIds` — because
+   * this consent is **broader than a record approval and cannot be partly withheld**. Approving
+   * a case approves every record in it, now and for as long as the case stands; the threshold
+   * is unchanged, so a second keyholder is still required before anything opens.
+   */
+  approveCase(caseRef: Uint8Array, inputs: CallInputs = {}): Promise<TxReceipt> {
+    return this.call('approveCase', [caseRef, BigInt(this.index)], {
+      ephemeral: randomScalar(),
+      ...inputs,
+    });
+  }
 }

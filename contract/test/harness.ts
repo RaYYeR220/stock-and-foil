@@ -177,10 +177,16 @@ export function openRecord(record: { E: Point; ct: bigint[] }, S: Point): { invo
   };
 }
 
-/** Removes the auditor-directed masks of a keyholder share, returning D_i = s_i·E. */
-export function openShare(share: { E2: Point; ct: bigint[] }, auditorSk: bigint): Point {
+/**
+ * Removes the auditor-directed masks of a keyholder share, returning D_i = s_i·E.
+ *
+ * `slot` is the case slot the share belongs to: one case approval seals up to four shares under
+ * a single shared point, so slot j is masked at indices 2j and 2j+1. A request share is slot 0.
+ */
+export function openShare(share: { E2: Point; ct: bigint[] }, auditorSk: bigint, slot = 0): Point {
   const S2 = pure.mulPoint(share.E2, auditorSk);
-  return { x: modP(share.ct[0]! - pure.maskOf(S2, 0n)), y: modP(share.ct[1]! - pure.maskOf(S2, 1n)) };
+  const j = BigInt(slot) * 2n;
+  return { x: modP(share.ct[0]! - pure.maskOf(S2, j)), y: modP(share.ct[1]! - pure.maskOf(S2, j + 1n)) };
 }
 
 /** Lagrange-combines decryption shares: Σ λ_i·D_i = sk·E. Indices are Shamir indices (1-based). */
@@ -379,6 +385,14 @@ export class Auditor extends Persona {
   request(recordId: Bytes, caseRef: Bytes) {
     return this.call('requestDisclosure', [recordId, caseRef]);
   }
+  /** Opens a case over up to four records; the fixed four slots are padded here. */
+  openCase(caseRef: Bytes, recordIds: Bytes[]) {
+    return this.call('openCase', [caseRef, pad4(recordIds, ZERO32), pad4(recordIds.map(() => true), false)]);
+  }
+  /** The raw four-slot form, for tests that need a used flag the padding would not produce. */
+  openCaseRaw(caseRef: Bytes, recordIds: [Bytes, Bytes, Bytes, Bytes], used: [boolean, boolean, boolean, boolean]) {
+    return this.call('openCase', [caseRef, recordIds, used]);
+  }
 }
 
 export class Keyholder extends Persona {
@@ -392,6 +406,10 @@ export class Keyholder extends Persona {
   }
   approve(requestId: Bytes, inputs: CallInputs = {}) {
     return this.call('approveDisclosure', [requestId, BigInt(this.index)], { ephemeral: randomScalar(), ...inputs });
+  }
+  /** One approval for the whole case: a sealed share per record the case covers. */
+  approveCase(caseRef: Bytes, inputs: CallInputs = {}) {
+    return this.call('approveCase', [caseRef, BigInt(this.index)], { ephemeral: randomScalar(), ...inputs });
   }
 }
 

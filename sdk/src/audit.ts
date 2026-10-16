@@ -12,7 +12,7 @@
 // Nothing here needs a secret: an explorer, a keyholder about to approve, or a financier sizing
 // up a registry can all run them from `backend.publicState()`.
 import { toHex } from './bytes.js';
-import type { Point, PublicLedgerView, RecordView, RequestView } from './types.js';
+import type { CaseView, Point, PublicLedgerView, RecordView, RequestView } from './types.js';
 
 /** Records that were sealed under the same ephemeral point, which is a leak (see below). */
 export interface ReusedSealingKey {
@@ -42,12 +42,14 @@ export function reusedSealingKeys(view: Pick<PublicLedgerView, 'records'>): Reus
     .map((records) => ({ E: records[0]!.E, recordIds: records.map((r) => r.recordId) }));
 }
 
-/** How far one sealed record has been opened, counting every request that names it. */
+/** How far one sealed record has been opened, counting every request and case that names it. */
 export interface RecordDisclosureState {
   recordId: string;
   /** Requests on this record, in ledger order. */
   requests: RequestView[];
-  /** Keyholder slots that approved *any* request for this record. */
+  /** Cases covering this record, in ledger order. */
+  cases: CaseView[];
+  /** Keyholder slots that approved *any* request or case that reaches this record. */
   approvedSlots: [boolean, boolean, boolean];
   /** How many distinct keyholders have contributed a share for this record. */
   approvals: number;
@@ -67,23 +69,31 @@ export interface RecordDisclosureState {
  * when asking "has this record been opened?".
  */
 export function recordDisclosureState(
-  view: Pick<PublicLedgerView, 'requests'>,
+  view: Pick<PublicLedgerView, 'requests'> & Partial<Pick<PublicLedgerView, 'cases'>>,
   recordId: Uint8Array | string,
 ): RecordDisclosureState {
   const id = toHex(recordId);
   const requests = view.requests.filter((r) => r.recordId === id);
+  const cases = (view.cases ?? []).filter((c) => c.recordIds.includes(id));
   const approvedSlots: [boolean, boolean, boolean] = [false, false, false];
-  for (const request of requests) {
-    request.approvals.forEach((approved, i) => {
+  for (const source of [...requests, ...cases]) {
+    source.approvals.forEach((approved, i) => {
       if (approved) approvedSlots[i] = true;
     });
   }
   const approvals = approvedSlots.filter(Boolean).length;
-  return { recordId: id, requests, approvedSlots, approvals, openable: approvals >= 2 };
+  return { recordId: id, requests, cases, approvedSlots, approvals, openable: approvals >= 2 };
 }
 
-/** Every record that two or more keyholders have contributed a share for, across all requests. */
-export const openableRecords = (view: Pick<PublicLedgerView, 'requests'>): RecordDisclosureState[] =>
-  [...new Set(view.requests.map((r) => r.recordId))]
+/**
+ * Every record two or more keyholders have contributed a share for, across every request and
+ * every case. A case is the reason this cannot be read off one request: one case approval seals
+ * a share for each of up to four records at once, so a record can be openable without any
+ * request on it reaching two.
+ */
+export const openableRecords = (
+  view: Pick<PublicLedgerView, 'requests'> & Partial<Pick<PublicLedgerView, 'cases'>>,
+): RecordDisclosureState[] =>
+  [...new Set([...view.requests.map((r) => r.recordId), ...(view.cases ?? []).flatMap((c) => c.recordIds)])]
     .map((recordId) => recordDisclosureState(view, recordId))
     .filter((state) => state.openable);

@@ -152,3 +152,123 @@ describe('2-of-3 threshold decryption', () => {
     expect(recomputesNullifier(opened.invoice, second.n)).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+// Case-scoped disclosure (audit finding F-08)
+//
+// A record approval is per record: an insolvency over N receivables made every keyholder sign N
+// times, which is not how an investigation works and is where consent fatigue starts. A *case*
+// names up to four records up front; a keyholder approves the case once and the circuit publishes
+// one sealed share per record in it. The threshold is unchanged — two keyholders are still
+// required for every record — and so is the per-record path, which still exists for the single
+// receivable an auditor wants to look at without opening a case at all.
+//
+// The honest trade-off, stated here and in docs/THREAT-MODEL.md: a case approval is *broader*
+// than a record approval. A keyholder that approves a case has consented to all four records at
+// once and cannot take one back. That breadth is exactly what an insolvency practitioner needs
+// and exactly what a privacy reviewer must see written down.
+
+describe('case-scoped disclosure', () => {
+  const CASE_A = new Uint8Array(32).fill(0xa5);
+
+  /** Offers `count` invoices and returns their record ids, in order. */
+  function records(r: Registry, count: number): { recordIds: Uint8Array[]; invoices: ReturnType<typeof offered>[] } {
+    const invoices = [...Array(count).keys()].map((k) => offered(r, r.financierA, { invoiceNo: BigInt(k + 1) }));
+    return { recordIds: invoices.map((o) => r.ledger().pledges.lookup(o.n).recordId), invoices };
+  }
+
+  /** The auditor's view of one keyholder's share for one slot of a case. */
+  function caseShareOf(r: Registry, caseRef: Uint8Array, index: 0 | 1 | 2, slot: number) {
+    const sealed = r.ledger().shares.lookup(pure.caseShareKeyOf(caseRef, BigInt(index), BigInt(slot)));
+    return { index: index + 1, D: openShare(sealed, r.auditorSk, slot) };
+  }
+
+  it('one approval per keyholder opens every record in the case', () => {
+    const r = setupRegistry();
+    const { recordIds, invoices } = records(r, 3);
+    r.auditor.openCase(CASE_A, recordIds);
+
+    const opened = r.ledger().cases.lookup(CASE_A);
+    expect(opened.count).toBe(3n);
+    expect(opened.approvals).toEqual([false, false, false]);
+    expect(opened.recordIds.map(hex)).toEqual([...recordIds.map(hex), hex(new Uint8Array(32))]);
+
+    // Two signatures in total, for three records — the old path needed six.
+    r.keyholders[0].approveCase(CASE_A);
+    r.keyholders[2].approveCase(CASE_A);
+    expect(r.ledger().cases.lookup(CASE_A).approvals).toEqual([true, false, true]);
+    expect(r.ledger().shares.size()).toBe(6n);
+
+    recordIds.forEach((recordId, slot) => {
+      const S = combineShares([caseShareOf(r, CASE_A, 0, slot), caseShareOf(r, CASE_A, 2, slot)]);
+      const record = r.ledger().records.lookup(recordId);
+      expect(S).toEqual(pure.mulPoint(record.E, r.disclosureSk));
+      const plaintext = openRecord(record, S);
+      expect(plaintext.invoice).toEqual(invoices[slot]!.inv);
+      expect(recomputesNullifier(plaintext.invoice, invoices[slot]!.n)).toBe(true);
+    });
+  });
+
+  it('one keyholder is not enough, for any record in the case', () => {
+    const r = setupRegistry();
+    const { recordIds, invoices } = records(r, 2);
+    r.auditor.openCase(CASE_A, recordIds);
+    r.keyholders[1].approveCase(CASE_A);
+    expect(r.ledger().shares.size()).toBe(2n);
+    recordIds.forEach((recordId, slot) => {
+      const S = combineShares([caseShareOf(r, CASE_A, 1, slot)]);
+      const plaintext = openRecord(r.ledger().records.lookup(recordId), S);
+      expect(plaintext.invoice).not.toEqual(invoices[slot]!.inv);
+      expect(recomputesNullifier(plaintext.invoice, invoices[slot]!.n)).toBe(false);
+    });
+  });
+
+  it('every slot gets its own mask, so two slots naming one record do not cancel', () => {
+    // One approval seals four shares under a single shared point, so the slots must use
+    // different mask indices. If they did not, subtracting two ciphertexts would cancel the
+    // masks and show an observer with no key at all which slots name the same record.
+    const r = setupRegistry();
+    const { recordIds } = records(r, 1);
+    r.auditor.openCase(CASE_A, [recordIds[0]!, recordIds[0]!]);
+    r.keyholders[0].approveCase(CASE_A);
+    const first = r.ledger().shares.lookup(pure.caseShareKeyOf(CASE_A, 0n, 0n));
+    const second = r.ledger().shares.lookup(pure.caseShareKeyOf(CASE_A, 0n, 1n));
+    expect(first.E2).toEqual(second.E2);
+    expect(first.ct[0]).not.toBe(second.ct[0]);
+    expect(first.ct[1]).not.toBe(second.ct[1]);
+    // Both still decrypt to the same point, because the slots do name the same record.
+    expect(openShare(first, r.auditorSk, 0)).toEqual(openShare(second, r.auditorSk, 1));
+  });
+
+  it('the per-record path is untouched: a case and a request coexist on one record', () => {
+    const r = setupRegistry();
+    const { recordIds, invoices } = records(r, 1);
+    const recordId = recordIds[0]!;
+    r.auditor.request(recordId, CASE_A);
+    const requestId = pure.requestIdOf(recordId, CASE_A);
+    r.auditor.openCase(CASE_A, [recordId]);
+
+    r.keyholders[0].approve(requestId);
+    r.keyholders[1].approveCase(CASE_A);
+    expect(r.ledger().requests.lookup(requestId).approvals).toEqual([true, false, false]);
+    expect(r.ledger().cases.lookup(CASE_A).approvals).toEqual([false, true, false]);
+    expect(r.ledger().shares.size()).toBe(2n);
+
+    // Shares are bound to the record, so one from each path combines — which is F-08 again,
+    // now visible across the two paths and counted per record by the SDK.
+    const S = combineShares([
+      { index: 1, D: openShare(r.ledger().shares.lookup(pure.shareKeyOf(requestId, 0n)), r.auditorSk) },
+      caseShareOf(r, CASE_A, 1, 0),
+    ]);
+    expect(openRecord(r.ledger().records.lookup(recordId), S).invoice).toEqual(invoices[0]!.inv);
+  });
+
+  it('a case share key is distinct from a request share key under the same reference', () => {
+    const r = setupRegistry();
+    const { recordIds } = records(r, 1);
+    const requestId = pure.requestIdOf(recordIds[0]!, CASE_A);
+    expect(hex(pure.caseShareKeyOf(CASE_A, 0n, 0n))).not.toBe(hex(pure.shareKeyOf(requestId, 0n)));
+    expect(hex(pure.caseShareKeyOf(CASE_A, 0n, 0n))).not.toBe(hex(pure.caseShareKeyOf(CASE_A, 0n, 1n)));
+    expect(hex(pure.caseShareKeyOf(CASE_A, 0n, 0n))).not.toBe(hex(pure.caseShareKeyOf(CASE_A, 1n, 0n)));
+  });
+});

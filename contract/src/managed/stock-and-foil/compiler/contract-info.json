@@ -636,6 +636,38 @@
       }
     },
     {
+      "name": "caseShareKeyOf",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "caseRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "index",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 255
+          }
+        },
+        {
+          "name": "slot",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 255
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "certIdOf",
       "pure": true,
       "proof": false,
@@ -1144,6 +1176,72 @@
         "types": [
         ]
       }
+    },
+    {
+      "name": "openCase",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "caseRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "recordIds",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          }
+        },
+        {
+          "name": "used",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Boolean"
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "approveCase",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "caseRef",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "index",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 255
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
     }
   ],
   "witnesses": [
@@ -1509,8 +1607,8 @@
     {
       "name": "disclosurePk",
       "index": [
-        1,
-        0
+        0,
+        1
       ],
       "exported": true,
       "storage": "Cell",
@@ -1527,7 +1625,7 @@
       "name": "keyholderPks",
       "index": [
         1,
-        1
+        0
       ],
       "exported": true,
       "storage": "Cell",
@@ -1548,7 +1646,7 @@
       "name": "threshold",
       "index": [
         1,
-        2
+        1
       ],
       "exported": true,
       "storage": "Cell",
@@ -1561,7 +1659,7 @@
       "name": "auditorPk",
       "index": [
         1,
-        3
+        2
       ],
       "exported": true,
       "storage": "Cell",
@@ -1578,7 +1676,7 @@
       "name": "settlementColor",
       "index": [
         1,
-        4
+        3
       ],
       "exported": true,
       "storage": "Cell",
@@ -1591,7 +1689,7 @@
       "name": "debtors",
       "index": [
         1,
-        5
+        4
       ],
       "exported": true,
       "storage": "HistoricMerkleTree",
@@ -1605,7 +1703,7 @@
       "name": "financiers",
       "index": [
         1,
-        6
+        5
       ],
       "exported": true,
       "storage": "HistoricMerkleTree",
@@ -1619,7 +1717,7 @@
       "name": "acks",
       "index": [
         1,
-        7
+        6
       ],
       "exported": true,
       "storage": "HistoricMerkleTree",
@@ -1633,7 +1731,7 @@
       "name": "ackNullifiers",
       "index": [
         1,
-        8
+        7
       ],
       "exported": true,
       "storage": "Set",
@@ -1646,7 +1744,7 @@
       "name": "pledges",
       "index": [
         1,
-        9
+        8
       ],
       "exported": true,
       "storage": "Map",
@@ -1717,7 +1815,7 @@
       "name": "records",
       "index": [
         1,
-        10
+        9
       ],
       "exported": true,
       "storage": "Map",
@@ -1764,7 +1862,7 @@
       "name": "certificates",
       "index": [
         1,
-        11
+        10
       ],
       "exported": true,
       "storage": "Map",
@@ -1829,7 +1927,7 @@
       "name": "requests",
       "index": [
         1,
-        12
+        11
       ],
       "exported": true,
       "storage": "Map",
@@ -1872,7 +1970,7 @@
       "name": "shares",
       "index": [
         1,
-        13
+        12
       ],
       "exported": true,
       "storage": "Map",
@@ -1919,7 +2017,7 @@
       "name": "peers",
       "index": [
         1,
-        14
+        13
       ],
       "exported": true,
       "storage": "Map",
@@ -1943,6 +2041,60 @@
             "type": {
               "type-name": "Bytes",
               "length": 32
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "cases",
+      "index": [
+        1,
+        14
+      ],
+      "exported": true,
+      "storage": "Map",
+      "key": {
+        "type-name": "Bytes",
+        "length": 32
+      },
+      "value": {
+        "type-name": "Struct",
+        "name": "DisclosureCase",
+        "elements": [
+          {
+            "name": "caseRef",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "count",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 255
+            }
+          },
+          {
+            "name": "recordIds",
+            "type": {
+              "type-name": "Vector",
+              "length": 4,
+              "type": {
+                "type-name": "Bytes",
+                "length": 32
+              }
+            }
+          },
+          {
+            "name": "approvals",
+            "type": {
+              "type-name": "Vector",
+              "length": 3,
+              "type": {
+                "type-name": "Boolean"
+              }
             }
           }
         ]

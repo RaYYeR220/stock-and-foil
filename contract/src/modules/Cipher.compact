@@ -30,6 +30,7 @@ module Cipher {
 
   struct RecordIdPreimage { domain: Bytes<32>; n: Bytes<32>; ex: Field; ey: Field; }
   struct ShareKeyPreimage { domain: Bytes<32>; requestId: Bytes<32>; index: Uint<8>; }
+  struct CaseShareKeyPreimage { domain: Bytes<32>; caseRef: Bytes<32>; index: Uint<8>; slot: Uint<8>; }
 
   /** Mask construction version carried by every sealed value on the ledger. */
   export pure circuit cipherVersion(): Uint<8> {
@@ -81,5 +82,17 @@ module Cipher {
   export pure circuit shareKeyOf(requestId: Bytes<32>, index: Uint<8>): Bytes<32> {
     return persistentHash<ShareKeyPreimage>(
       ShareKeyPreimage { domain: pad(32, "snf:v1:share"), requestId: requestId, index: index });
+  }
+
+  /**
+   * Ledger key of one keyholder's share for one slot of a case: H("caseshare", caseRef, i, slot).
+   *
+   * Case shares live in the same `shares` map as request shares — they are the same kind of
+   * value, sealed the same way — and the separate domain is what keeps the two key spaces
+   * disjoint, so a case reference that happens to equal a request id can never collide.
+   */
+  export pure circuit caseShareKeyOf(caseRef: Bytes<32>, index: Uint<8>, slot: Uint<8>): Bytes<32> {
+    return persistentHash<CaseShareKeyPreimage>(
+      CaseShareKeyPreimage { domain: pad(32, "snf:v1:caseshare"), caseRef: caseRef, index: index, slot: slot });
   }
 }

@@ -16,6 +16,12 @@ export type DisclosureRequest = { recordId: Uint8Array;
                                   approvals: boolean[]
                                 };
 
+export type DisclosureCase = { caseRef: Uint8Array;
+                               count: bigint;
+                               recordIds: Uint8Array[];
+                               approvals: boolean[]
+                             };
+
 export type CipherRecord = { version: bigint;
                              E: __compactRuntime.JubjubPoint;
                              ct: bigint[]
@@ -109,6 +115,13 @@ export type ImpureCircuits<PS> = {
   approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
                     requestId_0: Uint8Array,
                     index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+  openCase(context: __compactRuntime.CircuitContext<PS>,
+           caseRef_0: Uint8Array,
+           recordIds_0: Uint8Array[],
+           used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
+  approveCase(context: __compactRuntime.CircuitContext<PS>,
+              caseRef_0: Uint8Array,
+              index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -146,6 +159,13 @@ export type ProvableCircuits<PS> = {
   approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
                     requestId_0: Uint8Array,
                     index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+  openCase(context: __compactRuntime.CircuitContext<PS>,
+           caseRef_0: Uint8Array,
+           recordIds_0: Uint8Array[],
+           used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
+  approveCase(context: __compactRuntime.CircuitContext<PS>,
+              caseRef_0: Uint8Array,
+              index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type PureCircuits = {
@@ -172,6 +192,7 @@ export type PureCircuits = {
   recordIdOf(n_0: Uint8Array, E_0: __compactRuntime.JubjubPoint): Uint8Array;
   requestIdOf(recordId_0: Uint8Array, caseRef_0: Uint8Array): Uint8Array;
   shareKeyOf(requestId_0: Uint8Array, index_0: bigint): Uint8Array;
+  caseShareKeyOf(caseRef_0: Uint8Array, index_0: bigint, slot_0: bigint): Uint8Array;
   certIdOf(lenderRef_0: Uint8Array, lenderNonce_0: Uint8Array): Uint8Array;
   borrowerCommitOf(sellerId_0: bigint, lenderNonce_0: Uint8Array): Uint8Array;
   poolCount(used_0: boolean[]): bigint;
@@ -228,6 +249,10 @@ export type Circuits<PS> = {
   shareKeyOf(context: __compactRuntime.CircuitContext<PS>,
              requestId_0: Uint8Array,
              index_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  caseShareKeyOf(context: __compactRuntime.CircuitContext<PS>,
+                 caseRef_0: Uint8Array,
+                 index_0: bigint,
+                 slot_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   certIdOf(context: __compactRuntime.CircuitContext<PS>,
            lenderRef_0: Uint8Array,
            lenderNonce_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
@@ -276,6 +301,13 @@ export type Circuits<PS> = {
   approveDisclosure(context: __compactRuntime.CircuitContext<PS>,
                     requestId_0: Uint8Array,
                     index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+  openCase(context: __compactRuntime.CircuitContext<PS>,
+           caseRef_0: Uint8Array,
+           recordIds_0: Uint8Array[],
+           used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
+  approveCase(context: __compactRuntime.CircuitContext<PS>,
+              caseRef_0: Uint8Array,
+              index_0: bigint): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type Ledger = {
@@ -359,6 +391,13 @@ export type Ledger = {
     member(key_0: Uint8Array): boolean;
     lookup(key_0: Uint8Array): PeerRegistry;
     [Symbol.iterator](): Iterator<[Uint8Array, PeerRegistry]>
+  };
+  cases: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): DisclosureCase;
+    [Symbol.iterator](): Iterator<[Uint8Array, DisclosureCase]>
   };
 }
 

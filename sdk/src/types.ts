@@ -94,6 +94,17 @@ export interface RequestView {
 }
 
 /**
+ * An auditor's case: a fixed set of records a keyholder approves once, instead of once per
+ * record. Unused slots are omitted from `recordIds`, so its length is the case's size.
+ */
+export interface CaseView {
+  caseRef: string;
+  count: number;
+  recordIds: string[];
+  approvals: [boolean, boolean, boolean];
+}
+
+/**
  * One peer registry this operator declares it recognises. The address is public because a lender
  * needs it to query the peer; the label is a hiding commitment the operator can open off chain.
  */
@@ -123,6 +134,7 @@ export interface PublicLedgerView {
     requests: number;
     shares: number;
     peers: number;
+    cases: number;
   };
   config: RegistryConfig;
   pledges: PledgeView[];
@@ -131,6 +143,7 @@ export interface PublicLedgerView {
   requests: RequestView[];
   shares: ShareView[];
   peers: PeerView[];
+  cases: CaseView[];
 }
 
 /**
@@ -174,6 +187,9 @@ export const findShare = (view: PublicLedgerView, shareKey: Uint8Array | string)
 
 export const findPeer = (view: PublicLedgerView, address: Uint8Array | string): PeerView | undefined =>
   view.peers.find((p) => p.address === toHex(address));
+
+export const findCase = (view: PublicLedgerView, caseRef: Uint8Array | string): CaseView | undefined =>
+  view.cases.find((c) => c.caseRef === toHex(caseRef));
 
 /** Whether a receivable is available to pledge, tying up collateral, or already settled. */
 export type Encumbrance = 'FREE' | 'ENCUMBERED' | 'SETTLED';
