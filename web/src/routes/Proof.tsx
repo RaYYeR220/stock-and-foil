@@ -99,7 +99,10 @@ export function Proof() {
                   { label: 'Deployment files found', value: '0' },
                   { label: 'Evidence files found', value: '0' },
                   { label: 'Audited', value: 'no — nothing here has been audited' },
-                  { label: 'Mainnet', value: 'no — mainnet deployment is gated by the Foundation' },
+                  {
+                    label: 'Mainnet',
+                    value: 'no — permissionless mainnet deployment opened on 28 Sept 2026 and this is not through it',
+                  },
                 ]}
               />
             </section>
@@ -298,7 +301,11 @@ export function Proof() {
                 <span>Nothing here has been audited.</span>
               </li>
               <li>
-                <span>Nothing is deployed to mainnet; mainnet deployment goes through the Foundation.</span>
+                <span>
+                  Nothing is deployed to Midnight mainnet. Permissionless mainnet contract deployment went live on
+                  28 September 2026, so there is no longer a gate to point at — the registry simply is not there yet,
+                  and this page will say so until it is.
+                </span>
               </li>
               <li>
                 <span>
