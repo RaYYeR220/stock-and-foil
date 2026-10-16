@@ -3,11 +3,12 @@
 // Deployment, and the wallet wiring the scenario reuses.
 //
 // A deploy here is *staged*, and that is not a style choice. A Midnight block caps how many bytes
-// one transaction may write; this contract's twelve verifier keys total about 26 kB and a deploy
+// one transaction may write; this contract's verifier keys run to tens of kilobytes and a deploy
 // carrying all of them is rejected outright. So the first transaction carries the constructor and
-// six keys, and six `VerifierKeyInsert` maintenance transactions add the rest — seven in total,
-// each printed as it lands. The deployer can do that because it holds the contract's maintenance
-// authority, whose signing key lives in the LevelDB private-state store under `cli/.secrets/`.
+// six keys, and one `VerifierKeyInsert` maintenance transaction per remaining circuit adds the
+// rest, each printed as it lands. The count follows the number of circuits rather than being
+// fixed. The deployer can do this because it holds the contract's maintenance authority, whose
+// signing key lives in the LevelDB private-state store under `cli/.secrets/`.
 // Lose that directory and the contract can never be maintained again.
 import { existsSync } from 'node:fs';
 import {

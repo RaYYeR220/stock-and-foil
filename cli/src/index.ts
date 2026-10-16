@@ -24,12 +24,14 @@ const USAGE = `stock-and-foil cli
       cli/.secrets/<network>-keys.json (gitignored) and prints the public material.
 
   deploy --network <id> [--mnemonic-file <path>] [--force] [--verifier-keys-per-tx <n>]
-      Deploys the registry in seven transactions (one deploy carrying six verifier keys, six
-      maintenance transactions carrying the rest) and writes cli/deployments/<network>.json.
+      Deploys the registry in stages: one transaction carrying the constructor and six verifier
+      keys, then one maintenance transaction per remaining circuit, because all of the keys do
+      not fit in one transaction. Writes cli/deployments/<network>.json.
 
-  scenario --network <id> [--mnemonic-file <path>] [--from <step>] [--fresh]
+  scenario --network <id> [--mnemonic-file <path>] [--from <step>] [--fresh] [--peer <address>]
       Replays the guided First Brands scenario with real proofs and writes
       cli/evidence/<network>-<timestamp>.json. Resumable: completed steps are skipped.
+      --peer declares another registry as a peer; without it that step is skipped.
 
   verify --network <id> [--evidence <path>]
       Re-reads the contract through the indexer and asserts it matches the newest evidence file.

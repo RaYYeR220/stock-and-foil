@@ -105,11 +105,14 @@ export const CIRCUIT_IDS: readonly string[] = Object.keys(
  * How many of this contract's verifier keys fit in one transaction.
  *
  * A Midnight block limits the bytes a transaction may write (50,000 on the networks we target,
- * and a single transaction may claim only part of that). The twelve verifier keys of Stock &
- * Foil total about 26 kB, and a deploy carrying all of them is refused by the node with
- * "Transaction would exhaust the block limits". Six keys deploy comfortably; the rest are added
- * afterwards with maintenance transactions, which the deployer can do because it is the
- * contract's maintenance authority.
+ * and a single transaction may claim only part of that). Stock & Foil's verifier keys run to
+ * tens of kilobytes in total and a deploy carrying all of them is refused by the node with
+ * "Transaction would exhaust the block limits" — reported, unhelpfully, as a generic submission
+ * error. Six keys deploy comfortably; the rest are added afterwards with maintenance
+ * transactions, which the deployer can do because it is the contract's maintenance authority.
+ *
+ * The number of transactions therefore follows the number of circuits: `1 + (CIRCUIT_IDS.length
+ * - 6)`. Nothing downstream hard-codes it.
  */
 export const VERIFIER_KEYS_PER_TX = 6;
 
@@ -185,7 +188,7 @@ export class NetworkBackend implements RegistryBackend {
    *
    * The deployment is staged: the first transaction carries the constructor and as many verifier
    * keys as a block will accept, and one maintenance transaction per remaining circuit adds the
-   * rest. By the time this resolves the contract carries all twelve keys, so an ordinary
+   * rest. By the time this resolves the contract carries every key, so an ordinary
    * `findDeployedContract` verifies against it.
    */
   static async deploy(options: NetworkDeployOptions): Promise<NetworkBackend> {

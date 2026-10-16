@@ -134,7 +134,7 @@ npm run -w cli estimate -- --network mainnet \
   --mnemonic-file ../infra/.secrets/mainnet-wallet.json
 
 # 4. Deploy: one transaction carrying the constructor and six verifier keys, then one
-#    maintenance transaction per remaining circuit. Seven in total.
+#    maintenance transaction per remaining circuit.
 npm run -w cli deploy -- --network mainnet \
   --mnemonic-file ../infra/.secrets/mainnet-wallet.json --yes-mainnet
 
@@ -149,10 +149,10 @@ npm run -w cli verify -- --network mainnet
 `verify` still needs `BLOCKFROST_PROJECT_ID_MAINNET` in the environment, because that is how the
 indexer is reached now. It needs nothing else.
 
-### Why the deploy is seven transactions
+### Why the deploy is staged
 
-A Midnight block caps the bytes one transaction may write. This contract's verifier keys total
-about 26 kB and a deploy carrying all of them is rejected with
+A Midnight block caps the bytes one transaction may write. This contract's verifier keys run to
+tens of kilobytes and a deploy carrying all of them is rejected with
 `1010 Transaction would exhaust the block limits`, which the node reports as a generic
 submission error with no clue in it. So the deploy carries six keys and `VerifierKeyInsert`
 maintenance transactions add the rest. The deployer can do that because it holds the contract's
