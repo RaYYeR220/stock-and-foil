@@ -183,6 +183,69 @@ Back it up before the deploy, not after.
 
 ---
 
+## 3b. The other route: deploy through a browser wallet, with no DUST at all
+
+Section 3 assumes the slow thing has happened: cNIGHT registered, DUST accrued, a funded
+mainnet wallet. If it has not, and there is no route to Cardano, there is a second way in.
+
+The **1AM** wallet extension proves and balances transactions through its own ProofStation
+service, which pays the DUST fee out of a funded pool ([1am.xyz/developers](https://1am.xyz/developers)).
+A signer with zero DUST can therefore deploy and transact. `tools/mainnet-console` is a
+local-only operator console that drives exactly that: it reuses `NetworkBackend.deploy`, so the
+staging is the same eleven transactions, and it writes the same
+`cli/deployments/mainnet.json` and `cli/evidence/mainnet-*.json`, so `verify` and `proof` work
+afterwards with no changes.
+
+```sh
+npm run compile              # if the artefacts are not current
+npm run -w web zk:stage      # ~124 MB into web/public/zk, gitignored, served at /zk with CORS
+npm run console              # http://127.0.0.1:5174/
+```
+
+It is a dev server and nothing else. It has no `build` script, `vite build` refuses with an
+error, and it is not in the root `build` pipeline — so it cannot become part of the published
+site, which matters because it reads `cli/.secrets/mainnet-keys.json` (the circuits cannot be
+run without the personas' secrets) and because the dev server holds the Blockfrost token.
+
+**Where the credential lives.** `BLOCKFROST_PROJECT_ID_MAINNET`, in the environment or in an
+untracked `.env.local` at the repository root. The dev server reads it and attaches it to
+outbound indexer traffic; the page calls the same-origin path `/bf` and never holds the token,
+so it is not in a bundle, in devtools or in a HAR. Midnight's own mainnet indexer answers
+`410`, and 1AM's `getConfiguration()` still points at it, so the console ignores what the
+wallet reports and reads through Blockfrost.
+
+**What it does, in order.** Checks this machine (token, indexer, the compiled artefacts against
+the frozen sixteen-circuit build, the staged keys digest-compared with the compiler output, the
+ceremony), connects and reads the wallet including its DUST balance — zero is the expected
+reading — then a dry run that walks the whole flow and stops before any signature. Then the
+eleven deployment transactions, one approval each, then the ceremony and lifecycle steps
+ordered so the meaningful ones land first, then the evidence file.
+
+**Prompts: nineteen.** Eleven for the staged deployment, eight for the lifecycle. Two lifecycle
+steps raise none — the double-pledge refusal, which the contract rejects while the circuit runs
+in the tab, and the disclosure opening, which is arithmetic over two published shares.
+
+**If something stops.** Every completed transaction is recorded before the next prompt goes up,
+in `cli/.secrets/mainnet-console.json`, and the deployer's signing key — the contract's
+maintenance authority — is mirrored to
+`cli/.secrets/mainnet-console-private-state.json`. A closed tab or a declined prompt costs one
+transaction: reconnect and press *Resume at transaction n of 11*. **Back that private-state
+file up, as you would `cli/.secrets/mainnet-private-state/`: without it the contract can never
+be maintained again.** Nothing is ever retried automatically, and a failure names which of the
+four parties refused — the contract, you, 1AM's sponsor, or the network.
+
+**If 1AM's sponsor declines** — policy, rate limit, an empty pool — the console stops on the
+spot, shows their message verbatim and says it was their refusal. The fallbacks, in order of
+how much they cost: wait and press the same button again (the run resumes where it stopped);
+point the console at a different sponsored wallet; or fall back to section 3, which needs DUST.
+A half-finished deployment is repairable — a half-finished *deploy transaction* is not, because
+re-running it deploys a second registry.
+
+One interaction to know about: `zk:stage` copies the proving keys into `web/public/zk`, and a
+local `npm run -w web build` then copies them into `web/dist`, making it ~143 MB. Neither path
+is committed, and a Vercel build from source never sees them, but delete `web/dist/zk` before
+any `vercel deploy --prebuilt`.
+
 ## 4. Fee sponsorship on mainnet
 
 The sponsor is the one wallet in the system that must hold DUST. Everything in
