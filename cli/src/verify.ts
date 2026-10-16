@@ -144,6 +144,8 @@ export async function verify(args: Args): Promise<number> {
   compareByKey(checks, 'certificate', 'certId', evidence.finalState.certificates, chain.certificates);
   compareByKey(checks, 'request', 'requestId', evidence.finalState.requests, chain.requests);
   compareByKey(checks, 'share', 'shareKey', evidence.finalState.shares, chain.shares);
+  compareByKey(checks, 'peer', 'address', evidence.finalState.peers ?? [], chain.peers);
+  compareByKey(checks, 'case', 'caseRef', evidence.finalState.cases ?? [], chain.cases);
 
   // What the evidence claims about itself, checked against the chain rather than taken on trust.
   assertThat(

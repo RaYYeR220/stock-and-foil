@@ -13,9 +13,10 @@ proves nothing to a stranger.
 | `preview` | public Midnight testnet | deployed, full scenario, verified |
 | `undeployed` | local devnet (node, indexer, proof server in Docker) | deployed, full scenario, verified |
 | `preprod` | public Midnight testnet | **not deployed** - see [Preprod](#preprod-not-deployed) |
+| `mainnet` | Midnight mainnet | **not deployed** - see [Mainnet](#mainnet-ready-not-deployed) |
 
-Compact toolchain `0.31.1`, compact-runtime `0.16.0`, midnight-js `4.1.1`, proof server `8.1.0`.
-Nothing here has been audited by anyone but us.
+Compact toolchain `0.31.1`, compact-runtime `0.16.0`, midnight-js `4.1.1`, ledger-v8 `8.1.3`,
+proof server `8.1.3`. Nothing here has been audited by anyone but us.
 
 ## Preview: the deployed registry
 
@@ -181,31 +182,71 @@ evidence carries identifiers and block heights only.
 ## Preprod: not deployed
 
 The preprod wallet `mn_addr_preprod1le8jjcyr9ws7vtrtypvxsdhea8h5ec6c26qgjwgar42a2d8qsqqqk5tyg4`
-is fully synced (1 523 610 shielded, 1 524 091 dust events) and holds **0 tNIGHT and 0 DUST**. The
-preprod faucet is behind a captcha and was not available, so no NIGHT was ever received, no DUST
-could be generated, and no transaction can be paid for. Nothing has been deployed there.
+holds **0 tNIGHT and 0 DUST**. In Wave 1 the preprod faucet was behind a captcha loop and never
+paid out; it works again now, but two other things changed underneath it, and both are worth
+stating because a reader checking our Wave-1 config against the network today would find it
+broken:
 
-Everything in this file is therefore preview and local devnet. When the faucet comes back, the
-same three commands produce the same artifacts under `preprod` with no code changes:
-`ceremony`, `deploy`, `scenario`, `verify` all take `--network preprod`.
+- **Midnight retired its own preprod endpoints on 2026-10-09 22:00 UTC.**
+  `indexer.preprod.midnight.network` answers `410 ENDPOINT_DECOMMISSIONED`. Preprod is now served
+  by Blockfrost at `midnight-preprod.blockfrost.io/api/v0` and
+  `rpc.midnight-preprod.blockfrost.io`, with a per-network project token that is mandatory. The
+  repository's network table was rewritten for this; `preview` is unaffected and still tokenless.
+- **Saved wallet sync state did not survive the cutover.** A wallet resuming state captured
+  against the old indexer must resync from genesis, which on preprod is about 78 minutes of
+  streaming roughly 1.4M global DUST ledger events.
+
+The commands are unchanged: `ceremony`, `deploy`, `scenario` and `verify` all take
+`--network preprod`, and read the token from `BLOCKFROST_PROJECT_ID_PREPROD` or
+`--blockfrost-token`.
+
+## Mainnet: ready, not deployed
+
+Mainnet contract deployment has been permissionless since 2026-09-28; the request process was
+retired by [MIP PR #375](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/375),
+merged 2026-10-09. The docs site still says otherwise and has an unmerged fix open, so the MIP is
+the authority, not the guide.
+
+Everything needed to deploy is in this repository and nothing has been deployed. The remaining
+gate is DUST: there is no mainnet faucet, fees are paid in DUST, and DUST comes from registering
+NIGHT — a registration that takes about twelve hours to finalize on Cardano and reach a Midnight
+node, after which it accrues over about a week. A registration of ~200 NIGHT against the DUST
+address `mn_dust1wdp945q3qkfsnwlgdvucltpu5w8wqf75yk7whtxdex0ffd2exrlr7j4vkp3` is in flight.
+
+What is ready:
+
+- `--network mainnet` on `ceremony`, `deploy`, `scenario` and `verify`, with Blockfrost
+  endpoints and explorer links for midnightexplorer.com and midnight.subscan.io.
+- `npm run -w cli balance -- --network mainnet --watch 60`, which never waits for DUST, to watch
+  the registration land.
+- `npm run -w cli estimate -- --network mainnet`, which prices a full deploy plus scenario
+  against mainnet's own ledger parameters **before anything is spent**, by reading a previous
+  run's transactions back from the indexer as raw ledger bytes and re-pricing those exact bytes.
+  Nothing is built, proven or submitted; `--offline` does not even open a wallet.
+- A guard: every command that can submit refuses `--network mainnet` without `--yes-mainnet`.
+
+The runbook, with the exact commands and the failure modes, is [`docs/MAINNET.md`](./docs/MAINNET.md).
 
 ## Tests
 
 | Suite | Files | Tests | Notes |
 |---|---|---|---|
-| `contract/test/*` | 7 | **110** | lifecycle, one scenario per refusal code, fast-check model test, 2-of-3 disclosure with negative controls, deploy-time ceremony validation, public-transcript assertions, documented-limit reproductions |
-| `sdk/test/*` (default) | 6 | **67** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks, sandbox snapshot codec |
-| **Total, `npm test`** | **13** | **177** | no Docker, no node, no proof server |
+| `contract/test/*` | 7 | **139** | lifecycle, one scenario per refusal code, fast-check model test, 2-of-3 disclosure with negative controls, deploy-time ceremony validation, public-transcript assertions, documented-limit reproductions |
+| `sdk/test/*` (default) | 9 | **136** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks, sandbox snapshot codec, the network table and its Blockfrost tokens, the indexer client, the sponsorship client |
+| `sponsor/test/*` | 4 | **74** | the allowlist and the rate limit, the service end to end against a fake wallet, the budget under twenty parallel requests, the rate-limit bucket against a spoofed `X-Forwarded-For`, and what the service is allowed to log |
+| **Total, `npm test`** | **20** | **349** | no Docker, no node, no proof server |
 | `sdk/test/network.devnet.test.ts` | 1 | 4 | opt-in (`DEVNET=1`): staged deploy and a real lifecycle with real proofs against a local node; 276.6 s |
 
 ## Reproduce
 
 Everything below needs Node >= 22. The scenario additionally needs a proof server
-(`docker run -p 6300:6300 midnightntwrk/proof-server:8.1.0`) and a funded wallet.
+(`docker run -p 6300:6300 midnightntwrk/proof-server:8.1.3`) and a funded wallet. The proof
+server runs locally on every network, including mainnet, because it sees witness data in the
+clear.
 
 ```bash
 npm install
-npm test                               # 177 tests, no Docker needed
+npm test                               # 349 tests, no Docker needed
 npm run -w contract compile            # rebuild circuits and proving keys (needs Docker)
 ```
 

@@ -26,6 +26,7 @@ import {
   OperatorClient,
   REFUSAL_MESSAGES,
   SellerClient,
+  findCase,
   findPledge,
   fromHex,
   generatePersona,
@@ -123,7 +124,16 @@ interface RunState {
   startedAt: string;
   now0: string;
   personas: Record<'debtor' | 'seller' | 'financierA' | 'financierB', string>;
-  constants: { caseRef: string; lenderRef: string; lenderNonce: string };
+  constants: {
+    caseRef: string;
+    lenderRef: string;
+    lenderNonce: string;
+    /** Second case reference, for the case-scoped disclosure the Wave-2 contract added. */
+    insolvencyRef?: string;
+    /** 32 bytes of the operator's own naming for the peer registry, committed rather than published. */
+    peerLabel?: string;
+    peerLabelSalt?: string;
+  };
   invoices: Record<string, InvoiceJson>;
   steps: StepRecord[];
   disclosure?: DisclosureEvidence;
@@ -227,14 +237,34 @@ export async function scenario(args: Args): Promise<number> {
         : seller.issueInvoice({ debtorId: debtor.id, invoiceNo: spec.invoiceNo, amount: spec.amount, dueDate });
     }
 
-    const constants = saved?.constants ?? {
+    const constants = {
       caseRef: hex(randomBytes32()),
       lenderRef: hex(randomBytes32()),
       lenderNonce: hex(randomBytes32()),
+      insolvencyRef: hex(randomBytes32()),
+      peerLabel: hex(randomBytes32()),
+      peerLabelSalt: hex(randomBytes32()),
+      ...saved?.constants,
     };
+    // A resumed run from before these existed has no value saved for them.
+    constants.insolvencyRef ??= hex(randomBytes32());
+    constants.peerLabel ??= hex(randomBytes32());
+    constants.peerLabelSalt ??= hex(randomBytes32());
     const caseRef = fromHex(constants.caseRef);
     const lenderRef = fromHex(constants.lenderRef);
     const lenderNonce = fromHex(constants.lenderNonce);
+    const insolvencyRef = fromHex(constants.insolvencyRef);
+
+    /**
+     * Another Stock & Foil registry this one recognises.
+     *
+     * A pledge marker is `H("pledge", fingerprint)` and nothing else — no registry identity, no
+     * operator key — so the same receivable has the same marker everywhere and one lender can
+     * put the encumbrance question to every registry it knows of. Pass `--peer <address>` to
+     * declare a real one; without it the step is skipped rather than faked, because a peer entry
+     * pointing at nothing would be the one row in the evidence a reader could not check.
+     */
+    const peerAddress = flagValue(args, 'peer');
 
     const state: RunState = {
       network,
@@ -277,6 +307,37 @@ export async function scenario(args: Args): Promise<number> {
       return fromHex(pledge.recordId);
     };
     const currentRequestId = async (): Promise<Uint8Array> => auditor.requestIdOf(await currentRecordId(), caseRef);
+
+    /** The record a pool pledge points at, for a case that covers more than one receivable. */
+    const poolRecordId = async (key: string): Promise<Uint8Array> => {
+      const pledge = findPledge(await backend.publicState(), pureCircuits.nullifierOf(invoice(key)));
+      if (!pledge) throw new Error(`invoice #${key} has no pledge on the ledger yet`);
+      return fromHex(pledge.recordId);
+    };
+
+    /**
+     * Opens a whole case and checks every record in it against the ledger.
+     *
+     * The per-record path above proves one receivable. This proves the thing an insolvency
+     * actually needs: two keyholder approvals, once, covering every record the case names, with
+     * each one still recomputing its own on-ledger marker from the plaintext.
+     */
+    const openInsolvencyCase = async (): Promise<Outcome> => {
+      const startedAt = Date.now();
+      const opened = await auditor.openWholeCase(insolvencyRef);
+      if (opened.length === 0) throw new Error('the case opened no records');
+      const unverified = opened.filter((d) => !d.verified);
+      if (unverified.length > 0) {
+        throw new Error(`${unverified.length} of ${opened.length} records in the case did not prove themselves`);
+      }
+      return {
+        durationMs: Date.now() - startedAt,
+        note:
+          `${opened.length} records opened from one pair of approvals; invoices ` +
+          `${opened.map((d) => `#${d.invoice.invoiceNo}`).join(', ')}, each recomputing its own ` +
+          `on-ledger marker`,
+      };
+    };
 
     const openDisclosure = async (): Promise<Outcome> => {
       const startedAt = Date.now();
@@ -506,6 +567,18 @@ export async function scenario(args: Args): Promise<number> {
         run: async () => asOutcome(await financierA.accept(pureCircuits.nullifierOf(invoice('2001')))),
       },
       {
+        id: 'accept-pool-batch',
+        label: 'The pool lender takes the remaining three certified invoices in one atomic batch',
+        circuit: 'acceptBatch',
+        persona: 'financierA',
+        run: async () =>
+          asOutcome(
+            await financierA.acceptBatch(
+              POOL_KEYS.slice(1).map((key) => pureCircuits.nullifierOf(invoice(key))),
+            ),
+          ),
+      },
+      {
         id: 'request-disclosure',
         label: "Auditor requests disclosure of invoice #1001's sealed record",
         circuit: 'requestDisclosure',
@@ -533,6 +606,60 @@ export async function scenario(args: Args): Promise<number> {
         persona: 'auditor',
         run: openDisclosure,
       },
+      {
+        id: 'open-case',
+        label: 'Auditor opens an insolvency case over two receivables at once',
+        circuit: 'openCase',
+        persona: 'auditor',
+        run: async () =>
+          asOutcome(
+            await auditor.openCase(insolvencyRef, [await currentRecordId(), await poolRecordId('2001')]),
+          ),
+      },
+      {
+        id: 'approve-case-keyholder-1',
+        label: 'Keyholder 1 approves the whole case in one signature',
+        circuit: 'approveCase',
+        persona: 'keyholder1',
+        run: async () => asOutcome(await keyholders[0]!.approveCase(insolvencyRef)),
+      },
+      {
+        id: 'approve-case-keyholder-3',
+        label: 'Keyholder 3 approves: two of three, for every record the case names',
+        circuit: 'approveCase',
+        persona: 'keyholder3',
+        run: async () => asOutcome(await keyholders[2]!.approveCase(insolvencyRef)),
+      },
+      {
+        id: 'open-whole-case',
+        label: 'Auditor opens every record of the case, and each one proves itself',
+        circuit: 'openWholeCase (off chain)',
+        persona: 'auditor',
+        run: openInsolvencyCase,
+      },
+      ...(peerAddress === undefined
+        ? []
+        : [
+            {
+              id: 'register-peer',
+              label: `Operator declares ${peerAddress.slice(0, 10)}... as a peer registry`,
+              circuit: 'registerPeer',
+              persona: 'operator',
+              run: async (): Promise<Outcome> => {
+                const declared = await operator.registerPeer(
+                  fromHex(peerAddress),
+                  fromHex(constants.peerLabel!),
+                  fromHex(constants.peerLabelSalt!),
+                );
+                return {
+                  ...asOutcome(declared.receipt),
+                  note:
+                    `the ledger holds the address and the label commitment ` +
+                    `${hex(declared.labelCommit).slice(0, 18)}..., not the operator's name for it`,
+                };
+              },
+            },
+          ]),
     ];
 
     // ------------------------------------------------------------------------------ the runner
@@ -659,6 +786,17 @@ export async function scenario(args: Args): Promise<number> {
     say(`  dust paid      ${totalFeeSpeck} SPECK (${formatDust(totalFeeSpeck)} DUST)`);
     say(`  ledger counts  ${JSON.stringify(finalState.counts)}`);
     say(`  disclosure     ${state.disclosure?.verified ? 'opened and self-verified' : 'not verified'}`);
+    const openedCase = findCase(await backend.publicState(), insolvencyRef);
+    say(
+      `  case           ${
+        openedCase
+          ? `${openedCase.count} record(s), approvals ${JSON.stringify(openedCase.approvals)}`
+          : 'none'
+      }`,
+    );
+    if (peerAddress === undefined) {
+      say('  peers          none declared (pass --peer <contract address> to declare one)');
+    }
     say(`\nevidence written to ${evidencePath}`);
     say(`next: npm run -w cli verify -- --network ${network}`);
     return 0;

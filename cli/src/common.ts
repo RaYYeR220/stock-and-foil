@@ -508,6 +508,10 @@ export interface LedgerViewJson {
   }>;
   requests: Array<{ requestId: string; recordId: string; caseRef: string; approvals: boolean[] }>;
   shares: Array<{ shareKey: string; version: number; E2: PointJson; ct: string[] }>;
+  /** Peer registries this operator declares it recognises. */
+  peers: Array<{ address: string; labelCommit: string }>;
+  /** Disclosure cases: a fixed set of records a keyholder approves once rather than per record. */
+  cases: Array<{ caseRef: string; count: number; recordIds: string[]; approvals: boolean[] }>;
 }
 
 const byKey =
@@ -558,6 +562,17 @@ export function serializeLedgerView(view: PublicLedgerView): LedgerViewJson {
     shares: view.shares
       .map((s) => ({ shareKey: s.shareKey, version: s.version, E2: pointToJson(s.E2), ct: s.ct.map(String) }))
       .sort(byKey((s) => s.shareKey)),
+    peers: view.peers
+      .map((p) => ({ address: p.address, labelCommit: p.labelCommit }))
+      .sort(byKey((p) => p.address)),
+    cases: view.cases
+      .map((c) => ({
+        caseRef: c.caseRef,
+        count: c.count,
+        recordIds: [...c.recordIds],
+        approvals: [...c.approvals],
+      }))
+      .sort(byKey((c) => c.caseRef)),
   };
 }
 
