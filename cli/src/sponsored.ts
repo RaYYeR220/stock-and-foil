@@ -24,6 +24,7 @@ import {
   createProviders,
   DebtorClient,
   formatDust,
+  fromHex,
   generatePersona,
   hex,
   NetworkBackend,
@@ -41,9 +42,11 @@ import { createHeadlessWallet, levelPrivateState, nodeZkConfigProvider } from '@
 import {
   cliEndpoints,
   COMPACT_VERSION,
+  runStatePath,
   EVIDENCE_DIR,
   explorerFor,
   fileStamp,
+  flagSet,
   flagValue,
   guardRealValueNetwork,
   heading,
@@ -165,6 +168,8 @@ export async function sponsored(args: Args): Promise<number> {
     say('  -> this wallet cannot pay a fee at all. Everything below is paid by the sponsor.');
 
     // ----------------------------------------------------------------- providers
+    /** What the sponsor reported paying, per submission, in the order they happened. */
+    const sponsorFees: Array<string | undefined> = [];
     const providers = createProviders({
       network,
       endpoints,
@@ -188,7 +193,6 @@ export async function sponsored(args: Args): Promise<number> {
       }),
       webSocket: globalThis.WebSocket,
     });
-    const sponsorFees: Array<string | undefined> = [];
 
     const backend = await NetworkBackend.connect({
       network,
@@ -203,7 +207,7 @@ export async function sponsored(args: Args): Promise<number> {
     // `acknowledge` is the right circuit for this: it is the debtor's own confirmation that it
     // owes an invoice, made by a finance clerk at a mid-market company, and it is exactly the
     // party that will never hold NIGHT.
-    const persona = await personaFor(args, circuitName, network);
+    const { persona, admitted } = personaFor(args, network);
     const now = await backend.now();
     const invoice: Invoice = new SellerClient(backend, generatePersona('seller')).issueInvoice({
       debtorId: new DebtorClient(backend, persona).id,
@@ -214,8 +218,16 @@ export async function sponsored(args: Args): Promise<number> {
 
     // The debtor has to be admitted before it can acknowledge anything. That is an operator
     // call, the operator funds itself, and it is deliberately not on the sponsor's allowlist —
-    // so it goes through a second, funded session rather than through the sponsor.
-    await admitDebtor(args, network, endpoints, assets, deployment.contractAddress, keys.operator, persona);
+    // so when it is needed it goes through a second, funded session rather than the sponsor.
+    //
+    // Usually it is not needed: the guided scenario already admitted its own debtor against
+    // this contract, and reusing that persona saves a second wallet sync, which on a public
+    // network is a quarter of an hour of nothing happening.
+    if (admitted) {
+      note('reusing the debtor the scenario already admitted; no operator call needed');
+    } else {
+      await admitDebtor(args, network, endpoints, assets, deployment.contractAddress, keys.operator, persona);
+    }
 
     const steps: SponsoredStep[] = [];
     const debtor = new DebtorClient(backend, persona);
@@ -301,24 +313,46 @@ export async function sponsored(args: Args): Promise<number> {
 }
 
 /**
- * A persona for the acting party, kept in `cli/.secrets/` so a re-run acknowledges a second
- * invoice as the same debtor instead of needing to be admitted again.
+ * The acting party's persona, and whether the registry has already admitted it.
+ *
+ * Three sources, in order. An explicit `--debtor-secret`; the debtor the guided scenario
+ * admitted against this same contract, which is both already admitted and genuinely the party
+ * the demo is about; or a fresh persona kept in `cli/.secrets/` so a re-run acknowledges a
+ * second invoice as the same debtor.
+ *
+ * Note what the persona is *not*: a wallet. A persona is a private-state identity that proves
+ * knowledge of a secret whose hash is on the ledger, and it is entirely independent of whose
+ * wallet paid. That separation is why sponsorship is sound here rather than a workaround — the
+ * registry never looked at the fee payer in the first place.
  */
-async function personaFor(
+function personaFor(
   args: Args,
-  circuit: string,
   network: ChainNetwork,
-): Promise<StockAndFoilPrivateState> {
-  void args;
-  void circuit;
+): { persona: StockAndFoilPrivateState; admitted: boolean } {
+  const explicit = flagValue(args, 'debtor-secret');
+  if (explicit !== undefined) {
+    return { persona: { role: 'debtor', secretKey: fromHex(explicit) }, admitted: true };
+  }
+
+  if (!flagSet(args, 'fresh-debtor')) {
+    const scenarioPath = runStatePath(network);
+    if (existsSync(scenarioPath)) {
+      const run = readJson<{ contractAddress?: string; personas?: { debtor?: string } }>(scenarioPath);
+      const deployment = loadDeployment(network);
+      if (run.contractAddress === deployment.contractAddress && run.personas?.debtor) {
+        return { persona: { role: 'debtor', secretKey: fromHex(run.personas.debtor) }, admitted: true };
+      }
+    }
+  }
+
   const path = join(SECRETS_DIR, `${network}-sponsored-persona.json`);
   if (existsSync(path)) {
-    const stored = readJson<{ role: 'debtor'; secretKey: string }>(path);
-    return { role: 'debtor', secretKey: Buffer.from(stored.secretKey, 'hex') };
+    const stored = readJson<{ secretKey: string; admitted?: boolean }>(path);
+    return { persona: { role: 'debtor', secretKey: fromHex(stored.secretKey) }, admitted: stored.admitted === true };
   }
   const persona = generatePersona('debtor');
-  writeJson(path, { role: 'debtor', secretKey: hex(persona.secretKey) });
-  return persona;
+  writeJson(path, { role: 'debtor', secretKey: hex(persona.secretKey), admitted: false });
+  return { persona, admitted: false };
 }
 
 /**
@@ -364,6 +398,8 @@ async function admitDebtor(
     try {
       const receipt = await operator.admitDebtor(debtor.leaf);
       note(`debtor admitted in tx ${receipt.txId}`);
+      const path = join(SECRETS_DIR, `${network}-sponsored-persona.json`);
+      if (existsSync(path)) writeJson(path, { role: 'debtor', secretKey: hex(persona.secretKey), admitted: true });
     } catch (error) {
       note(`debtor was already admitted (${error instanceof Error ? error.message : String(error)}); continuing`);
     }

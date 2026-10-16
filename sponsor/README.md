@@ -36,6 +36,10 @@ Four properties make it safe:
 2. **The user binds first.** Only a bound `FinalizedTransaction` crosses the wire. The sponsor
    cannot add a call, remove one, or re-target one.
 3. **The network rejects a modified transaction.** The binding is cryptographic, not a promise.
+   The mechanism is visible in the wallet SDK itself: `finalizeRecipe` on a finalized recipe does
+   `recipe.originalTransaction.merge(finalizedBalancing)` — the user's bound transaction is kept
+   whole and the sponsor's fee-balancing transaction is merged alongside it. There is no step at
+   which the sponsor holds an unbound version of the user's call.
 4. **DUST cannot be extracted.** It is non-transferable. The worst a hostile caller can do is
    make the sponsor pay fees — which is what the allowlist, the caps and the rate limit are for.
 
