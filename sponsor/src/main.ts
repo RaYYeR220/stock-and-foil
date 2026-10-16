@@ -117,6 +117,13 @@ async function main(): Promise<void> {
     syncTimeoutMs: Number(env.SPONSOR_SYNC_TIMEOUT_MS ?? 45 * 60_000),
     // The sponsor is the one wallet in the system that must hold DUST, so wait for it.
     requireDust: true,
+    // A cold sync is a quarter of an hour of a service that is not yet serving. Say so.
+    onSyncProgress: (p) =>
+      process.stdout.write(
+        `sponsor: syncing ${p.percent}%  shielded ${p.shielded.applied}/${p.shielded.target}  ` +
+          `dust ${p.dust.applied}/${p.dust.target}
+`,
+      ),
   });
 
   const opening = await wallet.balances();
