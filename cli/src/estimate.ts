@@ -233,10 +233,19 @@ function printReport(
     }
   }
   say('');
-  say('  Caveat, stated rather than hidden: these are the reference run\'s exact transactions');
-  say('  re-priced, not the transactions that will actually be built. Keys, addresses, salts and');
-  say(`  a larger contract state move the real cost by a few percent, which is what the ${marginPercent(args)}% margin`);
-  say('  is for. 1 DUST = 10^15 SPECK.');
+  say('  Two caveats, stated rather than hidden.');
+  say('');
+  say('  These are the reference run\'s exact transactions re-priced, not the transactions that');
+  say('  will actually be built. Keys, addresses, salts and a larger contract state move the');
+  say(`  real cost by a few percent, which is what the ${marginPercent(args)}% margin is for.`);
+  say('');
+  say('  The price is the target network\'s ledger parameters plus this wallet\'s configured fee');
+  say('  overhead (additionalFeeOverhead, 1000 SPECK per transaction). On a network whose own');
+  say('  parameters price a transaction at 1 SPECK the overhead dominates and the per-transaction');
+  say('  figures look flat; that is the wallet being cautious, not the estimate failing. Read the');
+  say('  total as an upper bound on what a run will draw from the balance.');
+  say('');
+  say('  1 DUST = 10^15 SPECK.');
 }
 
 function writeReport(
@@ -260,7 +269,9 @@ function writeReport(
     method:
       'Each transaction of the reference run was read back from the reference indexer as raw ' +
       'ledger bytes and re-priced with the target wallet\'s own cost function. Nothing was built, ' +
-      'proven or submitted.',
+      'proven or submitted. The price is the target ledger parameters plus the wallet\'s '  +
+      'configured additionalFeeOverhead of 1000 SPECK per transaction, so it is an upper '  +
+      'bound rather than a prediction.',
     estimatedAt: new Date().toISOString(),
     marginPercent: marginPercent(args),
     transactions: priced.map((t) => ({

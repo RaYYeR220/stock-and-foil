@@ -96,10 +96,17 @@ It prints a per-transaction table, the total, a 25% margin (`--margin-percent` t
 whether the wallet can cover it, writes the same to `cli/evidence/estimate-mainnet-*.json`, and
 exits `2` when the balance is short so a script can branch.
 
-What it does not capture, stated rather than hidden: the mainnet transactions will not be
-byte-identical. Different keys, addresses, salts and timestamps move a transaction's size by a
+What it does not capture, stated rather than hidden. The mainnet transactions will not be
+byte-identical: different keys, addresses, salts and timestamps move a transaction's size by a
 few bytes, and a contract whose state has grown costs marginally more to call. That is what the
 margin is for.
+
+And the price includes the wallet's own `additionalFeeOverhead`, 1000 SPECK per transaction, on
+top of what the ledger parameters charge. Measured against the local devnet on 2026-10-16, every
+transaction from 17.5 kB down to 5.7 kB priced at exactly 1001 SPECK: 1000 of overhead and 1 of
+ledger fee. So on a cheap network the figure is flat and dominated by the overhead. Read the
+total as an **upper bound on what a run will draw from the balance**, not as a prediction of the
+ledger's own charge. On mainnet, where the parameters are not nominal, the two parts separate.
 
 `--offline` skips the wallet entirely and reports only what the reference network charged. Run
 that before the token exists.
