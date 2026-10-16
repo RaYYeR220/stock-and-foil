@@ -352,27 +352,37 @@ export async function federation(args: Args): Promise<number> {
 
     // ------------------------------------------------------------------ peer declarations
     await record('register-peer-a', `${registryA.name} declares ${registryB.name} a peer`, 'registerPeer', 'A', 'operator A', async () => {
-      const declared = await operatorA.registerPeer(
-        fromHex(registryB.contractAddress),
-        fromHex(state.peerLabels.aToB),
-        fromHex(state.peerLabels.aToBSalt),
-      );
-      return {
-        receipt: declared.receipt,
-        note: `the ledger holds B's address and the label commitment ${hex(declared.labelCommit).slice(0, 18)}..., not A's name for it`,
-      };
+      try {
+        const declared = await operatorA.registerPeer(
+          fromHex(registryB.contractAddress),
+          fromHex(state.peerLabels.aToB),
+          fromHex(state.peerLabels.aToBSalt),
+        );
+        return {
+          receipt: declared.receipt,
+          note: `the ledger holds B's address and the label commitment ${hex(declared.labelCommit).slice(0, 18)}..., not A's name for it`,
+        };
+      } catch (error) {
+        if (isRefusal(error)) return { refused: error.code, note: 'already declared by an earlier run' };
+        throw error;
+      }
     });
 
     await record('register-peer-b', `${registryB.name} declares ${registryA.name} a peer`, 'registerPeer', 'B', 'operator B', async () => {
-      const declared = await operatorB.registerPeer(
-        fromHex(registryA.contractAddress),
-        fromHex(state.peerLabels.bToA),
-        fromHex(state.peerLabels.bToASalt),
-      );
-      return {
-        receipt: declared.receipt,
-        note: 'declared on both sides, so a lender that finds either registry finds the other',
-      };
+      try {
+        const declared = await operatorB.registerPeer(
+          fromHex(registryA.contractAddress),
+          fromHex(state.peerLabels.bToA),
+          fromHex(state.peerLabels.bToASalt),
+        );
+        return {
+          receipt: declared.receipt,
+          note: 'declared on both sides, so a lender that finds either registry finds the other',
+        };
+      } catch (error) {
+        if (isRefusal(error)) return { refused: error.code, note: 'already declared by an earlier run' };
+        throw error;
+      }
     });
 
     // ------------------------------------------------------------------ B admits the parties
@@ -394,8 +404,38 @@ export async function federation(args: Args): Promise<number> {
       }
     });
 
-    // ------------------------------------------------------------------ the marker
+    // ------------------------------------------------------------------ the decisive question
+    //
+    // This runs *before* anything about the receivable touches registry B, which is the whole
+    // point and the order a lender would actually use. B's own book is empty of it, so if the
+    // check comes back clean the lender advances; the only thing that can say otherwise is the
+    // peer. Running it after B had already taken the offer — as a first draft of this command
+    // did — would have let B's own ledger answer the question, and proved nothing about asking
+    // across.
     const markerA = pureCircuits.nullifierOf(subject);
+    let beforeVerdict: FederatedEncumbrance | undefined;
+    await record(
+      'check-across-before-anything',
+      `The ${registryB.name} lender is offered the receivable and asks every registry it knows`,
+      'checkEncumbranceAcross (off chain)',
+      'B',
+      'lender',
+      async () => {
+        beforeVerdict = await lenderInB.checkEncumbranceAcross(subject, [registryA.backend]);
+        const peers = beforeVerdict.peers
+          .map((r) => `${r.contractAddress.slice(0, 10)}...: ${r.unreachable ? 'unreachable' : r.encumbrance}`)
+          .join('; ');
+        return {
+          note:
+            `here (${registryB.name}) ${beforeVerdict.here.encumbrance} — its own book has never seen this ` +
+            `receivable; ${peers}. encumberedAnywhere=${beforeVerdict.encumberedAnywhere}, ` +
+            `complete=${beforeVerdict.complete}. Only the peer could answer, and the lender declines on ` +
+            'one bit: encumbered. Not the holder, not the amount, not since when.',
+        };
+      },
+    );
+
+    // ------------------------------------------------------------------ the marker
     await record(
       'acknowledge-b',
       `The debtor acknowledges invoice #${subject.invoiceNo} in ${registryB.name} too`,
@@ -472,8 +512,8 @@ export async function federation(args: Args): Promise<number> {
     // ------------------------------------------------------------------ the lender asks both
     let encumberedVerdict: FederatedEncumbrance | undefined;
     await record(
-      'check-across-encumbered',
-      `The ${registryB.name} lender asks every registry it knows before advancing`,
+      'check-across-after-b-took-it',
+      `The same question once ${registryB.name} has taken the offer too`,
       'checkEncumbranceAcross (off chain)',
       'B',
       'lender',
@@ -484,9 +524,9 @@ export async function federation(args: Args): Promise<number> {
           .join('; ');
         return {
           note:
-            `here (${registryB.name}) ${encumberedVerdict.here.encumbrance}; ${peers}. ` +
-            `encumberedAnywhere=${encumberedVerdict.encumberedAnywhere}, complete=${encumberedVerdict.complete}. ` +
-            'The lender declines; it learns one bit and nothing else — not the holder, not the amount, not since when.',
+            `here (${registryB.name}) ${encumberedVerdict.here.encumbrance}; ${peers}. Both books now show it, ` +
+            'which is the state a second lender would walk into — and exactly the double pledge the ' +
+            'check above would have prevented.',
         };
       },
     );
@@ -514,8 +554,17 @@ export async function federation(args: Args): Promise<number> {
       },
     );
 
-    if (encumberedVerdict === undefined || freeVerdict === undefined) {
+    if (beforeVerdict === undefined || encumberedVerdict === undefined || freeVerdict === undefined) {
       throw new Error('the cross-registry checks did not produce a verdict');
+    }
+    if (!beforeVerdict.encumberedAnywhere) {
+      throw new Error('the pledged receivable was not reported as encumbered anywhere; the demonstration failed');
+    }
+    if (beforeVerdict.here.encumbrance !== 'FREE') {
+      throw new Error(
+        `registry B already knew about this receivable before the run started (${beforeVerdict.here.encumbrance}), ` +
+          'so the check could have answered from its own book. Pick a --subject that B has never seen.',
+      );
     }
     if (!encumberedVerdict.encumberedAnywhere) {
       throw new Error('the pledged receivable was not reported as encumbered anywhere; the demonstration failed');
@@ -553,10 +602,12 @@ export async function federation(args: Args): Promise<number> {
       claim:
         'Two independent registries, two ceremonies, two operators. The same receivable has the ' +
         'same pledge marker in both, because a marker is a function of the invoice and its ' +
-        'parties alone. The second registry cannot refuse a receivable pledged in the first — ' +
-        'its ledger has never heard of it — and the transaction showing that is recorded here. ' +
-        "What stops the double pledge is the lender's cross-registry check, which returns one " +
-        'bit per registry and nothing else.',
+        'parties alone. Asked before the second registry had ever seen the receivable, its own ' +
+        'book answered FREE and only the peer answered ENCUMBERED, so the cross-registry ' +
+        'question is what carried the information. The second registry then accepted the same ' +
+        'receivable, because its ledger cannot see across and no contract can; the transaction ' +
+        "showing that is recorded here. What stops the double pledge is the lender's check, " +
+        'which returns one bit per registry and nothing else.',
       registries: [
         { role: 'A', name: registryA.name, scope: registryA.scope, contractAddress: registryA.contractAddress, operatorId: registryA.operatorId },
         { role: 'B', name: registryB.name, scope: registryB.scope, contractAddress: registryB.contractAddress, operatorId: registryB.operatorId },
@@ -570,7 +621,14 @@ export async function federation(args: Args): Promise<number> {
       },
       steps,
       verdicts: [
-        verdictJson(`Invoice #${subject.invoiceNo}, pledged in ${registryA.name}`, encumberedVerdict),
+        verdictJson(
+          `Invoice #${subject.invoiceNo}, pledged in ${registryA.name} — asked before ${registryB.name} had seen it`,
+          beforeVerdict,
+        ),
+        verdictJson(
+          `Invoice #${subject.invoiceNo}, asked again once ${registryB.name} had taken it too`,
+          encumberedVerdict,
+        ),
         verdictJson(`Invoice #${control.invoiceNo}, pledged nowhere`, freeVerdict),
       ],
       deploymentAnchors: {
@@ -582,7 +640,8 @@ export async function federation(args: Args): Promise<number> {
     heading('result');
     say(`  marker                 ${hex(markerA)}`);
     say(`  keyed by both ledgers  ${markersIdentical ? 'yes' : 'NO'}`);
-    say(`  pledged receivable     encumberedAnywhere=${encumberedVerdict.encumberedAnywhere}, complete=${encumberedVerdict.complete}`);
+    say(`  asked before B saw it  here=${beforeVerdict.here.encumbrance}, encumberedAnywhere=${beforeVerdict.encumberedAnywhere}, complete=${beforeVerdict.complete}`);
+    say(`  asked after B took it  here=${encumberedVerdict.here.encumbrance}, encumberedAnywhere=${encumberedVerdict.encumberedAnywhere}`);
     say(`  control receivable     encumberedAnywhere=${freeVerdict.encumberedAnywhere}, complete=${freeVerdict.complete}`);
     say(`\nevidence written to ${path}`);
     say(`next: npm run -w cli proof -- --network ${network}`);
