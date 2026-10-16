@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: contract + sdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The compiled circuits are committed, so the suites run without the Compact
+      # toolchain, Docker, a node or a proof server.
+      - run: npm test
+      - run: npm run -w contract typecheck
+      - run: npm run -w sdk typecheck

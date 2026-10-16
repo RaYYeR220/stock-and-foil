@@ -6,9 +6,18 @@
 check them, and the register refuses a forged, an inflated or a second pledge of the same invoice —
 while the public ledger holds nothing but commitments, one-time markers and sealed records.
 
-Built on [Midnight](https://midnight.network) in Compact. Named after the medieval exchequer tally:
-a stick notched with a debt and split in two, the **stock** kept by the lender and the **foil** by
-the debtor. Halves that don't match are a forgery, and a stick already split cannot be split again.
+This project is built on the Midnight Network. The registry is written in Compact and named after
+the medieval exchequer tally: a stick notched with a debt and split in two, the **stock** kept by
+the lender and the **foil** by the debtor. Halves that don't match are a forgery, and a stick
+already split cannot be split again.
+
+| | |
+|---|---|
+| Live app, no wallet needed | **https://stock-and-foil.vercel.app** |
+| Three-minute walkthrough | https://youtu.be/rDnDGqp-ekE |
+| Deployed contract (Midnight preview) | `9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7` |
+| Every transaction, with explorer links | [PROOF.md](./PROOF.md) · `npm run verify:onchain` |
+| Review it in five minutes | [JUDGES.md](./JUDGES.md) |
 
 ---
 
@@ -146,8 +155,8 @@ Counts and the live evidence are in [PROOF.md](./PROOF.md).
   the lock verifiable.
 - Record sealing uses Poseidon masks, which the platform does not promise to keep stable across
   upgrades; records carry a version for that reason.
-- Deployed to a public test network only: mainnet contract deployment on Midnight is gated by the
-  Foundation's review process.
+- The registry is young: it has been exercised end to end on a public network and in a property
+  model, not by a lender's back office.
 - Not audited.
 
 ## Roadmap
