@@ -20,22 +20,24 @@ proof server `8.1.3`. Nothing here has been audited by anyone but us.
 
 ## Preview: the deployed registry
 
+<!-- BEGIN GENERATED preview -->
+
 | | |
 |---|---|
-| Contract address | [`9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7`](https://preview.midnightexplorer.com/contracts/9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7) |
-| Deployed at | 2026-09-15 17:40:31 UTC |
+| Contract address | [`74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad`](https://preview.midnightexplorer.com/contracts/74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad) |
+| Deployed at | 2026-10-16 10:24:50 UTC |
 | Deployment record | [`cli/deployments/preview.json`](./cli/deployments/preview.json) |
-| Evidence | [`cli/evidence/preview-2026-09-15T18-03-58Z.json`](./cli/evidence/preview-2026-09-15T18-03-58Z.json) |
-| Scenario window | 2026-09-15 17:55:27 UTC - 18:03:58 UTC, blocks 879534 - 879615 |
+| Evidence | [`cli/evidence/preview-2026-10-16T11-21-09Z.json`](./cli/evidence/preview-2026-10-16T11-21-09Z.json) |
+| Scenario window | 2026-10-16 10:40:51 UTC - 2026-10-16 11:21:09 UTC, blocks 1321121 - 1321369 |
+| Compact toolchain | 0.31.1 |
 | Disclosure threshold | 2 of 3 keyholders |
 
 ### Reading the links
 
-midnight-js reports a transaction *identifier* (the 33-byte value a contract call is keyed by);
-Midnight Explorer indexes by the transaction *hash* and answers a lookup by identifier with a 404.
-The evidence file carries both for every transaction, and the links below use the hash. The
-templates are recorded in the deployment file under `explorer`, checked against the live explorer
-on 2026-09-15:
+midnight-js reports a transaction *identifier* (the value a contract call is keyed by);
+Midnight Explorer indexes by the transaction *hash* and answers a lookup by identifier with a
+404. The evidence file carries both for every transaction, and the links below use the hash.
+The templates are recorded in the deployment file under `explorer`:
 
 ```
 tx           https://preview.midnightexplorer.com/transactions/{txHash}
@@ -44,123 +46,124 @@ block        https://preview.midnightexplorer.com/blocks/{height}
 subscanBlock https://midnight-preview.subscan.io/block/{height}
 ```
 
-Subscan gets a block template only. `midnight-preview.subscan.io/block/<height>` resolves, but
-`/extrinsic/<ledger tx hash>` renders the same empty page for a real hash as for thirty-two zero
-bytes: a Midnight *ledger* transaction hash is not the Substrate extrinsic hash Subscan keys on,
-so there is no honest per-transaction Subscan link for this chain.
+Subscan gets a block template only. `/block/<height>` resolves, but `/extrinsic/<ledger tx
+hash>` renders the same empty page for a real hash as for thirty-two zero bytes: a Midnight
+*ledger* transaction hash is not the Substrate extrinsic hash Subscan keys on, so there is no
+honest per-transaction Subscan link for this chain.
 
-### Deployment: seven transactions
+### Deployment: 11 transactions
 
-Twelve verifier keys total about 26 kB, which is over the node's 50 000-byte `bytes_written` cap
-for one block, so the deployment is staged: the deploy transaction carries the constructor and the
-first six keys, and six `VerifierKeyInsert` maintenance transactions carry the rest. They are
-signed by the deployer's maintenance authority, whose key lives in the private-state store under
-`cli/.secrets/` and never leaves this machine.
+A Midnight block caps the bytes one transaction may write, and this contract's verifier keys
+do not fit under it, so the deployment is staged: the deploy transaction carries the
+constructor and the first six keys, and 10 `VerifierKeyInsert` maintenance transactions
+carry the rest. They are signed by the deployer's maintenance authority, whose key lives in
+the private-state store under `cli/.secrets/` and never leaves this machine.
 
 | # | Stage | Transaction | Block | Time (UTC) |
 |---|---|---|---|---|
-| 1 | `deploy` - constructor + 6 verifier keys | [`d8732da6763e...`](https://preview.midnightexplorer.com/transactions/d8732da6763ed09c52a7013ebef9d76534264c1e900ba3a8c6c25a7906d13f68) | 879363 | 2026-09-15 17:38:30Z |
-| 2 | `VerifierKeyInsert` - `certifyBorrowingBase` | [`cef559b00c25...`](https://preview.midnightexplorer.com/transactions/cef559b00c25d87a55ffb0dff632eaed3bf7cfc0198fc4a04caa4b6f5e72672d) | 879366 | 2026-09-15 17:38:48Z |
-| 3 | `VerifierKeyInsert` - `payInvoice` | [`1fb3decc45ee...`](https://preview.midnightexplorer.com/transactions/1fb3decc45ee01509369091e1046f8aebd64f7980616c0f3e0209cf04bf00850) | 879369 | 2026-09-15 17:39:06Z |
-| 4 | `VerifierKeyInsert` - `claimAsHolder` | [`627cdb34c8e1...`](https://preview.midnightexplorer.com/transactions/627cdb34c8e176826b67b4ff872f2d23237ae725f64eaf44f6ddfb31d2474046) | 879372 | 2026-09-15 17:39:24Z |
-| 5 | `VerifierKeyInsert` - `claimAsSeller` | [`82c84ce6838c...`](https://preview.midnightexplorer.com/transactions/82c84ce6838c626c457384505d71be43d38a4ad0734df2640fab58a1605ca0f8) | 879375 | 2026-09-15 17:39:42Z |
-| 6 | `VerifierKeyInsert` - `requestDisclosure` | [`b8f3dd941008...`](https://preview.midnightexplorer.com/transactions/b8f3dd94100863fe16ce5ae554b7bb3077a10d5f698cf7e10f16490ffbaf9590) | 879378 | 2026-09-15 17:40:00Z |
-| 7 | `VerifierKeyInsert` - `approveDisclosure` | [`060fc88f792e...`](https://preview.midnightexplorer.com/transactions/060fc88f792e7e71270c75cb1f138c3e22e832c6e482690d639696623d48f96d) | 879381 | 2026-09-15 17:40:18Z |
+| 1 | `deploy` - constructor + first verifier keys | [`c61e4a58e6f7...`](https://preview.midnightexplorer.com/transactions/c61e4a58e6f76cbe637816c0b471c0a6cb2e488749ad7351da6200230c3e286d) | 1320927 | 2026-10-16 10:21:36 UTC |
+| 2 | `VerifierKeyInsert` - `acceptBatch` | [`c7cd79f03fab...`](https://preview.midnightexplorer.com/transactions/c7cd79f03fabf75a9e518c041fbd8cb61dcc81befeff76e9fda87afc047b6516) | 1320930 | 2026-10-16 10:21:54 UTC |
+| 3 | `VerifierKeyInsert` - `release` | [`9d0acdbe126c...`](https://preview.midnightexplorer.com/transactions/9d0acdbe126c901a7baec460fcae21983771f5395e5b45fcc1b473ca429c82ed) | 1320933 | 2026-10-16 10:22:12 UTC |
+| 4 | `VerifierKeyInsert` - `certifyBorrowingBase` | [`9657d5113adc...`](https://preview.midnightexplorer.com/transactions/9657d5113adc76adebeb40f76e6efb501979db1bc62a7a4e608bf5ceccefb5a8) | 1320936 | 2026-10-16 10:22:30 UTC |
+| 5 | `VerifierKeyInsert` - `payInvoice` | [`bdc92188c1a6...`](https://preview.midnightexplorer.com/transactions/bdc92188c1a6f6570c7dcaa09fb0c9e960802658e2e57fd822828d36f23caf50) | 1320939 | 2026-10-16 10:22:48 UTC |
+| 6 | `VerifierKeyInsert` - `claimAsHolder` | [`e1ef579e0681...`](https://preview.midnightexplorer.com/transactions/e1ef579e06816539c4362700ec3a877762cf80d4b10675af9321719ba81a752f) | 1320942 | 2026-10-16 10:23:06 UTC |
+| 7 | `VerifierKeyInsert` - `claimAsSeller` | [`13b7b72b3f6d...`](https://preview.midnightexplorer.com/transactions/13b7b72b3f6d9de14fcfb8e39ce47897a285b3d08e8ee69ab1f0a11014abb6a5) | 1320945 | 2026-10-16 10:23:24 UTC |
+| 8 | `VerifierKeyInsert` - `requestDisclosure` | [`3ece211d960c...`](https://preview.midnightexplorer.com/transactions/3ece211d960cb1a89614c02f742771cea05701f56440c6da1ea421f9cc8a79bc) | 1320948 | 2026-10-16 10:23:42 UTC |
+| 9 | `VerifierKeyInsert` - `approveDisclosure` | [`859ecd9148ce...`](https://preview.midnightexplorer.com/transactions/859ecd9148ce552b8d05c029013f159e05bcff1a5319efed643c2d9b253e4966) | 1320951 | 2026-10-16 10:24:00 UTC |
+| 10 | `VerifierKeyInsert` - `openCase` | [`55439bcaa441...`](https://preview.midnightexplorer.com/transactions/55439bcaa44119a476cc27a2f020954799165588a659769f7fba50ead6c5aa72) | 1320954 | 2026-10-16 10:24:18 UTC |
+| 11 | `VerifierKeyInsert` - `approveCase` | [`5e0d1e383627...`](https://preview.midnightexplorer.com/transactions/5e0d1e383627a2f6745281b4fd4c1ae8c21db42d55e8b82c43c9020bde2e6d36) | 1320957 | 2026-10-16 10:24:36 UTC |
 
-### The scenario: twenty transactions
+### The scenario: 24 transactions
 
-The First Brands replay, end to end, on preview. Twenty-seven steps: twenty transactions, five
-refusals that submitted nothing, and two checks a party runs off chain against public state. One
-funded wallet paid every fee; the personas are private-state identities, not wallets, each proving
-knowledge of a secret whose hash is on the ledger.
+The First Brands replay, end to end. 33 steps: 24 transactions,
+5 refusals that submitted nothing, and 4 checks a party runs off chain
+against public state. One funded wallet paid every fee; the personas are private-state
+identities, not wallets, each proving knowledge of a secret whose hash is on the ledger.
 
-"Proof + submit" is wall-clock from the CLI calling the circuit to the transaction being accepted,
-including proving on a local proof server.
+"Proof + submit" is wall-clock from the CLI calling the circuit to the transaction being
+accepted, including proving on a local proof server.
 
 | # | Step | Circuit | Persona | Transaction | Block | Time (UTC) | Proof + submit |
 |---|---|---|---|---|---|---|---|
-| 1 | Operator admits the debtor after off-chain KYB | `admitDebtor` | operator | [`45779ecd8a41...`](https://preview.midnightexplorer.com/transactions/45779ecd8a418e3568fc56bc3fc8be96a370049527e28896ab60c42a7c24a67c) | 879534 | 17:55:36Z | 23.1s |
-| 2 | Operator admits financier A | `admitFinancier` | operator | [`24eea9097a83...`](https://preview.midnightexplorer.com/transactions/24eea9097a83608b37d44f6d7cccda6fa925c19ae03899f1de9c437cbb3ce35b) | 879538 | 17:56:00Z | 23.2s |
-| 3 | Operator admits financier B | `admitFinancier` | operator | [`cb9be4ab80c9...`](https://preview.midnightexplorer.com/transactions/cb9be4ab80c9a4a479a7a4cbac04cdd0ab044a7b063fa70f6f5a7053e7e3e7cd) | 879542 | 17:56:24Z | 25.1s |
-| 4 | Debtor acknowledges invoice #1001 for $2,300.00 | `acknowledge` | debtor | [`18d538ce594c...`](https://preview.midnightexplorer.com/transactions/18d538ce594c1304c2615ec60035867c89f5e650b40a2580c84010ad40a1eded) | 879546 | 17:56:48Z | 23.0s |
-| 5 | Seller offers #1001 to financier A | `offer` | seller | [`ec441d7521be...`](https://preview.midnightexplorer.com/transactions/ec441d7521be955e41cc853038e43a15b067f8a5241dc873265bb7e74f6170df) | 879550 | 17:57:12Z | 24.6s |
-| 6 | Financier A accepts: the receivable is pledged | `accept` | financier A | [`b976bf1dff0d...`](https://preview.midnightexplorer.com/transactions/b976bf1dff0da462dbb686803721494fe44c7b481b9f463b7b0397a5aa1c7574) | 879554 | 17:57:36Z | 23.7s |
-| - | *three frauds refused here at 17:57:50-17:57:51Z - see the refusal table* | | | none | - | | 1.2s |
-| 7 | Financier A releases the pledge | `release` | financier A | [`5232bbabbfee...`](https://preview.midnightexplorer.com/transactions/5232bbabbfeed7b5fef8897cf3f4ed37c7540de8c2ed3cc674b21f3c13e77938) | 879558 | 17:58:00Z | 22.5s |
-| 8 | Seller re-offers #1001, now legitimately, to financier B | `offer` | seller | [`9ee89eaeb5ab...`](https://preview.midnightexplorer.com/transactions/9ee89eaeb5abc88ab48108d6eaeafdb41cd143efd3a1d1f328af306a4c4b641e) | 879562 | 17:58:24Z | 24.1s |
-| 9 | Financier B accepts and funds the receivable | `accept` | financier B | [`861109c0acdc...`](https://preview.midnightexplorer.com/transactions/861109c0acdc209b27fef7a719505a89cd700ac7fbcb2a71ebd8e8ccdac8fd75) | 879566 | 17:58:48Z | 24.2s |
-| 10 | Debtor pays $2,300.00 into the registry | `payInvoice` | debtor | [`90e4757dec54...`](https://preview.midnightexplorer.com/transactions/90e4757dec54795e57e848893d0a52831a63a2f8e156d12309ad85ee1f74aabb) | 879571 | 17:59:18Z | 30.4s |
-| - | *the seller's attempt to take those proceeds is refused here, 17:59:33Z* | | | none | - | | 0.5s |
-| 11 | Financier B claims the proceeds; the seller cannot divert them | `claimAsHolder` | financier B | [`a301f96bae09...`](https://preview.midnightexplorer.com/transactions/a301f96bae090ab05d1b451076739f3eea009d1dd7205d9ad6fcc95a26396823) | 879575 | 17:59:42Z | 23.0s |
-| 12 | Debtor acknowledges invoice #2001 for $1,000.00 | `acknowledge` | debtor | [`3b2433791b59...`](https://preview.midnightexplorer.com/transactions/3b2433791b59c278c7ab227df8521dafd4a7b99fa0de6b0cd46c410f08ced528) | 879579 | 18:00:06Z | 25.6s |
-| 13 | Debtor acknowledges invoice #2002 for $2,000.00 | `acknowledge` | debtor | [`3d708ea1d3d8...`](https://preview.midnightexplorer.com/transactions/3d708ea1d3d84c50ff0efeab70fd4a17e9226c2c568e013a1801cbdeac815b40) | 879583 | 18:00:30Z | 23.1s |
-| 14 | Debtor acknowledges invoice #2003 for $3,000.00 | `acknowledge` | debtor | [`324a2ecb7108...`](https://preview.midnightexplorer.com/transactions/324a2ecb71081546d67edc1ed800614115f5b92fb38705b06f725cdc461a25d0) | 879587 | 18:00:54Z | 31.2s |
-| 15 | Debtor acknowledges invoice #2004 for $4,000.00 | `acknowledge` | debtor | [`d9360457133f...`](https://preview.midnightexplorer.com/transactions/d9360457133faacb1bdc57c1dd484609056d44c80c57b98289686a296b6f1a9b) | 879592 | 18:01:24Z | 22.9s |
-| - | *a borrowing base overstated to $15,000.00 is refused here, 18:01:39Z* | | | none | - | | 0.5s |
-| 16 | Borrowing base: 4 invoices locked to one lender over an $8,000.00 floor | `certifyBorrowingBase` | seller | [`aea54e4be099...`](https://preview.midnightexplorer.com/transactions/aea54e4be0998f815c2ed1b1cf9d89dfe22db9160d506db7d31aeac79232b6dc) | 879599 | 18:02:06Z | 40.5s |
-| 17 | The lender checks the certificate really locks its pool to it, and only to it | `checkCertificate` (off chain) | financier A | none | - | 18:02:20Z | 0.2s |
-| 18 | The pool lender takes up the first certified invoice | `accept` | financier A | [`32b5ee1fc29a...`](https://preview.midnightexplorer.com/transactions/32b5ee1fc29a87be264821828b50301e241f6198100426ee90d628977a19a8d7) | 879603 | 18:02:30Z | 23.8s |
-| 19 | Auditor requests disclosure of invoice #1001's sealed record | `requestDisclosure` | auditor | [`3fa5fcf37e41...`](https://preview.midnightexplorer.com/transactions/3fa5fcf37e41b911c50c0d17f9b6706f86531268b59f5a022124a609b94820b8) | 879607 | 18:02:54Z | 24.9s |
-| 20 | Keyholder 1 approves the disclosure on the ledger | `approveDisclosure` | keyholder 1 | [`a14927a909d6...`](https://preview.midnightexplorer.com/transactions/a14927a909d6d1b24619b70552750027ae36c0500775cc313707623415860db9) | 879611 | 18:03:18Z | 22.3s |
-| 21 | Keyholder 3 approves: the 2-of-3 threshold is met | `approveDisclosure` | keyholder 3 | [`629a4e335dda...`](https://preview.midnightexplorer.com/transactions/629a4e335dda85217ccd53adf6a2c6b89927108dd7f4073af7c7ab4c20c5eb77) | 879615 | 18:03:42Z | 24.4s |
-| 22 | Auditor opens the record and it proves itself against the ledger | `verifyDisclosure` (off chain) | auditor | none | - | 18:03:57Z | 0.4s |
+| 1 | Operator admits the debtor after off-chain KYB | `admitDebtor` | operator | [`4aacefd21e8d...`](https://preview.midnightexplorer.com/transactions/4aacefd21e8d992124c71d949d06f8002c2ab9a01842709d1713b8aeec7ad4a5) | 1321121 | 10:41:00Z | 24.1s |
+| 2 | Operator admits financier A | `admitFinancier` | operator | [`564b4d266330...`](https://preview.midnightexplorer.com/transactions/564b4d2663306044fb85c89588e6c93d01b3d3e6e86682dfc1f471328cd326d4) | 1321125 | 10:41:24Z | 23.5s |
+| 3 | Operator admits financier B | `admitFinancier` | operator | [`ebc0f3c93656...`](https://preview.midnightexplorer.com/transactions/ebc0f3c9365604419715a0f5c11637f137ccd3c043a35dccf2b91bba845ae084) | 1321129 | 10:41:48Z | 22.8s |
+| 4 | Debtor acknowledges invoice #1001 for $2,300.00 | `acknowledge` | debtor | [`d6a23eadd0dd...`](https://preview.midnightexplorer.com/transactions/d6a23eadd0ddb0a7db00cc608a9a6fa39aa7425f94fb186c6dafd78aad396f9b) | 1321133 | 10:42:12Z | 24.4s |
+| 5 | Seller offers #1001 to financier A | `offer` | seller | [`2ab3b82de05e...`](https://preview.midnightexplorer.com/transactions/2ab3b82de05e5f7a30faccb8206fb19236dc824fba516d8a1819ead7bd52b953) | 1321137 | 10:42:36Z | 24.7s |
+| 6 | Financier A accepts: the receivable is pledged | `accept` | financierA | [`48200f4bf1df...`](https://preview.midnightexplorer.com/transactions/48200f4bf1dffd4df7cf96904a99c52d0c1f71bc0c17e79b4edf70dfbe200eb1) | 1321141 | 10:43:00Z | 23.4s |
+| 7 | Financier A releases the pledge | `release` | financierA | [`1b0e7a0645b1...`](https://preview.midnightexplorer.com/transactions/1b0e7a0645b168cce0f6a8533df216ce1f8a66dba9d0a8e4a226bea8ea77e32e) | 1321145 | 10:43:24Z | 22.6s |
+| 8 | Seller re-offers #1001, now legitimately, to financier B | `offer` | seller | [`edd5070cf958...`](https://preview.midnightexplorer.com/transactions/edd5070cf9583a7f2f98e4351c4b9b8eaa473e958abfe4ac25ede8a6761d2bf9) | 1321149 | 10:43:48Z | 23.9s |
+| 9 | Financier B accepts and funds the receivable | `accept` | financierB | [`d5a40c15fcc4...`](https://preview.midnightexplorer.com/transactions/d5a40c15fcc420633c5e9fef48615cbe6074cd98050c413176447a29a6ce12ab) | 1321153 | 10:44:12Z | 23.6s |
+| 10 | Debtor pays $2,300.00 into the registry | `payInvoice` | debtor | [`aa380726c136...`](https://preview.midnightexplorer.com/transactions/aa380726c136dafb941d03d31cb9bea506f660935d54775d84213b004f02033c) | 1321157 | 10:44:36Z | 24.4s |
+| 11 | Financier B claims the proceeds; the seller cannot divert them | `claimAsHolder` | financierB | [`7bf8fc4e818b...`](https://preview.midnightexplorer.com/transactions/7bf8fc4e818b0046a5f1965c967fa417467f1e8930586d4708dd24a838e99a5a) | 1321161 | 10:45:00Z | 24.0s |
+| 12 | Debtor acknowledges invoice #2001 for $1,000.00 | `acknowledge` | debtor | [`d34844114b60...`](https://preview.midnightexplorer.com/transactions/d34844114b6087c57047945b658f692e3ea13c33def7c1d8025c90ba1dfc06ba) | 1321165 | 10:45:24Z | 24.1s |
+| 13 | Debtor acknowledges invoice #2002 for $2,000.00 | `acknowledge` | debtor | [`ff5939e6a641...`](https://preview.midnightexplorer.com/transactions/ff5939e6a6415dc605aa2ff49d0c62041cdf88668c3cdad2e842e2d6149c073a) | 1321169 | 10:45:48Z | 23.3s |
+| 14 | Debtor acknowledges invoice #2003 for $3,000.00 | `acknowledge` | debtor | [`e101e3ee3d82...`](https://preview.midnightexplorer.com/transactions/e101e3ee3d82e14f7ad4f4e9936bdf829d1ec67b13682be161f8d34f37d58d4c) | 1321173 | 10:46:12Z | 24.2s |
+| 15 | Debtor acknowledges invoice #2004 for $4,000.00 | `acknowledge` | debtor | [`24dc2ff29818...`](https://preview.midnightexplorer.com/transactions/24dc2ff298187272de9afe4dc8eba195f02fdfa4ff612a384d0ad8c7bbd43342) | 1321177 | 10:46:36Z | 23.6s |
+| 16 | Borrowing base: 4 invoices locked to one lender over a $8,000.00 floor | `certifyBorrowingBase` | seller | [`f01f494cafbb...`](https://preview.midnightexplorer.com/transactions/f01f494cafbb6fb48396a28f3046cd65c42e685dd674548c543b7ed7e56c5576) | 1321183 | 10:47:12Z | 36.3s |
+| 17 | The lender checks the certificate really locks its pool to it, and only to it | `checkCertificate (off chain)` | financierA | none | - | 10:47:27Z | 0.2s |
+| 18 | The pool lender takes up the first certified invoice | `accept` | financierA | [`ac539d954c83...`](https://preview.midnightexplorer.com/transactions/ac539d954c83ffd1df1df87ddc48b61e0119edbd24c9efde5af0a259f54ae046) | 1321187 | 10:47:36Z | 23.2s |
+| 19 | The pool lender takes the remaining three certified invoices in one atomic batch | `acceptBatch` | financierA | [`d882efbac697...`](https://preview.midnightexplorer.com/transactions/d882efbac697551bb6c45295701068bd97da26485cb94c4f52ae102cd87cdf9d) | 1321191 | 10:48:00Z | 23.9s |
+| 20 | Auditor requests disclosure of invoice #1001's sealed record | `requestDisclosure` | auditor | [`26f619477bd5...`](https://preview.midnightexplorer.com/transactions/26f619477bd5ee581a247804a5dc621777e19605bd8b2f13d0c2fdba36d0cf0e) | 1321195 | 10:48:24Z | 24.8s |
+| 21 | Keyholder 1 approves the disclosure on the ledger | `approveDisclosure` | keyholder1 | [`ea7a56330d9f...`](https://preview.midnightexplorer.com/transactions/ea7a56330d9fa70d001db2159bd96c5515d2eb9d9c2158b6c0f296c17171db41) | 1321199 | 10:48:48Z | 22.9s |
+| 22 | Keyholder 3 approves: the 2-of-3 threshold is met | `approveDisclosure` | keyholder3 | [`d87482f691cd...`](https://preview.midnightexplorer.com/transactions/d87482f691cd06365fdb10e262b6b8b45e5b84543eb3ce4dc51027bbd6531b7d) | 1321203 | 10:49:12Z | 24.4s |
+| 23 | Auditor opens the record and it proves itself against the ledger | `verifyDisclosure (off chain)` | auditor | none | - | 10:49:27Z | 0.3s |
+| 24 | Auditor opens an insolvency case over four receivables at once | `openCase` | auditor | [`459c80c6ddba...`](https://preview.midnightexplorer.com/transactions/459c80c6ddba7ffa0f59a0e98481cd42e00472e67a5384b3d0bca26453e6d926) | 1321361 | 11:05:00Z | 22.2s |
+| 25 | Keyholder 1 approves the whole case in one signature | `approveCase` | keyholder1 | [`d6d0c28b45c0...`](https://preview.midnightexplorer.com/transactions/d6d0c28b45c098ebf20fa34aa4be0d1bc2f3d3d421942fe38e420186596213ba) | 1321365 | 11:05:24Z | 23.8s |
+| 26 | Keyholder 3 approves: two of three, for all four records the case names | `approveCase` | keyholder3 | [`10af7b2b4b4f...`](https://preview.midnightexplorer.com/transactions/10af7b2b4b4fbfd18b3caa5e640d86dd4e80aad6ef309e90ba4a5949003243d6) | 1321369 | 11:05:48Z | 24.1s |
+| 27 | Auditor opens every record of the case, and each one proves itself | `openWholeCase (off chain)` | auditor | none | - | 11:06:03Z | 0.5s |
+| 28 | A lender asks every registry it knows of whether the receivable is already pledged | `checkEncumbranceAcross (off chain)` | financierA | none | - | 11:06:03Z | 0.1s |
 
-Final public state after the run: 1 debtor, 2 financiers, 5 acknowledgment leaves, 5 acknowledgment
-nullifiers, 5 pledge markers, 6 sealed records, 1 certificate, 1 disclosure request, 2 keyholder
-shares. One pledge is `SETTLED` with `claimed = true` and `amount = 230000`; three of the four
-certified markers are still `OFFERED` and one is `PLEDGED`.
+Final public state after the run: 1 debtors, 2 financiers, 5 acks, 5 ackNullifiers, 5 pledges, 6 records, 1 certificates, 1 requests, 10 shares, 2 cases. 1 pledge(s) `SETTLED` with `claimed = true`, amount(s) 230000. The whole run cost **24 SPECK** (0.000000 DUST), read back from the indexer per transaction rather than asserted.
 
 ### Refusals: what was attempted, and what reached the chain
 
-Each of these ran the real circuit against the real ledger state. The contract asserts while the
-transaction is being *built*, so there is nothing to submit, nothing to mine and nothing to
-revert. **None of these five has a transaction id, on any explorer, because none exists.**
+Each of these ran the real circuit against the real ledger state. The contract asserts while
+the transaction is being *built*, so there is nothing to submit, nothing to mine and nothing
+to revert. **None of these 5 has a transaction id, on any explorer, because none exists.**
 `verify` re-checks that claim against the chain.
 
 | Refusal code | What was attempted | Circuit | Transaction submitted |
 |---|---|---|---|
-| `NOT_ACKNOWLEDGED` | Fraud 1, forged: the seller offers an invoice (#9999, $5,000.00) the debtor never owed | `offer` | none |
-| `NOT_ACKNOWLEDGED` | Fraud 2, inflated: the seller re-prices acknowledged invoice #1001 tenfold, to $23,000.00, and offers that | `offer` | none |
-| `ALREADY_ENCUMBERED` | Fraud 3, double pledge: the seller offers #1001 to financier B while financier A holds it | `offer` | none |
-| `NOT_PAYEE` | Fraud 4, diversion: the seller tries to take the settled proceeds of #1001, which are pledged to financier B | `claimAsSeller` | none |
-| `BELOW_FLOOR` | A borrowing base of $10,000.00 of collateral certified as clearing a $15,000.00 floor | `certifyBorrowingBase` | none |
+| `NOT_ACKNOWLEDGED` | Fraud 1, forged: an invoice the debtor never owed | `offer` | none |
+| `NOT_ACKNOWLEDGED` | Fraud 2, inflated: #1001 re-priced tenfold to $23,000.00 | `offer` | none |
+| `ALREADY_ENCUMBERED` | Fraud 3, double pledge: #1001 offered to financier B while A holds it | `offer` | none |
+| `NOT_PAYEE` | Fraud 4, diversion: the seller tries to take proceeds that are pledged to financier B | `claimAsSeller` | none |
+| `BELOW_FLOOR` | Borrowing base overstated: $10,000.00 of collateral claimed as $15,000.00 | `certifyBorrowingBase` | none |
 
-In fraud 3 it is the *seller* the contract stops, and it stops the seller without telling anyone
-anything. A financier asking the same question up front - `FinancierClient.checkEncumbrance`,
-which reads public state and submits nothing - learns exactly one bit: this receivable is already
-encumbered. Not by whom, not for how much, not since when.
+### The checks a party runs for itself, off chain
 
-### The lender-side certificate check
+Neither of these submits anything. They read public state and reach a conclusion the reader
+can reach the same way.
 
-A borrowing-base certificate proves its pool cleared a floor and names the markers it locked, but
-the holder tag on each locked slot comes from a witness the *seller* supplies - nothing in the
-circuit ties it to the lender named by `lenderRef`. Step 17 is the check a lender runs before
-advancing against one, added after the security review:
+- **The lender checks the certificate really locks its pool to it, and only to it** (`checkCertificate (off chain)`, financierA): certificate 603ee2e2d913d76a74 floor $8,000.00, 4 slots, all live and addressed to the lender that asked for it; the same certificate checked by another financier reports ok=false (0 of 4 slots addressed to it)
 
-- certificate `9ea4d53af375d8d527d4f27a15ea0e1b388294f4a23662443a29377d13d7db0d`, floor $8,000.00,
-  4 slots, `validUntil` 1792086912;
-- for the addressee (financier A): all 4 slots are unexpired offers addressed to it, `ok = true`;
-- negative control - the same certificate checked by financier B: 0 of 4 slots addressed to it,
-  `ok = false`.
+- **Auditor opens the record and it proves itself against the ledger** (`verifyDisclosure (off chain)`, auditor): shares 1 + 3 recombined; invoice #1001 $2,300.00 recomputes nullifier 4fee305491cd2ceaf54a9187752f9233c15180c7e573b8db5698fdfaab0aae2a
+
+- **Auditor opens every record of the case, and each one proves itself** (`openWholeCase (off chain)`, auditor): 4 records opened from one pair of approvals; invoices #1001, #2001, #2002, #2003, each recomputing its own on-ledger marker
+
+- **A lender asks every registry it knows of whether the receivable is already pledged** (`checkEncumbranceAcross (off chain)`, financierA): marker 4fee305491cd2ceaf5... is SETTLED in this registry; no peer was declared, so nothing else was asked
 
 ### The disclosure, opened and self-proving
 
 | | |
 |---|---|
-| Request id | `2b34c738ee14778cdbeaf790f563963d1ff47e6f8f102f228f50d0cf8d11b657` |
-| Record id | `8babc1a26bfb193f416861066f8f880777a03744ae697a20aa0aa536a4f22608` |
-| Case reference | `582a082ee25aee4b47272b2ded3901b10d4f8ab4b2b3547f13aa4d97ff6b1d79` |
-| Approvals on the ledger | `[true, false, true]` - keyholders 1 and 3 |
+| Request id | `47ab75fc0c735d50a31a7519a549bbe09aff5128904197675e8a91fd7515ae67` |
+| Record id | `24912c93cf26f7bc69fe36488cbecc83081ed3f1415eb11b56f58d0ea1f71def` |
+| Case reference | `7b1168f151413495db3a8fd132d8770ea39db099d53d2e2fc745792d8d16964e` |
+| Approvals on the ledger | `[true,false,true]` |
 | Shamir indices recombined | 1 + 3 |
-| Opened invoice | #1001, $2,300.00, due 1797270912 |
-| Fingerprint | `c6c2f9d33b934a196df76f14f708f2a1fd2d7dec15eebd17175504a941b0b510` |
-| Acknowledgment leaf | `e05668e7b244a5f3fd3640b0112617ad65e7035d2894ffc066d121fd1e9088bf` |
-| Nullifier recomputed from the plaintext | `6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a` |
-| Nullifier the pledge is keyed by on chain | `6a49cd4cdc091d4e0e7f303d5bca6b2e374ed8fbe6198e4369396634d644e39a` |
+| Opened invoice | #1001, 230000 minor units, due 1799923236 |
+| Fingerprint | `5d177c81d468857698647e3732f5d73c7c2fc860244f6824c46fb66739e96222` |
+| Acknowledgment leaf | `839453975b1b136798c08d04206acfa9d8c8d76f3d743df92dafd9121f175cb7` |
+| Nullifier recomputed from the plaintext | `4fee305491cd2ceaf54a9187752f9233c15180c7e573b8db5698fdfaab0aae2a` |
+| Nullifier the pledge is keyed by on chain | `4fee305491cd2ceaf54a9187752f9233c15180c7e573b8db5698fdfaab0aae2a` |
 
-The two nullifiers are equal, which is the point: the auditor did not receive an invoice and take
-somebody's word for it - the plaintext it recovered rehashes to the exact public marker the
-registry has been tracking since the offer.
+The two nullifiers are equal, which is the point: the auditor did not receive an invoice and
+take somebody's word for it - the plaintext it recovered rehashes to the exact public marker
+the registry has been tracking since the offer.
+
+<!-- END GENERATED preview -->
 
 ## Local devnet: the same run, with the deployment repeated
 
