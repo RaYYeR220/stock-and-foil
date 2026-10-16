@@ -122,6 +122,11 @@ export async function openWallet(
     // A sponsored wallet balances only shielded and unshielded, and holds no DUST on purpose.
     payDustFees: sponsorUrl === undefined,
     requireDust: options.requireDust ?? sponsorUrl === undefined,
+    onSyncProgress: (p) =>
+      note(
+        `syncing ${p.percent}%  shielded ${p.shielded.applied}/${p.shielded.target}  ` +
+          `dust ${p.dust.applied}/${p.dust.target}`,
+      ),
   });
   note(`wallet ready: ${wallet.address}`);
   await options.onReady?.(wallet);

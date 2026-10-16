@@ -22,6 +22,7 @@ import {
   heading,
   loadMnemonic,
   NETWORK_FACTS,
+  note,
   redactEndpoint,
   requireNetwork,
   say,
@@ -77,6 +78,8 @@ export async function balance(args: Args): Promise<number> {
     // Never block on DUST: a wallet that has none is exactly what this command is for.
     requireDust: false,
     requireSync: !flagSet(args, 'no-sync'),
+    onSyncProgress: (p) =>
+      note(`syncing ${p.percent}%  shielded ${p.shielded.applied}/${p.shielded.target}  dust ${p.dust.applied}/${p.dust.target}`),
   });
 
   try {

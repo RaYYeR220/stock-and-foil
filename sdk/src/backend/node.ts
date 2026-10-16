@@ -102,6 +102,26 @@ export interface HeadlessWalletOptions {
   requireDust?: boolean;
   /** Skip waiting for a complete sync. Balances are then whatever has been applied so far. */
   requireSync?: boolean;
+  /**
+   * Called while the wallet syncs, at most once every `syncProgressEveryMs`.
+   *
+   * A cold sync against a public network is fifteen minutes of a process that prints nothing,
+   * which is indistinguishable from a hang — and on the networks that matter it is the single
+   * longest thing anyone running this will wait for. Reporting it is not decoration.
+   */
+  onSyncProgress?: (progress: SyncProgress) => void;
+  /** How often to report progress. Default 30 s. */
+  syncProgressEveryMs?: number;
+}
+
+/** How far each of the three wallets has applied the chain. */
+export interface SyncProgress {
+  shielded: { applied: number; target: number };
+  unshielded: { applied: number; target: number };
+  dust: { applied: number; target: number };
+  /** The least complete of the three, 0..100, which is what a human wants to see. */
+  percent: number;
+  elapsedMs: number;
 }
 
 /** What a wallet holds, in the units the chain uses and in human ones. */
@@ -212,9 +232,41 @@ export async function createHeadlessWallet(options: HeadlessWalletOptions): Prom
   const isSynced = (s: any): boolean =>
     complete(s.shielded.progress) && complete(s.unshielded.progress) && complete(s.dust.progress);
 
+  const startedAt = Date.now();
+  const readProgress = (s: any): SyncProgress => {
+    const part = (p: any, targetField: string): { applied: number; target: number } => ({
+      applied: Number(p?.appliedIndex ?? 0),
+      target: Number(p?.[targetField] ?? p?.highestIndex ?? 0),
+    });
+    const shielded = part(s.shielded?.progress, 'highestRelevantWalletIndex');
+    const unshielded = part(s.unshielded?.progress, 'highestIndex');
+    const dust = part(s.dust?.progress, 'highestRelevantWalletIndex');
+    const ratio = (v: { applied: number; target: number }): number =>
+      v.target > 0 ? Math.min(1, v.applied / v.target) : 0;
+    return {
+      shielded,
+      unshielded,
+      dust,
+      percent: Math.floor(100 * Math.min(ratio(shielded), ratio(dust))),
+      elapsedMs: Date.now() - startedAt,
+    };
+  };
+
   if (requireSync) {
+    // Progress is reported from the same stream the wait reads, so it cannot claim progress the
+    // wait is not seeing.
+    const report = options.onSyncProgress;
+    const everyMs = options.syncProgressEveryMs ?? 30_000;
+    let lastReportAt = 0;
     await Rx.firstValueFrom(
       wallet.state().pipe(
+        Rx.tap((s: any) => {
+          if (report === undefined) return;
+          const now = Date.now();
+          if (now - lastReportAt < everyMs) return;
+          lastReportAt = now;
+          report(readProgress(s));
+        }),
         Rx.filter((s: any) => isSynced(s) && (!requireDust || s.dust.availableCoins.length > 0)),
         Rx.timeout(options.syncTimeoutMs ?? 600_000),
       ),

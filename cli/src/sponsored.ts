@@ -159,6 +159,8 @@ export async function sponsored(args: Args): Promise<number> {
     // DUST, and do not wait for DUST that is never going to arrive.
     payDustFees: false,
     requireDust: false,
+    onSyncProgress: (p) =>
+      note(`syncing ${p.percent}%  shielded ${p.shielded.applied}/${p.shielded.target}  dust ${p.dust.applied}/${p.dust.target}`),
   });
 
   try {
