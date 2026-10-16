@@ -17,6 +17,7 @@ import {
   cliEndpoints,
   fail,
   flagValue,
+  instanceOf,
   heading,
   loadDeployment,
   newestEvidencePath,
@@ -24,6 +25,7 @@ import {
   redactEndpoint,
   requireNetwork,
   say,
+  scopeOf,
   serializeLedgerView,
   UsageError,
   type Args,
@@ -91,14 +93,19 @@ const short = (id: string): string => (id.length > 12 ? `${id.slice(0, 8)}…${i
 
 export async function verify(args: Args): Promise<number> {
   const network = requireNetwork(args);
-  const deployment = loadDeployment(network);
-  const path = flagValue(args, 'evidence') ?? newestEvidencePath(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const deployment = loadDeployment(network, instance);
+  const path = flagValue(args, 'evidence') ?? newestEvidencePath(scope);
   if (path === undefined) {
-    throw new UsageError(`no evidence file for ${network}; run: npm run -w cli scenario -- --network ${network}`);
+    throw new UsageError(
+      `no evidence file for ${scope}; run: npm run -w cli scenario -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
   }
   const evidence = readJson<EvidenceFile>(path);
 
-  heading(`verifying ${network}`);
+  heading(`verifying ${scope}`);
   say(`  contract  ${deployment.contractAddress}`);
   say(`  evidence  ${path}`);
   say(`  recorded  ${evidence.summary.steps} steps, ${evidence.summary.transactions} transactions, ` +

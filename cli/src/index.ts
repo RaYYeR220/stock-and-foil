@@ -50,11 +50,18 @@ const USAGE = `stock-and-foil cli
       Proof that a party holding zero DUST can use the registry: a wallet whose balance is read
       as 0 first proves, balances and binds a real call, and a sponsor pays the fee and submits.
 
-  proof --network <id> [--evidence <path>] [--out <path>]
+  federation --network <id> [--peer-instance <name>] [--subject <invoiceNo>]
+      The cross-registry demonstration: two independent registries declare each other as peers,
+      the same receivable is shown to have the same marker in both, the second registry is shown
+      unable to refuse it, and the lender's check across both is what catches the double pledge.
+
+  proof --network <id> [--instance <name>] [--evidence <path>] [--out <path>]
       Rewrites the generated region of PROOF.md from the deployment record, the newest evidence
       file and the newest sponsorship proof. Reads files, writes one file, touches no network.
 
 Networks: undeployed, preview, preprod, mainnet.
+--instance <name> selects a second, independent registry on the same network: its own ceremony
+keys, its own deployment record and its own private-state store, under <network>-<name>.
 Common flags: --blockfrost-token <id>, --indexer-url, --node-url, --proof-server-url,
 --sync-timeout-minutes <n>, --zk-assets <dir>. Mainnet also needs --yes-mainnet on any command
 that submits.
@@ -91,6 +98,10 @@ async function run(args: Args): Promise<number> {
     case 'sponsored': {
       const { sponsored } = await import('./sponsored.js');
       return sponsored(args);
+    }
+    case 'federation': {
+      const { federation } = await import('./federation.js');
+      return federation(args);
     }
     case 'proof': {
       const { proof } = await import('./proof.js');

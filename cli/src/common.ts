@@ -78,9 +78,45 @@ export function zkAssetsPath(args: Args): string {
   return path;
 }
 
-export const keysPath = (network: ChainNetwork): string => join(SECRETS_DIR, `${network}-keys.json`);
-export const runStatePath = (network: ChainNetwork): string => join(SECRETS_DIR, `${network}-scenario.json`);
-export const deploymentPath = (network: ChainNetwork): string => join(DEPLOYMENTS_DIR, `${network}.json`);
+/**
+ * Which registry on a network we are talking about.
+ *
+ * One network can hold more than one Stock & Foil registry, and that is not a hypothetical: the
+ * federation answer — a lender asks every registry it knows, because a pledge marker is a
+ * function of the invoice and of nothing else — can only be *shown* with two of them. So every
+ * per-registry file is scoped by `<network>` for the primary registry and `<network>-<instance>`
+ * for any other, and `--instance <name>` selects one.
+ *
+ * The instance name is part of a file name, so it is restricted to characters that cannot
+ * escape the directory or collide with the timestamp in an evidence file name.
+ */
+export type RegistryScope = string;
+
+const INSTANCE_NAME = /^[a-z0-9][a-z0-9-]{0,15}$/;
+
+export function instanceOf(args: Args): string | undefined {
+  const value = flagValue(args, 'instance');
+  if (value === undefined) return undefined;
+  if (!INSTANCE_NAME.test(value)) {
+    throw new UsageError(
+      `--instance "${value}" is not a usable name; use 1-16 characters of a-z, 0-9 and "-", ` +
+        'starting with a letter or digit.',
+    );
+  }
+  return value;
+}
+
+/** `preview` for the primary registry, `preview-b` for `--instance b`. */
+export const scopeOf = (network: ChainNetwork, instance?: string): RegistryScope =>
+  instance === undefined ? network : `${network}-${instance}`;
+
+/** The scope this invocation is working on, from `--network` and `--instance`. */
+export const requireScope = (args: Args, network?: ChainNetwork): RegistryScope =>
+  scopeOf(network ?? requireNetwork(args), instanceOf(args));
+
+export const keysPath = (scope: RegistryScope): string => join(SECRETS_DIR, `${scope}-keys.json`);
+export const runStatePath = (scope: RegistryScope): string => join(SECRETS_DIR, `${scope}-scenario.json`);
+export const deploymentPath = (scope: RegistryScope): string => join(DEPLOYMENTS_DIR, `${scope}.json`);
 
 /**
  * LevelDB store holding one private state per persona plus the deployer's signing key. The
@@ -88,7 +124,7 @@ export const deploymentPath = (network: ChainNetwork): string => join(DEPLOYMENT
  * deployment inserts six verifier keys with maintenance transactions after the deploy — so this
  * directory has to survive between `deploy` and any later maintenance.
  */
-export const privateStatePath = (network: ChainNetwork): string => join(SECRETS_DIR, `${network}-private-state`);
+export const privateStatePath = (scope: RegistryScope): string => join(SECRETS_DIR, `${scope}-private-state`);
 
 export const ensureDir = (path: string): void => {
   mkdirSync(path, { recursive: true });
@@ -284,10 +320,14 @@ export interface RegistryKeyMaterial {
   constructorArgs: RegistryConstructorArgs;
 }
 
-export function loadRegistryKeys(network: ChainNetwork): RegistryKeyMaterial {
-  const path = keysPath(network);
+export function loadRegistryKeys(network: ChainNetwork, instance?: string): RegistryKeyMaterial {
+  const scope = scopeOf(network, instance);
+  const path = keysPath(scope);
   if (!existsSync(path)) {
-    throw new UsageError(`no key material for ${network}; run: npm run -w cli ceremony -- --network ${network}`);
+    throw new UsageError(
+      `no key material for ${scope}; run: npm run -w cli ceremony -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
   }
   const file = readJson<KeysFile>(path);
   const keyholders = file.secrets.keyholders.map((k) => ({
@@ -417,10 +457,14 @@ export interface DeploymentFile {
   explorer?: ExplorerTemplates;
 }
 
-export function loadDeployment(network: ChainNetwork): DeploymentFile {
-  const path = deploymentPath(network);
+export function loadDeployment(network: ChainNetwork, instance?: string): DeploymentFile {
+  const scope = scopeOf(network, instance);
+  const path = deploymentPath(scope);
   if (!existsSync(path)) {
-    throw new UsageError(`no deployment for ${network}; run: npm run -w cli deploy -- --network ${network}`);
+    throw new UsageError(
+      `no deployment for ${scope}; run: npm run -w cli deploy -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
   }
   return readJson<DeploymentFile>(path);
 }
@@ -466,11 +510,18 @@ export const privateStatePassword = (): string =>
 
 // ------------------------------------------------------------------------------------- evidence
 
-/** Newest evidence file for a network, by file name (which carries an ISO timestamp). */
-export function newestEvidencePath(network: ChainNetwork): string | undefined {
+/**
+ * Newest evidence file for a registry, by file name (which carries an ISO timestamp).
+ *
+ * The timestamp match is not decoration: `preview-b-2026-...json` also begins with `preview-`,
+ * so a prefix test alone would hand a second registry's evidence back as the first registry's
+ * and `verify` would compare the wrong chain.
+ */
+export function newestEvidencePath(scope: RegistryScope): string | undefined {
   if (!existsSync(EVIDENCE_DIR)) return undefined;
+  const wanted = new RegExp(`^${scope}-\\d{4}-\\d{2}-\\d{2}T[0-9-]+Z\\.json$`);
   const names = readdirSync(EVIDENCE_DIR)
-    .filter((name) => name.startsWith(`${network}-`) && name.endsWith('.json'))
+    .filter((name) => wanted.test(name))
     .sort();
   const newest = names.at(-1);
   return newest === undefined ? undefined : join(EVIDENCE_DIR, newest);

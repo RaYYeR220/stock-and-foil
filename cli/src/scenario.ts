@@ -53,6 +53,7 @@ import {
   formatDust,
   guardRealValueNetwork,
   heading,
+  instanceOf,
   loadDeployment,
   money,
   note,
@@ -61,6 +62,7 @@ import {
   resolveTransactions,
   runStatePath,
   say,
+  scopeOf,
   serializeLedgerView,
   UsageError,
   writeJson,
@@ -191,8 +193,10 @@ async function expectRefusal(code: RefusalCode, thunk: () => Promise<unknown>): 
 export async function scenario(args: Args): Promise<number> {
   const network = requireNetwork(args);
   guardRealValueNetwork(args, network, 'replaying the scenario');
-  const deployment = loadDeployment(network);
-  const statePath = runStatePath(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const deployment = loadDeployment(network, instance);
+  const statePath = runStatePath(scope);
 
   let saved: RunState | undefined;
   if (existsSync(statePath) && !flagSet(args, 'fresh')) {
@@ -201,7 +205,7 @@ export async function scenario(args: Args): Promise<number> {
     else note('the saved run belongs to a different contract; starting a fresh run');
   }
 
-  const { session, backend } = await connectDeployed(args, network, deployment.contractAddress);
+  const { session, backend } = await connectDeployed(args, network, deployment.contractAddress, { instance });
   try {
     // ------------------------------------------------------------------ personas and invoices
     const personas = {
@@ -758,7 +762,7 @@ export async function scenario(args: Args): Promise<number> {
       writeJson(statePath, state);
     };
 
-    heading(`guided replay on ${network} — ${deployment.contractAddress}`);
+    heading(`guided replay on ${scope} — ${deployment.contractAddress}`);
     say(`  ${steps.length} steps, ${completed.size} already recorded; run state at ${statePath}`);
 
     for (const step of steps) {
@@ -857,7 +861,7 @@ export async function scenario(args: Args): Promise<number> {
       disclosure: state.disclosure,
       finalState,
     };
-    const evidencePath = join(EVIDENCE_DIR, `${network}-${fileStamp()}.json`);
+    const evidencePath = join(EVIDENCE_DIR, `${scope}-${fileStamp()}.json`);
     writeJson(evidencePath, evidence);
 
     heading('summary');
@@ -880,7 +884,10 @@ export async function scenario(args: Args): Promise<number> {
       say('  peers          none declared (pass --peer <contract address> to declare one)');
     }
     say(`\nevidence written to ${evidencePath}`);
-    say(`next: npm run -w cli verify -- --network ${network}`);
+    say(
+      `next: npm run -w cli verify -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
     return 0;
   } finally {
     await session.close();

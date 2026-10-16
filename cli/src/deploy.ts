@@ -42,8 +42,10 @@ import {
   loadRegistryKeys,
   note,
   privateStatePassword,
+  instanceOf,
   privateStatePath,
   redactEndpoint,
+  scopeOf,
   requireNetwork,
   resolveTransactions,
   say,
@@ -85,6 +87,11 @@ export interface OpenWalletOptions {
   requireDust?: boolean;
   /** Called once the wallet is open, before any transaction is built. */
   onReady?: (wallet: HeadlessWallet) => Promise<void> | void;
+  /**
+   * Which registry on this network. `undefined` is the primary one; a name selects a second,
+   * independent deployment with its own ceremony keys and its own private-state store.
+   */
+  instance?: string;
 }
 
 /**
@@ -100,7 +107,9 @@ export async function openWallet(
   options: OpenWalletOptions = {},
 ): Promise<WalletSession> {
   const assets = zkAssetsPath(args);
-  const keys = loadRegistryKeys(network);
+  const instance = options.instance ?? instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const keys = loadRegistryKeys(network, instance);
   const mnemonic = options.mnemonic ?? loadMnemonic(args);
   const sponsorUrl = options.sponsorUrl ?? flagValue(args, 'sponsor');
   const endpoints = cliEndpoints(args, network);
@@ -157,7 +166,7 @@ export async function openWallet(
     endpoints,
     zkConfigProvider: nodeZkConfigProvider(assets),
     privateStateProvider: levelPrivateState({
-      path: privateStatePath(network),
+      path: privateStatePath(scope),
       password: privateStatePassword(),
       accountId: wallet.adapter.getCoinPublicKey(),
     }),
@@ -170,7 +179,9 @@ export async function openWallet(
 export async function deploy(args: Args): Promise<number> {
   const network = requireNetwork(args);
   guardRealValueNetwork(args, network, 'deploying the registry');
-  const path = deploymentPath(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const path = deploymentPath(scope);
   if (existsSync(path) && !flagSet(args, 'force')) {
     throw new UsageError(`${path} already exists; pass --force to deploy a second registry over it`);
   }
@@ -178,7 +189,7 @@ export async function deploy(args: Args): Promise<number> {
 
   const session = await openWallet(args, network);
   try {
-    heading(`deploying the registry to ${network}`);
+    heading(`deploying the registry to ${scope}`);
     const maintenanceCircuits: string[] = [];
     const backend = await NetworkBackend.deploy({
       network,
@@ -239,7 +250,10 @@ export async function deploy(args: Args): Promise<number> {
     say(`    threshold       ${state.config.threshold} of 3`);
     say(`    counts          ${JSON.stringify(state.counts)}`);
     say(`\nwritten to ${path}`);
-    say(`next: npm run -w cli scenario -- --network ${network}`);
+    say(
+      `next: npm run -w cli scenario -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
     return 0;
   } finally {
     await session.close();

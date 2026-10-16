@@ -22,9 +22,11 @@ import {
   ensureDir,
   flagSet,
   heading,
+  instanceOf,
   keysPath,
   pointToJson,
   requireNetwork,
+  scopeOf,
   say,
   SECRETS_DIR,
   settlementColorHex,
@@ -37,7 +39,9 @@ import {
 
 export async function ceremony(args: Args): Promise<number> {
   const network = requireNetwork(args);
-  const path = keysPath(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const path = keysPath(scope);
   if (existsSync(path) && !flagSet(args, 'force')) {
     throw new UsageError(
       `${path} already exists. Re-running the ceremony orphans the contract deployed with the old keys; ` +
@@ -45,7 +49,7 @@ export async function ceremony(args: Args): Promise<number> {
     );
   }
 
-  heading(`disclosure key ceremony — ${network}`);
+  heading(`disclosure key ceremony — ${scope}`);
 
   const ceremonyResult = runDisclosureCeremony();
   const check = checkCeremony(ceremonyResult);
@@ -104,6 +108,9 @@ export async function ceremony(args: Args): Promise<number> {
   say(`  threshold       ${THRESHOLD} of 3`);
 
   say(`\nsecret shares written to ${path} (gitignored). The master secret was discarded.`);
-  say(`next: npm run -w cli deploy -- --network ${network}`);
+  say(
+    `next: npm run -w cli deploy -- --network ${network}` +
+      (instance === undefined ? '' : ` --instance ${instance}`),
+  );
   return 0;
 }

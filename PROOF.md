@@ -196,6 +196,16 @@ afterwards and is still zero, because it never paid.
 
 <!-- END GENERATED preview -->
 
+## Two registries, and the question a lender puts to both
+
+<!-- BEGIN GENERATED preview-federation -->
+<!-- END GENERATED preview-federation -->
+
+## Registry B: the second, independent deployment
+
+<!-- BEGIN GENERATED preview-b -->
+<!-- END GENERATED preview-b -->
+
 ## Local devnet: the same run, with the deployment repeated
 
 Kept because it is reproducible by anyone with Docker and no faucet, and because the deployment

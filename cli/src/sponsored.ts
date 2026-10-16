@@ -50,6 +50,7 @@ import {
   flagValue,
   guardRealValueNetwork,
   heading,
+  instanceOf,
   loadDeployment,
   loadMnemonic,
   loadRegistryKeys,
@@ -60,6 +61,7 @@ import {
   redactEndpoint,
   requireNetwork,
   say,
+  scopeOf,
   SECRETS_DIR,
   seedHexOf,
   UsageError,
@@ -137,10 +139,12 @@ export async function sponsored(args: Args): Promise<number> {
         'the call made by the party least likely to hold NIGHT. Use the scenario for the rest.',
     );
   }
-  const deployment = loadDeployment(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const deployment = loadDeployment(network, instance);
   const endpoints = cliEndpoints(args, network);
   const assets = zkAssetsPath(args);
-  const keys = loadRegistryKeys(network);
+  const keys = loadRegistryKeys(network, instance);
   const syncTimeoutMs = Number(flagValue(args, 'sync-timeout-minutes') ?? 45) * 60_000;
 
   heading(`zero-DUST sponsorship proof on ${network}`);
@@ -197,7 +201,7 @@ export async function sponsored(args: Args): Promise<number> {
       }),
       zkConfigProvider: nodeZkConfigProvider(assets),
       privateStateProvider: levelPrivateState({
-        path: privateStatePath(network),
+        path: privateStatePath(scope),
         password: privateStatePassword(),
         accountId: acting.adapter.getCoinPublicKey(),
       }),
@@ -217,7 +221,7 @@ export async function sponsored(args: Args): Promise<number> {
     // `acknowledge` is the right circuit for this: it is the debtor's own confirmation that it
     // owes an invoice, made by a finance clerk at a mid-market company, and it is exactly the
     // party that will never hold NIGHT.
-    const { persona, admitted } = personaFor(args, network);
+    const { persona, admitted } = personaFor(args, network, scope, instance);
     const now = await backend.now();
     const invoice: Invoice = new SellerClient(backend, generatePersona('seller')).issueInvoice({
       debtorId: new DebtorClient(backend, persona).id,
@@ -280,7 +284,7 @@ export async function sponsored(args: Args): Promise<number> {
     const explorer = deployment.explorer ?? explorerFor(network);
     const totalSpeck = steps.reduce((sum, s) => sum + BigInt(s.feeSpeck ?? s.sponsorReportedFeeSpeck ?? '0'), 0n);
 
-    const path = join(EVIDENCE_DIR, `sponsored-${network}-${fileStamp()}.json`);
+    const path = join(EVIDENCE_DIR, `sponsored-${scope}-${fileStamp()}.json`);
     writeJson(path, {
       project: 'Stock & Foil',
       kind: 'dust-sponsorship-proof',
@@ -338,6 +342,8 @@ export async function sponsored(args: Args): Promise<number> {
 function personaFor(
   args: Args,
   network: ChainNetwork,
+  scope: string,
+  instance: string | undefined,
 ): { persona: StockAndFoilPrivateState; admitted: boolean } {
   const explicit = flagValue(args, 'debtor-secret');
   if (explicit !== undefined) {
@@ -345,17 +351,17 @@ function personaFor(
   }
 
   if (!flagSet(args, 'fresh-debtor')) {
-    const scenarioPath = runStatePath(network);
+    const scenarioPath = runStatePath(scope);
     if (existsSync(scenarioPath)) {
       const run = readJson<{ contractAddress?: string; personas?: { debtor?: string } }>(scenarioPath);
-      const deployment = loadDeployment(network);
+      const deployment = loadDeployment(network, instance);
       if (run.contractAddress === deployment.contractAddress && run.personas?.debtor) {
         return { persona: { role: 'debtor', secretKey: fromHex(run.personas.debtor) }, admitted: true };
       }
     }
   }
 
-  const path = join(SECRETS_DIR, `${network}-sponsored-persona.json`);
+  const path = join(SECRETS_DIR, `${scope}-sponsored-persona.json`);
   if (existsSync(path)) {
     const stored = readJson<{ secretKey: string; admitted?: boolean }>(path);
     return { persona: { role: 'debtor', secretKey: fromHex(stored.secretKey) }, admitted: stored.admitted === true };

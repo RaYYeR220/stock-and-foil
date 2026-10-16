@@ -21,12 +21,14 @@ import {
   explorerFor,
   flagValue,
   heading,
+  instanceOf,
   loadDeployment,
   newestEvidencePath,
   readJson,
   REPO_ROOT,
   requireNetwork,
   say,
+  scopeOf,
   UsageError,
   type Args,
   type DeploymentFile,
@@ -38,8 +40,8 @@ import { readdirSync } from 'node:fs';
 
 const PROOF_PATH = join(REPO_ROOT, 'PROOF.md');
 
-const begin = (network: ChainNetwork): string => `<!-- BEGIN GENERATED ${network} -->`;
-const end = (network: ChainNetwork): string => `<!-- END GENERATED ${network} -->`;
+const begin = (scope: string): string => `<!-- BEGIN GENERATED ${scope} -->`;
+const end = (scope: string): string => `<!-- END GENERATED ${scope} -->`;
 
 /** `2026-09-15T17:38:30.000Z` as `17:38:30Z`, or the whole stamp when a date is wanted. */
 const clock = (iso: string | undefined): string => (iso === undefined ? '-' : `${iso.slice(11, 19)}Z`);
@@ -57,11 +59,12 @@ function txLink(explorer: ExplorerTemplates | undefined, hash: string | undefine
 
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
 
-/** Newest sponsorship evidence for a network, if the proof has been run. */
-function newestSponsoredPath(network: ChainNetwork): string | undefined {
+/** Newest file of a kind for a registry, if one has been produced. */
+function newestOfKind(kind: string, scope: string): string | undefined {
   if (!existsSync(EVIDENCE_DIR)) return undefined;
+  const wanted = new RegExp(`^${kind}-${scope}-\\d{4}-\\d{2}-\\d{2}T[0-9-]+Z\\.json$`);
   const names = readdirSync(EVIDENCE_DIR)
-    .filter((n) => n.startsWith(`sponsored-${network}-`) && n.endsWith('.json'))
+    .filter((n) => wanted.test(n))
     .sort();
   const newest = names.at(-1);
   return newest === undefined ? undefined : join(EVIDENCE_DIR, newest);
@@ -319,10 +322,132 @@ function sponsorshipSection(path: string | undefined, explorer: ExplorerTemplate
   ].join('\n');
 }
 
+/** What a cross-registry run recorded. Mirrors `FederationEvidence` in `federation.ts`. */
+interface FederationEvidenceJson {
+  network: string;
+  at: string;
+  registries: Array<{ role: string; name: string; scope: string; contractAddress: string; operatorId: string }>;
+  marker: { nullifier: string; invoiceNo: string; computedInA: string; computedInB: string; identical: boolean };
+  steps: Array<{
+    id: string;
+    label: string;
+    circuit: string;
+    registry: string;
+    persona: string;
+    txId?: string;
+    txHash?: string;
+    blockHeight?: number;
+    refused?: string;
+    note?: string;
+    durationMs: number;
+  }>;
+  verdicts: Array<{
+    subject: string;
+    nullifier: string;
+    here: { contractAddress: string; encumbrance: string; unreachable: boolean };
+    peers: Array<{ contractAddress: string; encumbrance: string; unreachable: boolean }>;
+    encumberedAnywhere: boolean;
+    complete: boolean;
+  }>;
+  explorer?: ExplorerTemplates;
+}
+
+/**
+ * The cross-registry section: two registries, their peer declarations, and the answer a lender
+ * gets from asking both.
+ */
+function federationSection(path: string): string {
+  const f = readJson<FederationEvidenceJson>(path);
+  const explorer = f.explorer;
+  const here = path.slice(path.lastIndexOf('evidence')).replace(/\\/g, '/');
+  const verdict = (v: FederationEvidenceJson['verdicts'][number]): string[] => {
+    const rows = [v.here, ...v.peers].map(
+      (r) =>
+        `| \`${r.contractAddress.slice(0, 16)}...\` | ${r.unreachable ? '**unreachable**' : r.encumbrance} |`,
+    );
+    return [
+      `**${v.subject}** — marker \`${v.nullifier}\``,
+      '',
+      '| Registry | Answer |',
+      '|---|---|',
+      ...rows,
+      '',
+      `Verdict: **${v.encumberedAnywhere ? 'ENCUMBERED somewhere' : 'FREE everywhere asked'}**, ` +
+        `answer ${v.complete ? 'complete (every registry answered)' : '**INCOMPLETE** (a registry did not answer)'}.`,
+      '',
+    ];
+  };
+
+  return [
+    begin(`${f.network}-federation`),
+    '',
+    'The standing objection to an encumbrance registry is that it only works once every competing',
+    'financier has joined the same one — a consortium sale a startup cannot make. This is the',
+    'answer, run on a public testnet with two genuinely separate deployments rather than argued.',
+    '',
+    'A pledge marker is `H("pledge", fingerprint)` and the fingerprint is a function of the',
+    'invoice and its parties alone: no registry identity, no operator key, no deployment salt. So',
+    'the same receivable has the same marker in every Stock & Foil registry, and one lender can',
+    'put the encumbrance question to all of them without any of them federating, sharing state or',
+    'agreeing to anything.',
+    '',
+    '| Role | Registry | Contract | Operator id |',
+    '|---|---|---|---|',
+    ...f.registries.map(
+      (r) =>
+        `| ${r.role} | ${r.name} (\`${r.scope}\`) | ${
+          explorer
+            ? `[\`${r.contractAddress}\`](${explorer.contract.replace('{address}', r.contractAddress)})`
+            : `\`${r.contractAddress}\``
+        } | \`${r.operatorId.slice(0, 16)}...\` |`,
+    ),
+    '',
+    'Two separate ceremonies, two operators, two sets of keyholders, two deployments. Neither can',
+    "read the other's private state, and neither was told anything about the other's book.",
+    '',
+    '### The marker is the same in both',
+    '',
+    '| | |',
+    '|---|---|',
+    `| Invoice | #${f.marker.invoiceNo} |`,
+    `| Marker computed in A | \`${f.marker.computedInA}\` |`,
+    `| Marker computed in B | \`${f.marker.computedInB}\` |`,
+    `| Identical | ${f.marker.identical ? '**yes**' : '**NO — the demonstration fails**'} |`,
+    '',
+    'Computed independently inside each registry from the same invoice and the same parties. This',
+    'is the whole mechanism; everything below follows from it.',
+    '',
+    '### What happened',
+    '',
+    '| # | Step | Registry | Circuit | Transaction | Block |',
+    '|---|---|---|---|---|---|',
+    ...f.steps.map(
+      (step, i) =>
+        `| ${i + 1} | ${step.label} | ${step.registry} | \`${step.circuit}\` | ${
+          step.refused !== undefined
+            ? `refused \`${step.refused}\`, none submitted`
+            : step.txHash === undefined
+              ? 'none (off chain)'
+              : txLink(explorer, step.txHash)
+        } | ${step.blockHeight ?? '-'} |`,
+    ),
+    '',
+    ...f.steps.filter((s) => s.note).flatMap((s) => [`- **${s.label}** — ${s.note}`, '']),
+    '### The answers a lender gets',
+    '',
+    ...f.verdicts.flatMap(verdict),
+    `Evidence: [\`cli/${here}\`](./cli/${here}).`,
+    '',
+    end(`${f.network}-federation`),
+  ]
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 // --------------------------------------------------------------------------------------- render
 
 function render(
-  network: ChainNetwork,
+  scope: string,
   deployment: DeploymentFile,
   evidence: EvidenceFile,
   evidencePath: string,
@@ -333,7 +458,7 @@ function render(
   const relative = (p: string): string => p.slice(p.lastIndexOf('evidence')).replace(/\\/g, '/');
 
   return [
-    begin(network),
+    begin(scope),
     '',
     '| | |',
     '|---|---|',
@@ -343,7 +468,7 @@ function render(
         : `\`${deployment.contractAddress}\``
     } |`,
     `| Deployed at | ${stamp(deployment.deployedAt)} |`,
-    `| Deployment record | [\`cli/deployments/${network}.json\`](./cli/deployments/${network}.json) |`,
+    `| Deployment record | [\`cli/deployments/${scope}.json\`](./cli/deployments/${scope}.json) |`,
     `| Evidence | [\`cli/${relative(evidencePath)}\`](./cli/${relative(evidencePath)}) |`,
     `| Scenario window | ${stamp(evidence.startedAt)} - ${stamp(evidence.finishedAt)}${
       heights.length > 0 ? `, blocks ${Math.min(...heights)} - ${Math.max(...heights)}` : ''
@@ -366,19 +491,41 @@ function render(
     disclosureTable(evidence),
     ...(sponsoredPath === undefined ? [] : ['', sponsorshipSection(sponsoredPath, explorer)]),
     '',
-    end(network),
+    end(scope),
   ]
     .filter((part) => part !== undefined)
     .join('\n')
     .replace(/\n{3,}/g, '\n\n');
 }
 
+/** Writes a rendered section into the markers named for it, and says so. */
+function replaceRegion(target: string, marker: string, section: string): void {
+  const document = readFileSync(target, 'utf8');
+  const from = document.indexOf(begin(marker));
+  const to = document.indexOf(end(marker));
+  if (from < 0 || to < 0) {
+    throw new UsageError(
+      `${target} has no generated region for ${marker}. Add these two lines where the evidence ` +
+        `belongs, and re-run:\n  ${begin(marker)}\n  ${end(marker)}`,
+    );
+  }
+  writeFileSync(target, document.slice(0, from) + section + document.slice(to + end(marker).length), 'utf8');
+}
+
 export async function proof(args: Args): Promise<number> {
   const network = requireNetwork(args);
-  const deployment = loadDeployment(network);
-  const evidencePath = flagValue(args, 'evidence') ?? newestEvidencePath(network);
+  const instance = instanceOf(args);
+  const scope = scopeOf(network, instance);
+  const target = flagValue(args, 'out') ?? PROOF_PATH;
+  if (!existsSync(target)) throw new UsageError(`${target} does not exist`);
+
+  const deployment = loadDeployment(network, instance);
+  const evidencePath = flagValue(args, 'evidence') ?? newestEvidencePath(scope);
   if (evidencePath === undefined) {
-    throw new UsageError(`no evidence file for ${network}; run: npm run -w cli scenario -- --network ${network}`);
+    throw new UsageError(
+      `no evidence file for ${scope}; run: npm run -w cli scenario -- --network ${network}` +
+        (instance === undefined ? '' : ` --instance ${instance}`),
+    );
   }
   const evidence = readJson<EvidenceFile>(evidencePath);
   if (evidence.contractAddress !== deployment.contractAddress) {
@@ -388,29 +535,23 @@ export async function proof(args: Args): Promise<number> {
         'regenerating PROOF.md.',
     );
   }
-  const sponsoredPath = newestSponsoredPath(network);
-  const section = render(network, deployment, evidence, evidencePath, sponsoredPath);
+  const sponsoredPath = newestOfKind('sponsored', scope);
+  replaceRegion(target, scope, render(scope, deployment, evidence, evidencePath, sponsoredPath));
 
-  const target = flagValue(args, 'out') ?? PROOF_PATH;
-  if (!existsSync(target)) throw new UsageError(`${target} does not exist`);
-  const document = readFileSync(target, 'utf8');
-  const from = document.indexOf(begin(network));
-  const to = document.indexOf(end(network));
-  if (from < 0 || to < 0) {
-    throw new UsageError(
-      `${target} has no generated region for ${network}. Add these two lines where the evidence ` +
-        `belongs, and re-run:\n  ${begin(network)}\n  ${end(network)}`,
-    );
-  }
-  const updated = document.slice(0, from) + section + document.slice(to + end(network).length);
-  writeFileSync(target, updated, 'utf8');
-
-  heading(`regenerated the ${network} evidence in ${target}`);
+  heading(`regenerated the ${scope} evidence in ${target}`);
   say(`  contract      ${deployment.contractAddress}`);
   say(`  evidence      ${evidencePath}`);
   say(`  transactions  ${evidence.summary.transactions}`);
   say(`  refusals      ${evidence.summary.refusals.length}`);
   say(`  dust paid     ${evidence.summary.totalFeeSpeck ?? 'unknown'} SPECK`);
   say(`  sponsorship   ${sponsoredPath ?? 'no proof run yet'}`);
+
+  // The federation evidence spans two registries, so it belongs to the network rather than to
+  // either one of them, and it is written only when a cross-registry run has produced it.
+  const federationPath = newestOfKind('federation', network);
+  if (federationPath !== undefined) {
+    replaceRegion(target, `${network}-federation`, federationSection(federationPath));
+    say(`  federation    ${federationPath}`);
+  }
   return 0;
 }
