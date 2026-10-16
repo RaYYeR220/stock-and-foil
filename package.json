@@ -26,7 +26,8 @@
     "balance": "npm run -w cli balance --",
     "estimate": "npm run -w cli estimate --",
     "sponsored": "npm run -w cli sponsored --",
-    "sponsor": "npm run -w sponsor start"
+    "sponsor": "npm run -w sponsor start",
+    "proof": "npm run -w cli proof --"
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
