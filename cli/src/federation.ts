@@ -34,6 +34,7 @@ import { pureCircuits } from '@stockandfoil/contract';
 import {
   createProviders,
   DebtorClient,
+  findPledge,
   FinancierClient,
   fromHex,
   generatePersona,
@@ -414,8 +415,6 @@ export async function federation(args: Args): Promise<number> {
       },
     );
 
-    const markerB = pureCircuits.nullifierOf(subject);
-    const markersIdentical = hex(markerA) === hex(markerB);
 
     // ------------------------------------------------------------------ B cannot refuse it
     const now = await registryB.backend.now();
@@ -454,6 +453,21 @@ export async function federation(args: Args): Promise<number> {
           sellerInB.offer(subject, lenderInB.holderTag(markerA), expiry),
         ),
     );
+
+    // ------------------------------------------------------------------ the marker, as the
+    // two ledgers actually key it
+    //
+    // Recomputing `nullifierOf` twice in this process would prove nothing — it is the same pure
+    // function called twice. What is worth recording is that two independently deployed
+    // contracts, each having run the circuit inside its own proof, ended up keying their entry
+    // by the same 32 bytes. So both ledgers are read and their own keys compared.
+    const markerInA = findPledge(await registryA.backend.publicState(), markerA)?.nullifier;
+    const markerInB = findPledge(await registryB.backend.publicState(), markerA)?.nullifier;
+    const markersIdentical = markerInA !== undefined && markerInA === markerInB;
+    say(`
+  marker on A's ledger   ${markerInA ?? '(absent)'}`);
+    say(`  marker on B's ledger   ${markerInB ?? '(absent)'}`);
+    say(`  identical              ${markersIdentical ? 'yes' : 'NO'}`);
 
     // ------------------------------------------------------------------ the lender asks both
     let encumberedVerdict: FederatedEncumbrance | undefined;
@@ -509,7 +523,12 @@ export async function federation(args: Args): Promise<number> {
     if (freeVerdict.encumberedAnywhere) {
       throw new Error('the control receivable was reported as encumbered; the demonstration failed');
     }
-    if (!markersIdentical) throw new Error('the marker differed between registries; the demonstration failed');
+    if (!markersIdentical) {
+      throw new Error(
+        `the two ledgers do not key the receivable by the same marker: A has ${markerInA ?? 'nothing'}, ` +
+          `B has ${markerInB ?? 'nothing'}. The demonstration failed.`,
+      );
+    }
 
     // ------------------------------------------------------------------ evidence
     const anchors = await resolveTransactions(
@@ -545,8 +564,8 @@ export async function federation(args: Args): Promise<number> {
       marker: {
         nullifier: hex(markerA),
         invoiceNo: subject.invoiceNo.toString(),
-        computedInA: hex(markerA),
-        computedInB: hex(markerB),
+        computedInA: markerInA ?? '(absent)',
+        computedInB: markerInB ?? '(absent)',
         identical: markersIdentical,
       },
       steps,
@@ -562,7 +581,7 @@ export async function federation(args: Args): Promise<number> {
 
     heading('result');
     say(`  marker                 ${hex(markerA)}`);
-    say(`  identical in both      ${markersIdentical ? 'yes' : 'NO'}`);
+    say(`  keyed by both ledgers  ${markersIdentical ? 'yes' : 'NO'}`);
     say(`  pledged receivable     encumberedAnywhere=${encumberedVerdict.encumberedAnywhere}, complete=${encumberedVerdict.complete}`);
     say(`  control receivable     encumberedAnywhere=${freeVerdict.encumberedAnywhere}, complete=${freeVerdict.complete}`);
     say(`\nevidence written to ${path}`);
