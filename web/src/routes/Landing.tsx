@@ -5,8 +5,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Footer, Mark } from '../components/chrome.js';
+import { Federation } from '../components/Federation.js';
 import { Press } from '../components/Press.js';
 import { SectionOpener } from '../components/ui.js';
+import { BENEFICIARIES } from '../lib/audience.js';
 import { inflate, notches, type Notch } from '../lib/press.js';
 import { BAR_VIEW, HERO_HASH, HERO_VIEW, HERO_VIEW_PHONE, STRIP_VIEW, SX, bar, exchange } from '../lib/tally.js';
 import { PUBLIC_DEPLOYMENTS } from '../lib/evidence.js';
@@ -270,13 +272,19 @@ export function Landing() {
           <nav className="topnav" aria-label="Sections">
             <ul>
               <li>
+                <a href="#who">Who it is for</a>
+              </li>
+              <li>
+                <a href="#federation">Why it works alone</a>
+              </li>
+              <li>
                 <a href="#how">How it works</a>
               </li>
               <li>
-                <a href="#ledger">What the chain sees</a>
+                <a href="#refusals">Refusals</a>
               </li>
               <li>
-                <a href="#refusals">Refusals</a>
+                <Link to="/whats-new">New in Wave 2</Link>
               </li>
               <li>
                 <Link to="/proof">Proof</Link>
@@ -299,8 +307,12 @@ export function Landing() {
             <h1>Every invoice can be pledged once.</h1>
             <div className="hero-side">
               <p className="lede">
-                Stock &amp; Foil refuses forged, inflated and double-pledged receivables at the moment of pledging — and
-                the refused lender learns nothing about who holds the first pledge.
+                <b>For the people who lend money against unpaid invoices.</b> Before the cash goes out, a factoring
+                company can ask whether that invoice is already financed somewhere else — and get a yes or no without
+                either lender seeing the other’s book.
+              </p>
+              <p className="lede-who">
+                Credit officers · supplier CFOs · the buyer’s accounts-payable team · insolvency practitioners
               </p>
             </div>
             <div className="cta-row">
@@ -312,6 +324,34 @@ export function Landing() {
               </a>
             </div>
             <HeroPlate />
+          </div>
+        </section>
+
+        <section className="sec sec--who" id="who">
+          <div className="shell">
+            <SectionOpener
+              title="Who stands to benefit."
+              dek="Four jobs, one receivable. For each: what they are stuck with today, what the registry hands them, and the thing they stop having to send to anybody."
+            />
+            <ol className="whos">
+              {BENEFICIARIES.map((b) => (
+                <li className="who-card card" key={b.n}>
+                  <span className="step-n">{b.n}</span>
+                  <h3>{b.who}</h3>
+                  <p className="who-at">{b.at}</p>
+                  <p className="who-today">{b.today}</p>
+                  <dl className="who-kv">
+                    <dt>What they get</dt>
+                    <dd>{b.gets}</dd>
+                    <dt>What they stop sending</dt>
+                    <dd>{b.stops}</dd>
+                  </dl>
+                  <Link className="quiet who-seat" to={b.to}>
+                    {b.seat}
+                  </Link>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
@@ -347,6 +387,23 @@ export function Landing() {
                 <span>facts about the first pledge shown to the second lender</span>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="sec" id="federation">
+          <div className="shell">
+            <SectionOpener
+              title="It does not need a consortium."
+              dek={
+                <>
+                  The objection we were handed in Wave 1 was scale: a registry only helps once every competing
+                  financier has joined <em>the same one</em>. That is not how this is built. A pledge marker is a
+                  deterministic function of the invoice, so the same receivable makes the same marker in every registry
+                  that exists — and one lender reads all of them.
+                </>
+              }
+            />
+            <Federation />
           </div>
         </section>
 

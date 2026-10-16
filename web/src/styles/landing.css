@@ -10,7 +10,7 @@
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: var(--s6);
-  align-items: end;
+  align-items: start;
 }
 .kicker {
   grid-column: 1 / -1;
@@ -43,12 +43,27 @@
 }
 .hero-side {
   grid-column: 9 / -1;
-  padding-bottom: 10px;
+  padding-top: 6px;
 }
 .lede {
-  font-size: 18px;
-  line-height: 1.56;
-  max-width: 42ch;
+  font-size: 19.5px;
+  line-height: 1.52;
+  max-width: 44ch;
+}
+.lede b {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* The four seats, named once above the fold, so the hero answers "who is this for" on its own. */
+.lede-who {
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 2px solid var(--pink);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  max-width: 44ch;
 }
 .cta-row {
   grid-column: 1 / span 8;
@@ -61,6 +76,228 @@
 .hero-art {
   grid-column: 1 / -1;
   margin-top: var(--s7);
+}
+
+/* ── who stands to benefit ──────────────────────────────── */
+/* Sits directly under the hero, so the first scroll of the page answers "for whom". */
+.sec--who {
+  border-top: 2px solid var(--ink);
+  padding-top: clamp(30px, 3.2vw, 46px);
+}
+/* Two by two, never four across: a still frame has to be readable at 1080p, and four columns of
+   this much copy sets type too small to survive one. */
+.whos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s4);
+}
+.who-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--s5) var(--s5) var(--s4);
+}
+.who-card h3 {
+  font-weight: 800;
+  font-stretch: 86%;
+  font-variation-settings: 'opsz' 28;
+  font-size: 25px;
+  line-height: 1.06;
+  letter-spacing: -0.018em;
+}
+.who-at {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.who-today {
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+.who-kv {
+  margin: var(--s2) 0 0;
+  display: grid;
+  gap: 4px;
+}
+.who-kv dt {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  margin-top: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--hair);
+}
+.who-kv dd {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.42;
+  color: var(--ink);
+  font-weight: 500;
+}
+.who-kv dt + dd {
+  margin-top: 2px;
+}
+.who-seat {
+  margin-top: auto;
+  padding-top: var(--s3);
+  font-size: 15px;
+  align-self: flex-start;
+}
+
+/* ── federation: one marker, every registry ─────────────── */
+.fed-plate {
+  background: var(--white);
+  border: 1px solid var(--hair);
+  padding: var(--s5) var(--s5) var(--s4);
+}
+.fed-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.fed-svg .fed-box {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+.fed-svg .fed-shadow {
+  fill: var(--pink-2);
+  mix-blend-mode: multiply;
+}
+.fed-svg .fed-lender {
+  fill: var(--ink);
+}
+.fed-svg .fed-h {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 86%;
+  font-size: 30px;
+  fill: var(--ink);
+}
+.fed-svg .fed-sub {
+  font-family: var(--text);
+  font-size: 18px;
+  fill: var(--ink-2);
+}
+.fed-svg .fed-mono {
+  font-family: var(--mono);
+  font-size: 15px;
+  fill: var(--ink-2);
+}
+.fed-svg .fed-mid {
+  text-anchor: middle;
+}
+.fed-svg .fed-on {
+  fill: var(--paper);
+}
+.fed-svg .fed-ray {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  fill: none;
+}
+.fed-svg .fed-cut {
+  stroke: var(--pink);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 7;
+  mix-blend-mode: multiply;
+}
+.fed-stack {
+  display: none;
+}
+.fed-stack ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+}
+.fed-stack li {
+  display: grid;
+  gap: 2px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: var(--s3) var(--s4);
+  box-shadow: 5px 5px 0 var(--pink-2);
+}
+.fed-stack strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 88%;
+  font-size: 21px;
+  color: var(--ink);
+}
+.fed-stack span {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.fed-stack em {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.fed-stack-read {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  text-align: center;
+  padding: var(--s3) 0;
+}
+.fed-stack-read::before {
+  content: '↑ ↑ ↑  ';
+}
+.fed-stack-lender {
+  display: grid;
+  gap: 3px;
+  background: var(--ink);
+  color: var(--paper);
+  padding: var(--s4);
+}
+.fed-stack-lender strong,
+.fed-stack-lender .mono {
+  color: var(--paper);
+}
+.fed-stack-lender .mono {
+  font-size: 12px;
+}
+
+.fed-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s5);
+  margin-top: var(--s5);
+}
+.fed-notes h3 {
+  font-weight: 700;
+  font-stretch: 92%;
+  font-size: 21px;
+  line-height: 1.14;
+  letter-spacing: -0.012em;
+  padding-top: 10px;
+  border-top: 2px solid var(--pink);
+}
+.fed-notes p {
+  margin-top: 10px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.fed-seam {
+  margin-top: var(--s5);
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: var(--s5) var(--s6);
+  align-items: start;
+}
+.fed-seam > div > * + * {
+  margin-top: 10px;
+}
+.fed-seam p {
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 /* ── First Brands band ──────────────────────────────────── */
@@ -382,6 +619,12 @@
   .steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .whos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fed-seam {
+    grid-template-columns: 1fr;
+  }
   .demos {
     grid-template-columns: 1fr;
     gap: var(--s6);
@@ -446,6 +689,16 @@
   .band-fig {
     margin-top: var(--s6);
   }
+  .whos {
+    grid-template-columns: 1fr;
+  }
+  .who-card {
+    padding: var(--s5);
+  }
+  .fed-notes {
+    grid-template-columns: 1fr;
+    gap: var(--s4);
+  }
   .compare {
     grid-template-columns: 1fr;
   }
@@ -472,6 +725,18 @@
   }
   .closing {
     padding: var(--s6) var(--s5);
+  }
+}
+/* The drawn federation sets its labels for a wide frame; below this it becomes type. */
+@media (max-width: 760px) {
+  .fed-svg {
+    display: none;
+  }
+  .fed-stack {
+    display: block;
+  }
+  .fed-plate {
+    padding: var(--s4);
   }
 }
 @media (max-width: 560px) {
