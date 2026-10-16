@@ -10,7 +10,7 @@ proves nothing to a stranger.
 
 | Network | What it is | Status |
 |---|---|---|
-| `preview` | public Midnight testnet | deployed, full scenario, verified |
+| `preview` | public Midnight testnet | **two** registries deployed; full scenario and a zero-DUST sponsored transaction on the first, a cross-registry check across both, verified |
 | `undeployed` | local devnet (node, indexer, proof server in Docker) | deployed, full scenario, verified |
 | `preprod` | public Midnight testnet | **not deployed** - see [Preprod](#preprod-not-deployed) |
 | `mainnet` | Midnight mainnet | **not deployed** - see [Mainnet](#mainnet-ready-not-deployed) |
@@ -300,8 +300,22 @@ Evidence: [`cli/evidence/federation-preview-2026-10-16T12-36-40Z.json`](./cli/ev
 
 ## Registry B: the second, independent deployment
 
-<!-- BEGIN GENERATED preview-b -->
-<!-- END GENERATED preview-b -->
+Harbour exists to be a peer, not a second demonstration, so it has no scenario run of its own:
+the only things it has done are the eleven transactions that deployed it and the cross-registry
+steps above. Its deployment record is
+[`cli/deployments/preview-b.json`](./cli/deployments/preview-b.json), with all eleven
+transaction hashes.
+
+| | |
+|---|---|
+| Contract address | [`2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd`](https://preview.midnightexplorer.com/contracts/2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd) |
+| Deployed at | 2026-10-16 12:03:26 UTC |
+| Deploy transaction | [`c61851ae250e...`](https://preview.midnightexplorer.com/transactions/c61851ae250e68523dc675eb620351a3fd24749c151ab25fb29926d9d853797a) |
+| Verifier-key transactions | 10 |
+| Ceremony | its own, in `cli/.secrets/preview-b-keys.json` — a different operator, a different disclosure key and a different three keyholders from Registry A |
+
+It runs the same sixteen-circuit build from the same compiled artifacts. That is the point: a
+rival consortium running the same software, not a second copy of our book.
 
 ## Local devnet: the same run, with the deployment repeated
 
