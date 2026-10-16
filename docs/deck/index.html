@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stock &amp; Foil — deck</title>
-<meta name="description" content="Stock &amp; Foil: a privacy-preserving collateral registry for receivables finance on Midnight. Fourteen slides.">
+<meta name="description" content="Stock &amp; Foil: a privacy-preserving collateral registry for receivables finance on Midnight. Seventeen slides, Wave 2.">
 <style>
 /* ── the press: fonts ─────────────────────────────────────────────── */
 @font-face{font-family:"Bricolage Grotesque";src:url("assets/fonts/bricolage-var-latin.woff2") format("woff2-variations"),url("assets/fonts/bricolage-var-latin.woff2") format("woff2");font-weight:400 800;font-stretch:75% 100%;font-style:normal;font-display:block}
@@ -180,6 +180,70 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
 .bars .t{height:15px;background:var(--ink);min-width:2px}
 .bars .t.alt{background:var(--pink);mix-blend-mode:multiply}
 .bars .v{font-family:var(--mono);font-size:14px;color:var(--ink);text-align:right}
+/* the quality sheet charts twenty-one suites, so it runs at a smaller gauge */
+.bars.mini{gap:3px}
+.bars.mini .row{grid-template-columns:184px 1fr 40px;gap:11px}
+.bars.mini .k,.bars.mini .v{font-size:12.5px}
+.bars.mini .t{height:11px}
+.barhead{font-family:var(--mono);font-size:13px;color:var(--ink);display:flex;align-items:center;gap:9px;margin:14px 0 7px}
+.barhead:first-child{margin-top:0}
+.barhead::after{content:"";flex:1;height:1px;background:var(--hair)}
+
+/* a note in somebody else's words */
+blockquote.said{margin:0;border-left:3px solid var(--pink);padding:2px 0 2px 15px;font-size:17px;line-height:1.42;color:var(--ink-2)}
+blockquote.said i{font-style:italic}
+blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font-style:normal;color:var(--ink);margin-top:7px}
+
+/* verdict plates, for the cross-registry answers */
+.verdict{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:16px;padding:11px 0;border-top:1px solid var(--hair)}
+.verdict:first-of-type{border-top:0}
+.verdict b{font-family:var(--display);font-weight:800;font-stretch:84%;font-size:21px;letter-spacing:-.012em;color:var(--ink)}
+.verdict .free{color:var(--ink-2)}
+.verdict span{font-size:16px;line-height:1.3}
+.verdict .who{font-family:var(--mono);font-size:13px;color:var(--ink-2);text-align:right;white-space:nowrap}
+.flag{border-left:3px solid var(--pink);background:rgba(255,72,176,.07);padding:16px 18px}
+.flag h3{font-size:21px}
+
+/* a figure, what it is, and who published it */
+.mkt{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;column-gap:22px}
+.mkt>*{border-top:1px solid var(--hair);padding:10px 0;margin:0}
+.mkt>:nth-child(-n+3){border-top:0}
+.mkt b{font-family:var(--display);font-weight:800;font-stretch:82%;font-size:27px;line-height:1.05;letter-spacing:-.018em;color:var(--ink);white-space:nowrap}
+.mkt span{font-size:16.5px;line-height:1.38}
+.mkt i{font-family:var(--mono);font-size:12px;font-style:normal;color:var(--ink);line-height:1.35;text-align:right;max-width:19ch}
+.mkt.tiers b{font-size:19px;font-stretch:88%}
+.mkt.tiers i{font-family:var(--display);font-weight:800;font-stretch:82%;font-size:23px;color:var(--ink);max-width:none;white-space:nowrap}
+.mkt.models b{font-size:23px}
+.mkt.models span{font-size:16px}
+.mkt.models i{font-family:var(--mono);font-size:14px;color:var(--ink);max-width:none;white-space:nowrap}
+#s15 .mkt{column-gap:18px}
+#s15 .mkt>*{padding:4px 0}
+#s15 .card{padding:16px 20px}
+#s15 .card h3{font-size:20px}
+/* sheets that run tighter than the house gauge, each for its own reason */
+#s07 dl.data dt,#s07 dl.data dd{padding-top:6px;padding-bottom:6px;font-size:15px}
+#s07 dl.data dd{font-size:13.5px}
+#s10 .card{padding:15px 18px}
+#s12 .card{padding:20px 22px}
+#s12 .bars{gap:5px}
+#s12 dl.data dt,#s12 dl.data dd{padding-top:7px;padding-bottom:7px}
+#s13 .bars.mini{gap:2px}
+#s13 .bars.mini .row{line-height:1.12}
+#s13 .barhead{margin:9px 0 5px}
+#s13 .card{padding:18px 21px}
+#s08 .card{padding:19px 21px}
+#s16 ul.dots{gap:13px!important}
+#s16 ul.dots li{font-size:17.2px!important;line-height:1.43}
+#s16 .note{font-size:17.5px}
+#s17 ul.dots li{font-size:17px}
+#s17 .note{font-size:16.5px}
+#s13 dl.data dt,#s13 dl.data dd{padding-top:6px;padding-bottom:6px;font-size:15px}
+#s14 .card{padding:18px 21px}
+#s14 dl.data dt,#s14 dl.data dd{padding-top:7px;padding-bottom:7px}
+#s17 blockquote.said{font-size:15.5px}
+#s17 .card{padding:18px 20px}
+#s17 dl.data dt{padding-top:5px;padding-bottom:5px;font-size:15.5px}
+#s17 dl.data dd{padding-top:5px;padding-bottom:5px;font-size:14px}
 
 /* ── print: every sheet, one page ─────────────────────────────────── */
 @page{size:1920px 1080px;margin:0}
@@ -199,31 +263,39 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
 <div id="deck">
 
 <!-- ═══ 01 · title ═══════════════════════════════════════════════ -->
-<section class="slide" data-rh="" data-rh2="Midnight Buildathon · Wave 1">
+<section class="slide" data-rh="" data-rh2="Midnight Buildathon · Wave 2 · 19 October 2026">
   <div class="sheet">
     <div style="display:flex;align-items:flex-start;gap:40px">
       <div style="flex:1">
         <p class="hero-mark">
           <svg width="26" height="26" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3h14v4.2l-2 .9-2-.9-2 .9-2-.9-2 .9-2-.9L1 7.2z" fill="#FF48B0"/><path d="M1 9.4l2 .9 2-.9 2 .9 2-.9 2 .9 2-.9 2 .9V13H1z" fill="#0000FE"/></svg>
           Stock &amp; Foil</p>
-        <p class="lbl" style="margin:10px 0 30px 37px">Private collateral registry for receivables finance · built on Midnight</p>
-        <h1 class="claim">Every invoice can<br>be pledged once.</h1>
-        <p class="method">Prove it without revealing it.</p>
+        <p class="lbl" style="margin:10px 0 26px 37px">Private collateral registry for receivables finance · built on Midnight</p>
+        <h1 class="claim" style="font-size:104px">Every invoice can<br>be pledged once.</h1>
+        <p class="method" style="font-size:41px">Prove it without revealing it.</p>
       </div>
-      <div style="width:calc(4*var(--col) + 3*40px);padding-top:92px">
-        <p style="font-size:21px;line-height:1.5">A collateral registry that proves things it cannot read. Suppliers pledge invoices, financiers check them, and the register refuses a forged, an inflated or a second pledge of the same receivable.</p>
-        <p style="font-size:21px;line-height:1.5;margin-top:16px">The public ledger holds nothing but commitments, one-time markers and sealed records.</p>
+      <div style="width:calc(5*var(--col) + 4*40px);padding-top:70px">
+        <p style="font-size:20.5px;line-height:1.47"><b>A credit officer at a factoring company</b> funds an invoice on the borrower's word that nobody else is holding it. Stock &amp; Foil answers that question — yes or no — before the money leaves, and neither lender shows the other anything.</p>
+        <div class="card" style="margin-top:18px;padding:18px 20px">
+          <p class="lbl">new in Wave 2</p>
+          <ul class="dots" style="margin-top:11px;gap:9px">
+            <li><span style="font-size:16.5px"><b>Two registries,</b> two operators, two ceremonies, both live on preview — and a lender's check across them <span class="lbl" style="font-family:var(--mono)">slide 07</span></span></li>
+            <li><span style="font-size:16.5px"><b>A wallet holding zero DUST transacted,</b> so a buyer's clerk needs no token <span class="lbl" style="font-family:var(--mono)">slide 08</span></span></li>
+            <li><span style="font-size:16.5px"><b>Four new circuits, 12 → 16;</b> tests 177 → 362; CI on every push <span class="lbl" style="font-family:var(--mono)">slides 12–14</span></span></li>
+            <li><span style="font-size:16.5px"><b>Who benefits, named</b> — and every Wave 1 note answered <span class="lbl" style="font-family:var(--mono)">slides 03, 17</span></span></li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <figure class="plate fill" id="heroPlate" style="margin-top:38px">
+    <figure class="plate fill" id="heroPlate" style="margin-top:26px">
       <span class="plate-ghost" aria-hidden="true"></span>
       <canvas class="lay" id="heroPink" role="img" aria-label="Halftone print of a split exchequer tally: one hand holds the stock half, another the foil half, and the notched edges meet in the middle."></canvas>
       <canvas class="lay" id="heroBlue" aria-hidden="true"></canvas>
     </figure>
     <p class="cap" style="display:flex;justify-content:space-between">
       <span>Stock, kept by the lender · Foil, kept by the buyer · notches cut from 0x31e5…46f7</span>
-      <span>Compact 0.31.1 · 12 circuits · 177 tests</span>
+      <span>Compact 0.31.1 · 16 circuits · 362 tests · stock-and-foil.vercel.app, no wallet needed</span>
     </p>
   </div>
 </section>
@@ -247,12 +319,122 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
         <div style="display:block"><strong style="display:block;font-size:136px;margin-bottom:14px">&gt;1</strong><span style="font-size:20px;display:block;max-width:26ch">financiers shown the same invoice</span></div>
       </div>
     </div>
-    <p style="font-family:var(--display);font-weight:700;font-stretch:88%;font-size:34px;line-height:1.16;letter-spacing:-.018em;color:var(--paper);max-width:46ch">Stock &amp; Foil lets them check without showing each other anything.</p>
+    <div style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:60px;align-items:end;padding-top:26px;border-top:1px solid rgba(212,212,255,.3)">
+      <p style="font-size:20px;line-height:1.5;color:#C3C3FF"><b style="color:var(--paper)">The registry model is already proven, and the disclosure problem is what caps it.</b> Singapore's Trade Finance Registry has a national mandate and 40+ participating institutions, and in December 2025 <i>Global Trade Review</i> still reported that its effectiveness "has been limited because the relatively low number of transactions being submitted into the system means it may not detect duplicate financing". Submitting means disclosing your book.</p>
+      <p class="src" style="text-align:right">GTR, 16 Dec 2025<br>Singapore's anti-fraud trade registry eyes expansion</p>
+    </div>
+    <p style="font-family:var(--display);font-weight:700;font-stretch:88%;font-size:34px;line-height:1.16;letter-spacing:-.018em;color:var(--paper);max-width:46ch;margin-top:26px">Stock &amp; Foil lets them check without showing each other anything.</p>
   </div>
 </section>
 
-<!-- ═══ 03 · why it isn't fixed ══════════════════════════════════ -->
-<section class="slide" data-rh="03 · why it isn't fixed today">
+<!-- ═══ 03 · who benefits ════════════════════════════════════════ -->
+<section class="slide" id="s03" data-rh="03 · who stands to benefit">
+  <div class="sheet">
+    <div class="opener" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:60px;align-items:end;margin-bottom:16px">
+      <div>
+        <h2 class="title" data-ghost="Who stands to benefit.">Who stands to benefit.</h2>
+        <p class="dek" style="margin-top:14px">Four jobs, one receivable. For each: what they are stuck with today, what the registry hands them, and the thing they stop having to send to anybody.</p>
+      </div>
+      <blockquote class="said" style="padding-bottom:6px;font-size:16px">
+        <i>“Its content accurately addressed the pain points. The presentation would be even better if it made it clearer who stands to benefit from using this.”</i>
+        <cite>Wave 1 review · Communication. This slide is the answer.</cite>
+      </blockquote>
+    </div>
+    <hr class="dotrule">
+    <div class="grid g4 fill stretch" style="gap:26px">
+      <article class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:21px 23px">
+        <div>
+          <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">01<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+          <h3 style="font-size:25px">The credit officer</h3>
+          <p class="lbl" style="margin-top:7px">at a factoring company · Meridian Factoring</p>
+          <p class="body" style="font-size:17.5px;margin-top:13px">Funds the invoice on the borrower's word that nobody else is holding it.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they get</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px;color:var(--ink)"><b>A yes or no on whether this receivable is already pledged — before the money leaves.</b></p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they stop sending</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px">Circulating the invoice, the debtor or the client list to a rival lender to find out.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what does it</p>
+          <p style="margin-top:8px"><span class="chip" style="font-size:13px">ALREADY_ENCUMBERED</span> <span class="lbl" style="display:inline">and the cross-registry check, slide 07</span></p>
+        </div>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:21px 23px">
+        <div>
+          <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">02<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+          <h3 style="font-size:25px">The CFO</h3>
+          <p class="lbl" style="margin-top:7px">of the supplier · Kestrel Components</p>
+          <p class="body" style="font-size:17.5px;margin-top:13px">Pays a fraud premium set by what the lender cannot check.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they get</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px;color:var(--ink)"><b>An invoice a financier can confirm is unencumbered, priced on the receivable and not the doubt.</b></p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they stop sending</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px">Handing the whole debtor-by-debtor ledger to every lender that asks to see the book.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what does it</p>
+          <p style="margin-top:8px"><span class="chip" style="font-size:13px">certifyBorrowingBase</span> <span class="lbl" style="display:inline">a pool proved over a floor, slide 11</span></p>
+        </div>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:21px 23px">
+        <div>
+          <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">03<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+          <h3 style="font-size:25px">The accounts-payable team</h3>
+          <p class="lbl" style="margin-top:7px">at the buyer · Ardmore Retail Group</p>
+          <p class="body" style="font-size:17.5px;margin-top:13px">Verifies the same invoice by telephone for every financier in the chain.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they get</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px;color:var(--ink)"><b>One acknowledgment, made once, and payment that reaches whoever holds the debt now.</b></p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they stop sending</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px">Confirming payables to callers it has no way to authenticate.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what does it</p>
+          <p style="margin-top:8px"><span class="chip" style="font-size:13px">acknowledge</span> <span class="lbl" style="display:inline">with the fee sponsored, so no token, slide 08</span></p>
+        </div>
+      </article>
+
+      <article class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:21px 23px">
+        <div>
+          <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">04<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
+          <h3 style="font-size:25px">The insolvency practitioner</h3>
+          <p class="lbl" style="margin-top:7px">appointed over the estate · Halloran &amp; Reeve</p>
+          <p class="body" style="font-size:17.5px;margin-top:13px">Rebuilds who was owed what from six banks' paperwork, months after the money went.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they get</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px;color:var(--ink)"><b>One record opened under a case reference, with two of three keyholders' approval on the ledger.</b></p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what they stop sending</p>
+          <p class="body" style="font-size:17.5px;margin-top:6px">Chasing every financier in the chain to reconstruct a pledge history by hand.</p>
+        </div>
+        <div style="padding-top:15px;border-top:1px solid var(--hair)">
+          <p class="lbl">what does it</p>
+          <p style="margin-top:8px"><span class="chip" style="font-size:13px">openCase</span> <span class="lbl" style="display:inline">four records, two approvals, slide 10</span></p>
+        </div>
+      </article>
+    </div>
+    <p class="note" style="display:flex;justify-content:space-between;gap:40px;align-items:baseline;margin-top:22px;font-size:19px">
+      <span><b>Each of the four has a workspace in the app</b> — the same registry, seen from that seat, with what the party can and cannot see printed beside it.</span>
+      <span class="lbl" style="flex:none;text-align:right">stock-and-foil.vercel.app/#who<br>/app/financier-b · /app/seller · /app/debtor · /app/auditor</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 04 · why it isn't fixed ══════════════════════════════════ -->
+<section class="slide" data-rh="04 · why it isn't fixed today">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Both fixes cost more&#10;than the fraud.">Both fixes cost more<br>than the fraud.</h2>
@@ -328,8 +510,8 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
   </div>
 </section>
 
-<!-- ═══ 04 · the mechanism ═══════════════════════════════════════ -->
-<section class="slide" data-rh="04 · the mechanism">
+<!-- ═══ 05 · the mechanism ═══════════════════════════════════════ -->
+<section class="slide" data-rh="05 · the mechanism">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Four parties, one record.">Four parties, one record.</h2>
@@ -416,8 +598,8 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
   </div>
 </section>
 
-<!-- ═══ 05 · three refusals ══════════════════════════════════════ -->
-<section class="slide" data-rh="05 · the refusals">
+<!-- ═══ 06 · three refusals ══════════════════════════════════════ -->
+<section class="slide" data-rh="06 · the refusals">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Three refusals.">Three refusals.</h2>
@@ -473,8 +655,154 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
   </div>
 </section>
 
-<!-- ═══ 06 · the ledger ══════════════════════════════════════════ -->
-<section class="slide" data-rh="06 · the public ledger">
+<!-- ═══ 07 · federation ═════════════════════════════════════════ -->
+<section class="slide" id="s07" data-rh="07 · it does not need a consortium">
+  <div class="sheet">
+    <div class="opener" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:60px;align-items:end;margin-bottom:14px">
+      <div>
+        <h2 class="title" data-ghost="Two registries. One answer.">Two registries. One answer.</h2>
+        <p class="dek" style="margin-top:12px;font-size:22px">A pledge marker is a hash of the invoice and its parties alone — no registry identity, no operator key, no deployment salt. So the same receivable has the same marker in <i>every</i> registry, and asking another one is a read of public state, not a business relationship.</p>
+      </div>
+      <blockquote class="said" style="padding-bottom:4px;font-size:16px">
+        <i>“The catch is scale: it only works once many competing financiers join the same registry, a consortium sale that's hard for a startup.”</i>
+        <cite>Wave 1 review · Product. Below is the answer, run rather than argued.</cite>
+      </blockquote>
+    </div>
+    <hr class="dotrule" style="margin-bottom:22px">
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;align-items:start">
+      <div style="display:flex;flex-direction:column;height:100%;gap:20px">
+        <div>
+          <div class="shot" style="height:238px">
+            <img src="assets/shots/w2-federation-verdict.png" alt="The cross-registry panel on the landing page: Stock &amp; Foil reports ENCUMBERED, its ledger holding the marker as PLEDGED; Harbour reports ENCUMBERED, its ledger holding it as OFFERED; the verdict plate reads ENCUMBERED." style="object-position:50% 50%">
+          </div>
+          <p class="cap">Read live from both deployed contracts in the visitor's own tab at <b style="font-family:var(--mono);font-size:13px">stock-and-foil.vercel.app/#check</b> — no proxy, no API key, no wallet. A registry that does not answer prints <i>no answer</i>, never <i>free</i>.</p>
+        </div>
+        <div class="grid g2" style="gap:24px">
+          <article class="card" style="display:flex;flex-direction:column;padding:18px 20px">
+            <h3 style="font-size:21px">What the lender asked, and when</h3>
+            <p class="lbl" style="margin-top:10px">#2002 · asked before Harbour had ever seen the receivable</p>
+            <div style="margin-top:6px">
+              <div class="verdict"><b class="free">FREE</b><span>never seen it</span><span class="who">Harbour · its own book</span></div>
+              <div class="verdict"><b>ENCUMBERED</b><span>pledged here</span><span class="who">Stock &amp; Foil · a peer</span></div>
+            </div>
+            <p class="body" style="font-size:16.5px;margin-top:10px"><b>Only the peer could answer, and the lender declined on that one bit.</b> Not the holder, not the amount, not since when.</p>
+            <p class="lbl" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--hair)">control · #772002, pledged nowhere</p>
+            <p class="body" style="font-size:16.5px;margin-top:5px">FREE in both. The check says no when the answer is no.</p>
+          </article>
+          <article class="card flag" style="display:flex;flex-direction:column;padding:18px 20px">
+            <p class="lbl">the part that does not flatter us</p>
+            <h3 style="margin-top:6px;font-size:20px">Harbour accepted a receivable already pledged in Stock &amp; Foil.</h3>
+            <p class="body" style="font-size:16.5px;margin-top:9px">Harbour's ledger had never heard of the pledge, so its contract took the offer at block <span style="font-family:var(--mono);font-size:14px">1322275</span> — and no contract could have done otherwise, because one ledger cannot read another. Offered a second time <i>inside</i> Harbour it is refused on the spot, <span class="chip" style="font-size:12px">ALREADY_ENCUMBERED</span>.</p>
+            <p class="body" style="font-size:16.5px;margin-top:auto;padding-top:11px;border-top:1px solid rgba(0,0,175,.2)"><b>That gap is the entire reason the check above exists</b> — and it is written into PROOF.md rather than left out of it.</p>
+          </article>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-rows:auto auto 1fr;gap:11px;height:100%">
+        <article class="card" style="padding:17px 20px">
+          <h3 style="font-size:21px">Two deployments, nothing shared</h3>
+          <dl class="data" style="margin-top:10px">
+            <dt>A · Stock &amp; Foil</dt><dd>74fe0bf9…8a0fad</dd>
+            <dt>B · Harbour</dt><dd>2d8f8f23…0cccbd</dd>
+            <dt>Operators</dt><dd>79f27d5f… · 54f28d2d…</dd>
+            <dt>Ceremonies</dt><dd>2, independent</dd>
+            <dt>Peer declarations</dt><dd>mutual, on chain</dd>
+            <dt>Marker for #2002</dt><dd>identical in both</dd>
+          </dl>
+          <p class="note" style="margin-top:9px;font-size:15.5px">Eleven transactions each, three keyholders each, and neither can read the other's private state.</p>
+        </article>
+        <article class="card" style="padding:18px 20px">
+          <h3 style="font-size:21px">Why the marker travels</h3>
+          <p class="body" style="font-size:16.5px">These are the keys the two ledgers actually store the entry under, read back from each contract — not one hash computed twice in one process. And it still cannot be guessed: the fingerprint carries the seller's secret salt.</p>
+        </article>
+        <article class="card" style="padding:18px 20px;display:flex;flex-direction:column">
+          <p class="lbl">and before any of that</p>
+          <h3 style="font-size:21px;margin-top:6px">One lender alone is already worth it</h3>
+          <p class="body" style="font-size:16.5px;margin-top:8px">A forged and an inflated invoice are refused by the <i>buyer's</i> acknowledgment, not by other lenders. One factoring house running its own registry catches both on day one, plus duplicates across its own branches, with nobody else on the network.</p>
+          <p class="src" style="margin-top:auto;padding-top:11px">registerPeer is a declaration, not a proof that a peer is honest.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08 · fee sponsorship ═════════════════════════════════════ -->
+<section class="slide" id="s08" data-rh="08 · fee sponsorship">
+  <div class="sheet">
+    <div class="opener">
+      <h2 class="title" data-ghost="Nobody has to buy&#10;a token first.">Nobody has to buy<br>a token first.</h2>
+      <p class="dek">Every Midnight transaction pays its fee in DUST; DUST is generated only by registered NIGHT, is non-transferable, and a contract cannot hold any. Taken literally, that means a buyer's accounts-payable clerk acquires a crypto token before confirming that an invoice is real.</p>
+    </div>
+    <hr class="dotrule">
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;align-items:start">
+      <div style="display:flex;flex-direction:column;height:100%;gap:20px">
+        <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;padding:20px 22px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">The split, and what it costs each side</h3>
+            <span class="lbl">the official sponsorship pattern</span>
+          </div>
+          <div style="flex:1;min-height:0;display:grid;place-items:center;padding:14px 0">
+            <svg viewBox="0 0 980 290" width="100%" style="max-height:100%" preserveAspectRatio="xMidYMid meet" aria-label="The acting party proves the circuit, balances the shielded and unshielded sides, signs and binds. The sponsor balances the DUST and submits. The chain accepts the transaction. The sponsor never sees the invoice, the parties or the amount.">
+              <defs><marker id="ar4" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#0000FE" stroke-width="2"/></marker></defs>
+              <g fill="#FFFFFF" stroke="#0000FE" stroke-width="2.4">
+                <rect x="0" y="22" width="330" height="168"/>
+                <rect x="392" y="22" width="276" height="168"/>
+              </g>
+              <rect x="730" y="22" width="250" height="168" fill="#0000FE"/>
+              <g font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="22" fill="#0000FE">
+                <text x="20" y="54">The acting party</text><text x="412" y="54">The sponsor</text>
+              </g>
+              <text x="750" y="54" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="22" fill="#F1EFE8">The chain</text>
+              <g font-family="Space Mono, monospace" font-size="13.5" fill="#0000AF">
+                <text x="20" y="78">0 NIGHT · 0 DUST</text><text x="412" y="78">a funded wallet beside it</text>
+              </g>
+              <text x="750" y="78" font-family="Space Mono, monospace" font-size="13.5" fill="#9B9BFF">preview, block 1321650</text>
+              <g font-family="Work Sans, sans-serif" font-size="16.5" fill="#0000AF">
+                <text x="20" y="108">proves the circuit</text>
+                <text x="20" y="132">balances the shielded and</text>
+                <text x="20" y="152">unshielded sides</text>
+                <text x="20" y="172" fill="#0000FE">signs, and binds</text>
+                <text x="412" y="108">balances the DUST</text>
+                <text x="412" y="132">submits the transaction</text>
+                <text x="412" y="160" fill="#0000FE">pays 1 SPECK</text>
+              </g>
+              <g font-family="Work Sans, sans-serif" font-size="16.5" fill="#C3C3FF">
+                <text x="750" y="110">accepted, and the</text>
+                <text x="750" y="132">acting wallet's balance</text>
+                <text x="750" y="154">is still exactly zero</text>
+              </g>
+              <g stroke="#0000FE" stroke-width="2.4" fill="none" marker-end="url(#ar4)">
+                <path d="M330 98 H382"/><path d="M668 98 H720"/>
+              </g>
+              <rect x="0" y="222" width="668" height="68" fill="#FFB8DD" style="mix-blend-mode:multiply"/>
+              <text x="20" y="248" font-family="Space Mono, monospace" font-size="13.5" fill="#0000FE">what the sponsor never sees</text>
+              <text x="20" y="275" font-family="Work Sans, sans-serif" font-size="17" fill="#0000AF">the invoice · the parties · the amount · which record was sealed</text>
+              
+            </svg>
+          </div>
+          <p class="note" style="font-size:18px"><b>The registry authenticates by knowledge of a secret whose hash is on the ledger — never by who paid the fee.</b> So the sponsor's money buys a block slot and nothing else, and sponsoring somebody weakens no claim the contract makes about them.</p>
+        </div>
+        <article class="card" style="padding:20px 22px;flex:none">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:22px">The service, and the two reviews it had to pass</h3>
+            <span class="lbl">sponsor/ · 87 tests</span>
+          </div>
+          <p class="body" style="font-size:17px;margin-top:10px">A synchronous budget reservation that holds under twenty parallel requests, so a burst cannot overspend it. A rate-limit bucket keyed by API key or socket address rather than a spoofable <span style="font-family:var(--mono);font-size:15px">X-Forwarded-For</span>. And a suite that asserts what the service is allowed to say: no upstream error text and no balance ever reaches a caller.</p>
+        </article>
+      </div>
+
+      <div style="display:flex;flex-direction:column;height:100%;gap:0">
+        <div class="shot" style="flex:1;min-height:0">
+          <img src="assets/shots/w2-sponsorship.png" alt="The sponsorship panel: acting wallet mn_addr_preview1h757pw…y42wwl, its DUST before 0 SPECK, its DUST after 0 SPECK, its NIGHT 0 STAR and 0 registered for DUST, circuit acknowledge, transaction 0xa46d2c3a01…d06e07, block 1321650, fee paid by the sponsor 1 SPECK." style="object-position:50% 0%">
+        </div>
+        <p class="cap">Read from the chain <i>before</i> the run — the command aborts unless the balance is exactly zero — and read again afterwards. The claim is not that the wallet ought to have been empty but that it was, at the moment it transacted.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 09 · the ledger ══════════════════════════════════════════ -->
+<section class="slide" data-rh="09 · the public ledger">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="What the ledger shows,&#10;and what it never shows.">What the ledger shows,<br>and what it never shows.</h2>
@@ -489,7 +817,8 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
           <li><span><b>Per-pledge holder tags.</b> A fresh tag for every pledge.</span></li>
           <li><span><b>Sealed records and their ephemeral keys.</b></span></li>
           <li><span><b>Certificate floors, pool size and validity.</b></span></li>
-          <li><span><b>Disclosure requests and approvals.</b></span></li>
+          <li><span><b>Disclosure requests, cases and approvals.</b></span></li>
+          <li><span><b>Peer declarations.</b> Which other registries this operator recognises.</span></li>
           <li><span><b>Settlement amounts and addresses,</b> unshielded.</span></li>
         </ul>
         <p class="note" style="margin-top:auto;padding-top:16px;border-top:1px solid var(--hair);font-size:16px">Settlement is the one exception, and it is published under <b>Honest limits</b> rather than hidden.</p>
@@ -509,24 +838,24 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
       </div>
       <div style="grid-column:1/-1;display:grid;grid-template-columns:calc(3*var(--col) + 2*40px) 1fr;gap:40px;align-items:center">
         <p class="note" style="font-size:17px">The explorer in the app reads the same projection an indexer does — and this band is the whole of it. Counts, markers, statuses, ciphertexts. There is nothing underneath to be careless with.</p>
-        <div class="shot" style="height:150px">
-          <img src="assets/shots/app-ledger.png" alt="The ledger explorer in the app: counts of debtors, financiers, acknowledgments, pledge markers, sealed records, certificates, disclosure requests and sealed shares." style="object-position:50% 61%">
+        <div class="shot" style="height:99px">
+          <img src="assets/shots/app-ledger.png" alt="The ledger explorer in the app: counts of debtors, financiers, acknowledgments, pledge markers, sealed records, certificates, disclosure requests and sealed shares." style="object-position:50% 50%">
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ 07 · disclosure ══════════════════════════════════════════ -->
-<section class="slide" data-rh="07 · selective disclosure">
+<!-- ═══ 10 · disclosure ══════════════════════════════════════════ -->
+<section class="slide" id="s10" data-rh="10 · selective disclosure">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Disclosure nobody&#10;can do alone.">Disclosure nobody<br>can do alone.</h2>
       <p class="dek">An insolvency practitioner has to be able to open a specific pledge. One party being able to do that would undo everything else.</p>
     </div>
     <hr class="dotrule">
-    <div class="fill" style="display:grid;grid-template-columns:calc(8*var(--col) + 7*40px) 1fr;gap:40px;align-items:start">
-      <svg viewBox="0 0 1130 460" width="100%" aria-label="The auditor posts a disclosure request naming one record. Keyholders one and three each publish a decryption share sealed to the auditor and proved correct in circuit. The auditor combines two shares, opens the record, and the opened record recomputes the ledger's own pledge marker.">
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;align-items:start">
+      <svg viewBox="0 0 1130 460" width="100%" style="align-self:center" aria-label="The auditor posts a disclosure request naming one record. Keyholders one and three each publish a decryption share sealed to the auditor and proved correct in circuit. The auditor combines two shares, opens the record, and the opened record recomputes the ledger's own pledge marker.">
         <defs>
           <marker id="ar2" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#0000FE" stroke-width="2"/></marker>
           <marker id="ar2p" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0 L12 6 L0 12" fill="none" stroke="#FF48B0" stroke-width="2"/></marker>
@@ -597,27 +926,31 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
         <text x="938" y="432" font-family="Work Sans, sans-serif" font-size="15" fill="#0000AF">— and it matches</text>
       </svg>
 
-      <div style="display:grid;gap:18px;grid-template-rows:repeat(3,auto) 1fr;height:100%">
-        <article class="card" style="padding:20px 22px">
+      <div style="display:grid;gap:13px;grid-template-rows:repeat(4,auto) 1fr;height:100%">
+        <article class="card" style="padding:17px 20px">
           <p class="lbl">the key</p>
-          <p class="body" style="margin-top:6px;font-size:17.5px">A 2-of-3 Shamir sharing of the disclosure key over the Jubjub scalar field. The constructor checks the sharing itself, in point form, and refuses a deployment whose ceremony would let one party read everything or no two parties read anything.</p>
+          <p class="body" style="margin-top:5px;font-size:17px">A 2-of-3 Shamir sharing of the disclosure key over the Jubjub scalar field. The constructor checks the sharing itself, in point form, and refuses a ceremony that would let one party read everything or no two read anything.</p>
         </article>
-        <article class="card" style="padding:20px 22px">
+        <article class="card" style="padding:17px 20px">
           <p class="lbl">the share</p>
-          <p class="body" style="margin-top:6px;font-size:17.5px">A keyholder's share of the record key is computed inside the circuit and sealed to the auditor's key. No keyholder ever publishes anything another keyholder can use.</p>
+          <p class="body" style="margin-top:5px;font-size:17px">A keyholder's share of the record key is computed inside the circuit and sealed to the auditor's key. No keyholder ever publishes anything another keyholder can use.</p>
         </article>
-        <article class="card" style="padding:20px 22px">
+        <article class="card" style="padding:17px 20px">
           <p class="lbl">the check</p>
-          <p class="body" style="margin-top:6px;font-size:17.5px">The opened record recomputes the invoice fingerprint, the acknowledgment leaf and the pledge marker, so a doctored disclosure fails against the ledger's own value. The request and both approvals stay on the ledger: no record can be read without the reading being public.</p>
+          <p class="body" style="margin-top:5px;font-size:17px">The opened record recomputes the invoice fingerprint, the acknowledgment leaf and the pledge marker, so a doctored disclosure fails against the ledger's own value. Request and approvals stay public: no record is read unseen.</p>
         </article>
-        <p class="src" style="line-height:1.5;align-self:end">Devnet run: approvals from keyholders 1 and 3 · the opened record recomputed marker 9450be64… and the ledger holds the same value.</p>
+        <article class="card" style="padding:17px 20px">
+          <p class="lbl">the case <span class="chip" style="font-size:12px;margin-left:4px">NEW IN WAVE 2</span></p>
+          <p class="body" style="margin-top:5px;font-size:17px">An insolvency over four receivables used to need eight approvals. <b style="font-family:var(--mono);font-size:15px">openCase</b> names them under one reference and <b style="font-family:var(--mono);font-size:15px">approveCase</b> seals one share per record in a single call — two approvals, not eight. A share is bound to its case, so an approval cannot be replayed against a record the keyholders never saw.</p>
+        </article>
+        <p class="src" style="line-height:1.45;align-self:end">Preview run · approvals [true, false, true] · the opened record recomputed marker 4fee3054…0aae2a, the key the ledger stores the pledge under.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ 08 · borrowing base ══════════════════════════════════════ -->
-<section class="slide" data-rh="08 · borrowing base">
+<!-- ═══ 11 · borrowing base ══════════════════════════════════════ -->
+<section class="slide" data-rh="11 · borrowing base">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Prove the pool clears the floor.">Prove the pool clears the floor.</h2>
@@ -663,7 +996,7 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
             <text x="612" y="276">what each one is worth, who owes it</text>
           </g>
         </svg>
-        <p class="note" style="margin-top:22px;font-size:19px;flex:none">Each locked slot becomes an ordinary offer expiring with the certificate, which the lender takes up with the same <b style="font-family:var(--mono);font-size:17px">accept</b> it uses for a single invoice. Distinctness and the floor are proved before any slot is locked, so a pool that lists one invoice twice is refused for the duplicate rather than for an encumbrance it caused itself.</p>
+        <p class="note" style="margin-top:22px;font-size:19px;flex:none">Each locked slot becomes an ordinary offer expiring with the certificate, which the lender takes up one at a time with the same <b style="font-family:var(--mono);font-size:17px">accept</b> it uses for a single invoice — or all at once with <b style="font-family:var(--mono);font-size:17px">acceptBatch</b>, new this wave, which proves membership once for the whole batch and either takes every offer or none. Distinctness and the floor are proved before any slot is locked, so a pool that lists one invoice twice is refused for the duplicate rather than for an encumbrance it caused itself.</p>
         <div class="card" style="margin-top:22px;flex:none;padding:18px 22px">
           <p class="lbl">the certificate's own refusals, asserted in this order</p>
           <p style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
@@ -683,15 +1016,15 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
       </div>
       <div style="display:grid;grid-template-rows:auto auto 1fr auto;gap:18px;height:100%">
         <article class="card" style="padding:20px 22px">
-          <h3 style="font-size:22px">Up to four receivables</h3>
-          <p class="body" style="font-size:17.5px">Each proved acknowledged, unencumbered, not yet settled and not overdue — the same four checks a single pledge passes.</p>
+          <h3 style="font-size:22px">Four receivables, and on a real network exactly four</h3>
+          <p class="body" style="font-size:17.5px">Each proved acknowledged, unencumbered, not yet settled and not overdue — the same four checks a single pledge passes. A partly filled pool passes the simulator and <i>fails on a live network</i>: the proof server rejects the zeroed curve point an unused slot leaves in the public transcript. Found by running it, recorded in <b style="font-family:var(--mono);font-size:15px">PROOF.md</b>.</p>
         </article>
         <article class="card" style="padding:20px 22px">
           <h3 style="font-size:22px">The lock, and what it does not prove</h3>
           <p class="body" style="font-size:17.5px">A certificate that only asserted a total would be a promise. This one writes four pledge markers in the same transaction. What no circuit can check is that those markers are addressed to the lender the certificate names: a holder tag is derived from the lender's own secret, so the contract has nothing to test the seller's claim against. The lender recomputes every tag from public state before money moves.</p>
         </article>
-        <div class="shot" style="min-height:0">
-          <img src="assets/shots/app-seller.png" alt="The supplier workspace in the app: an invoice book with amounts, due dates, acknowledgment status and encumbrance." style="object-position:22% 100%">
+        <div class="shot" style="height:186px;align-self:end">
+          <img src="assets/shots/app-seller.png" alt="The supplier workspace in the app: an invoice book with amounts, due dates, acknowledgment status, encumbrance and pledge marker." style="object-position:0% 50%">
         </div>
         <p class="cap" style="margin-top:-4px">The supplier's own book, in the app. The registry never holds an invoice — only a hash of the whole document.</p>
       </div>
@@ -699,12 +1032,12 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
   </div>
 </section>
 
-<!-- ═══ 09 · engineering ═════════════════════════════════════════ -->
-<section class="slide" data-rh="09 · engineering">
+<!-- ═══ 12 · engineering ═════════════════════════════════════════ -->
+<section class="slide" id="s12" data-rh="12 · engineering">
   <div class="sheet">
     <div class="opener">
-      <h2 class="title" data-ghost="Twelve circuits, one contract.">Twelve circuits, one contract.</h2>
-      <p class="dek">Compact 0.31.1, language 0.23. Authorisation is always knowledge of a secret whose hash is on the ledger or inside committed data — never the caller's public key.</p>
+      <h2 class="title" data-ghost="Sixteen circuits, one contract.">Sixteen circuits, one contract.</h2>
+      <p class="dek">Compact 0.31.1, language 0.23. Authorisation is always knowledge of a secret whose hash is on the ledger, never the caller's key. Four circuits are new this wave, in pink.</p>
     </div>
     <hr class="dotrule">
     <div class="fill" style="display:grid;grid-template-columns:calc(5*var(--col) + 4*40px) 1fr;gap:40px;align-items:start">
@@ -715,7 +1048,8 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
           <li><span>Two membership trees, depth 10</span></li>
           <li><span>The acknowledgment tree, depth 16, and its nullifier set</span></li>
           <li><span>Pledge markers, keyed by nullifier</span></li>
-          <li><span>Sealed records, certificates, disclosure requests and shares</span></li>
+          <li><span>Sealed records, certificates, disclosure requests, cases and shares</span></li>
+          <li><span>The peers this operator has declared</span></li>
           <li><span>The ceremony: disclosure key, three keyholder keys, auditor key</span></li>
         </ul>
         <p class="lbl" style="margin-top:22px">private state, never leaves the party</p>
@@ -725,10 +1059,10 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
           <li><span>Holder tags, sealing scalars, keyholder shares</span></li>
         </ul>
         <dl class="data" style="margin-top:auto;padding-top:20px">
-          <dt>Exported circuits</dt><dd>12</dd>
-          <dt>Refusal codes, asserted in order</dt><dd>34</dd>
-          <dt>Domain separators, one per purpose</dt><dd>15</dd>
-          <dt>Compile with proving keys</dt><dd>1 m 54 s</dd>
+          <dt>Exported circuits</dt><dd>16 · 4 new</dd>
+          <dt>Refusal codes, asserted in order</dt><dd>39</dd>
+          <dt>Domain separators, one per purpose</dt><dd>17</dd>
+          <dt>Compile with proving keys</dt><dd>3 m 20 s</dd>
         </dl>
       </div>
 
@@ -743,11 +1077,11 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
         <div class="grid g2" style="gap:22px">
           <article class="card">
             <h3 style="font-size:22px">The seal</h3>
-            <p class="body" style="font-size:17px">A fresh scalar <i style="font-family:var(--mono);font-style:normal">e</i> per record. <i style="font-family:var(--mono);font-style:normal">E = e·G</i> is published; the mask is <i style="font-family:var(--mono);font-style:normal">Poseidon(S.x, S.y, j)</i> over <i style="font-family:var(--mono);font-style:normal">S = e·disclosurePk</i>. Poseidon because a SHA-derived mask sits below 2<sup>248</sup> and would leak the high bits of the 248-bit identities it pads. Records carry a version for that reason.</p>
+            <p class="body" style="font-size:16.5px">A fresh scalar <i style="font-family:var(--mono);font-style:normal">e</i> per record. <i style="font-family:var(--mono);font-style:normal">E = e·G</i> is published; the mask is <i style="font-family:var(--mono);font-style:normal">Poseidon(S.x, S.y, j)</i> over <i style="font-family:var(--mono);font-style:normal">S = e·disclosurePk</i>. Poseidon because a SHA-derived mask sits below 2<sup>248</sup> and would leak the high bits of the identities it pads.</p>
           </article>
           <article class="card">
             <h3 style="font-size:22px">The deploy</h3>
-            <p class="body" style="font-size:17px">Twelve verifier keys total about 26 kB, and one transaction's byte budget takes six. The deploy carries six, then six <i style="font-family:var(--mono);font-style:normal">VerifierKeyInsert</i> maintenance transactions carry the rest. Seven transactions, and no address is published until every circuit has a key.</p>
+            <p class="body" style="font-size:16.5px">Sixteen verifier keys total about 34 kB; one transaction's byte budget takes six. The deploy carries six, then ten <i style="font-family:var(--mono);font-style:normal">VerifierKeyInsert</i> transactions carry the rest — eleven per registry, twenty-two for the two.</p>
           </article>
         </div>
       </div>
@@ -755,32 +1089,37 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
   </div>
 </section>
 
-<!-- ═══ 10 · QA ══════════════════════════════════════════════════ -->
-<section class="slide" data-rh="10 · quality">
+<!-- ═══ 13 · QA ══════════════════════════════════════════════════ -->
+<section class="slide" id="s13" data-rh="13 · quality">
   <div class="sheet">
     <div class="opener">
-      <h2 class="title" data-ghost="177 tests, and the ones&#10;that are meant to fail.">177 tests, and the ones<br>that are meant to fail.</h2>
+      <h2 class="title" data-ghost="362 tests, and the ones&#10;that are meant to fail.">362 tests, and the ones<br>that are meant to fail.</h2>
+      <p class="dek">Up from 177 in Wave 1. No Docker, no node, no proof server — and green on GitHub Actions on every push.</p>
     </div>
     <hr class="dotrule">
     <div class="fill" style="display:grid;grid-template-columns:calc(5*var(--col) + 4*40px) 1fr;gap:40px;align-items:start">
-      <div class="card" style="height:100%">
+      <div class="card" style="height:100%;display:flex;flex-direction:column;padding:17px 21px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <h3 style="font-size:22px">On the simulator</h3>
-          <span class="lbl">no Docker, no chain</span>
+          <h3 style="font-size:22px">Every suite, by name</h3>
+          <span class="lbl">21 files · 362 tests</span>
         </div>
-        <div class="bars" id="testBars" style="margin-top:16px"></div>
-        <p class="lbl" style="margin-top:22px">and beyond it</p>
-        <dl class="data" style="margin-top:8px">
+        <p class="barhead">contract · 139</p>
+        <div class="bars mini" id="testBarsContract"></div>
+        <p class="barhead">sdk · 136</p>
+        <div class="bars mini" id="testBarsSdk"></div>
+        <p class="barhead">sponsor · 87</p>
+        <div class="bars mini" id="testBarsSponsor"></div>
+        <dl class="data" style="margin-top:18px">
+          <dt>Playwright, the hosted pages end to end</dt><dd>15</dd>
           <dt>Devnet integration, with real proofs</dt><dd>4</dd>
-          <dt>Playwright, the guided replay end to end</dt><dd>3</dd>
+          <dt>CI on every push</dt><dd>green</dd>
         </dl>
-        <p class="note" style="margin-top:auto;padding-top:20px;font-size:16.5px">The simulator runs the compiled circuits without proving, so the whole suite finishes on a laptop with no Docker and no node. It is the same code path the browser sandbox uses, which is why the sandbox can refuse a fraud for real.</p>
-        <p class="note" style="padding-top:14px;font-size:16.5px">In the history, each behaviour is its own commit with the test that proves it — <span style="font-family:var(--mono);font-size:15px">test(contract): the public transcript, and the limits that are not enforced</span>.</p>
+        <p class="note" style="margin-top:auto;padding-top:9px;font-size:15.5px">The simulator runs the compiled circuits without proving — the same code path the browser sandbox uses, which is why the sandbox can refuse a fraud for real.</p>
       </div>
-      <div class="grid g2 stretch" style="gap:22px;height:100%">
+      <div class="grid g2 stretch" style="gap:13px;height:100%">
         <article class="card">
           <h3 style="font-size:22px">The adversarial suite</h3>
-          <p class="body" style="font-size:17px">One scenario for every refusal code the contract can raise, plus the lying witness: when no real Merkle path exists the witness hands back a dummy one, so the refusal comes from the circuit's assert and not from a JavaScript exception. That distinction is the test.</p>
+          <p class="body" style="font-size:17px">Sixty-five scenarios — at least one for every one of the 39 refusal codes the contract can raise — plus the lying witness: when no real Merkle path exists the witness hands back a dummy one, so the refusal comes from the circuit's assert and not from a JavaScript exception. That distinction is the test.</p>
         </article>
         <article class="card">
           <h3 style="font-size:22px">The property model</h3>
@@ -792,171 +1131,174 @@ h1.claim{font-weight:800;font-stretch:77%;font-variation-settings:"opsz" 96;font
         </article>
         <article class="card">
           <h3 style="font-size:22px">The documented leaks</h3>
-          <p class="body" style="font-size:17px">A whole suite reproduces the leaks and griefing vectors the threat model admits, and another asserts value by value what each circuit publishes. "Not defended" is a measured statement rather than an assumption.</p>
+          <p class="body" style="font-size:17px">A whole suite reproduces the leaks and griefing vectors the threat model admits, and another asserts value by value what each circuit publishes. "Not defended" is a measured statement rather than an assumption. Every item on slide 16 has a test here.</p>
         </article>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ 11 · proof ═══════════════════════════════════════════════ -->
-<section class="slide" id="s11" data-rh="11 · proof">
+<!-- ═══ 14 · proof ═══════════════════════════════════════════════ -->
+<section class="slide" id="s11" data-rh="14 · proof">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Show your working.">Show your working.</h2>
-      <p class="dek">Nothing on this slide is typed by hand. It comes from the files the command-line tool wrote when it deployed the contract and ran the scenario against it.</p>
+      <p class="dek">Nothing here is typed by hand. It comes from the files the command-line tool wrote while it deployed two registries and ran the scenario against the first, all of it in <b style="font-family:var(--mono);font-size:19px">PROOF.md</b>.</p>
     </div>
     <hr class="dotrule">
     <div class="fill" style="display:grid;grid-template-columns:1fr 1fr calc(3*var(--col) + 2*40px);gap:30px;align-items:start">
-      <div style="display:grid;grid-template-rows:1fr auto;gap:22px;height:100%">
-        <article class="card">
+      <div style="display:grid;grid-template-rows:1fr;gap:20px;height:100%">
+        <article class="card" style="display:flex;flex-direction:column">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <h3 style="font-size:22px">Deployed</h3>
+            <h3 style="font-size:22px">Deployed, twice</h3>
             <span class="chip" style="font-size:13px">PREVIEW · PUBLIC TESTNET</span>
           </div>
           <dl class="data" style="margin-top:14px">
-            <dt>Contract</dt><dd>9be70aa1…33e8f7</dd>
-            <dt>Deploy tx</dt><dd>d8732da6…d13f68</dd>
-            <dt>Block</dt><dd>879363</dd>
-            <dt>Verifier keys</dt><dd>+6 maintenance txs</dd>
-            <dt>Deployed</dt><dd>15 Sept 2026, 17:40 UTC</dd>
-            <dt>Explorer</dt><dd>preview.midnightexplorer.com</dd>
+            <dt>A · Stock &amp; Foil</dt><dd>74fe0bf9…8a0fad</dd>
+            <dt>Deploy tx</dt><dd>c61e4a58…3e286d</dd>
+            <dt>Block</dt><dd>1320927</dd>
+            <dt>Deployed</dt><dd>16 Oct 2026, 10:24 UTC</dd>
+            <dt>B · Harbour</dt><dd>2d8f8f23…0cccbd</dd>
+            <dt>Deploy tx</dt><dd>c61851ae…53797a</dd>
+            <dt>Deployed</dt><dd>16 Oct 2026, 12:03 UTC</dd>
+            <dt>Transactions each</dt><dd>11</dd>
           </dl>
-          <p class="note" style="margin-top:14px;font-size:16px">A public Midnight testnet anyone can query without asking us for anything. Seven transactions: a constructor carrying six verifier keys, then one maintenance transaction for each remaining circuit, because twelve keys do not fit in one.</p>
-        </article>
-        <article class="card">
-          <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <h3 style="font-size:22px">And on a local devnet</h3>
-            <span class="lbl">the same 27 steps</span>
-          </div>
-          <p class="note" style="margin-top:10px;font-size:16.5px">A node, an indexer and a proof server in Docker on one laptop. It shows the code runs but proves nothing to a stranger, and <b style="font-family:var(--mono);font-size:15px">PROOF.md</b> labels it that way.</p>
+          <p class="note" style="margin-top:14px;font-size:16px">A public Midnight testnet anyone can query without asking us for anything. Eleven transactions apiece: a constructor carrying six verifier keys, then one maintenance transaction per remaining circuit, because sixteen keys do not fit in one.</p>
+          <p class="note" style="margin-top:auto;padding-top:14px;font-size:16px"><b>And a local devnet:</b> a node, an indexer and a proof server on one laptop, reproducible by anyone with Docker and no faucet. It shows the code runs but proves nothing to a stranger, and <b style="font-family:var(--mono);font-size:15px">PROOF.md</b> labels it that way.</p>
         </article>
       </div>
 
-      <div style="display:grid;grid-template-rows:auto 1fr;gap:22px;height:100%">
+      <div style="display:grid;grid-template-rows:auto 1fr;gap:15px;height:100%">
         <article class="card">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
             <h3 style="font-size:22px">The run</h3>
             <span class="chip" style="font-size:13px">PREVIEW</span>
           </div>
           <dl class="data" style="margin-top:14px">
-            <dt>Steps</dt><dd>27</dd>
-            <dt>Transactions</dt><dd>20</dd>
-            <dt>Blocks</dt><dd>879534 → 879615</dd>
+            <dt>Steps</dt><dd>33</dd>
+            <dt>Transactions</dt><dd>24</dd>
+            <dt>Blocks</dt><dd>1321121 → 1321369</dd>
             <dt>Refusals recorded</dt><dd>5</dd>
+            <dt>Off-chain checks</dt><dd>4</dd>
             <dt>Disclosure</dt><dd>2 of 3, verified</dd>
+            <dt>Whole run cost</dt><dd>24 SPECK</dd>
           </dl>
-          <p class="note" style="margin-top:14px;font-size:16.5px">Two <span class="chip" style="font-size:12.5px">NOT_ACKNOWLEDGED</span>, then <span class="chip" style="font-size:12.5px">ALREADY_ENCUMBERED</span>, <span class="chip" style="font-size:12.5px">NOT_PAYEE</span> for a supplier reaching for pledged proceeds, and <span class="chip" style="font-size:12.5px">BELOW_FLOOR</span> for an overstated pool. Each recorded as a refusal with no transaction to show for it, because there was none.</p>
+          <p class="note" style="margin-top:12px;font-size:16px">Two <span class="chip" style="font-size:12.5px">NOT_ACKNOWLEDGED</span>, then <span class="chip" style="font-size:12.5px">ALREADY_ENCUMBERED</span>, <span class="chip" style="font-size:12.5px">NOT_PAYEE</span> and <span class="chip" style="font-size:12.5px">BELOW_FLOOR</span>. None has a transaction id on any explorer, because none exists: the contract asserts while the transaction is being built.</p>
         </article>
         <article class="card">
-          <h3 style="font-size:22px">What a judge runs</h3>
+          <h3 style="font-size:22px">What a reviewer runs</h3>
           <pre class="cmd" style="margin-top:12px">npm test
-<i>177 tests, no Docker, no node</i>
+<i>362 tests, no Docker, no node,
+no proof server. Same on CI.</i>
 
 npm run verify:onchain
-<i>reads the deployed contract through
-the public indexer and compares it
-with the evidence, field by field.
-No wallet, no proof server, and a
-non-zero exit on any mismatch.</i></pre>
+<i>field by field against the evidence:
+122 checks, no wallet, non-zero exit.</i></pre>
         </article>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:16px;height:100%">
-        <article class="card">
+      <div style="display:flex;flex-direction:column;gap:12px;height:100%">
+        <article class="card" style="padding:19px 21px">
           <h3 style="font-size:22px">Zero-install sandbox</h3>
-          <p class="body" style="font-size:17px">The web app runs the real compiled circuits in the browser tab. No wallet, no install, no chain. Every refusal on screen is the contract's own assert, not a message the page invented.</p>
+          <p class="body" style="font-size:17px">The web app runs the real compiled circuits in the browser tab. No wallet, no install, no chain, about thirty seconds. Every refusal on screen is the contract's own assert, not a message the page invented.</p>
         </article>
-        <div class="shot" style="flex:1;min-height:0">
-          <img src="assets/shots/replay-refusal.png" alt="The guided replay in the app: the double-pledge step is marked refused, and the panel reads &quot;On the ledger: nothing. The existing pledge is not touched and not disclosed.&quot;" style="object-position:52% 74%">
+        <div class="shot" style="height:184px">
+          <img src="assets/shots/replay-refusal.png" alt="The guided replay in the app: fraud 3, the same receivable offered to a second lender, stamped REFUSED, with the refusal code ALREADY_ENCUMBERED and the line &quot;Refused by offer while the transaction was being built, in 24 ms. Nothing reached the ledger.&quot;" style="object-position:50% 50%">
         </div>
-        <p class="cap" style="margin-top:0">The double pledge, refused in the browser tab.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ 12 · market ══════════════════════════════════════════════ -->
-<section class="slide" data-rh="12 · market and adoption">
-  <div class="sheet">
-    <div class="opener">
-      <h2 class="title" data-ghost="Who buys a refusal.">Who buys a refusal.</h2>
-      <p class="dek">The product is not the ledger and not the proof. It is the moment a financier is told <i>no</i>, by a register that could not have told it anything else.</p>
-    </div>
-    <hr class="dotrule">
-    <div class="grid g4 stretch" style="gap:26px">
-      <article class="card">
-        <p class="lbl">buys the refusal</p>
-        <h3 style="font-size:22px;margin-top:8px">Factoring companies</h3>
-        <p class="body" style="font-size:17px">Buy invoices outright. The double pledge is their loss, and today they carry it as a credit-control cost.</p>
-      </article>
-      <article class="card">
-        <p class="lbl">buys the certificate</p>
-        <h3 style="font-size:22px;margin-top:8px">Asset-based lenders</h3>
-        <p class="body" style="font-size:17px">Advance against a borrowing base they cannot verify. A floor they can check is worth more than a spreadsheet they cannot.</p>
-      </article>
-      <article class="card">
-        <p class="lbl">carries the acknowledgment</p>
-        <h3 style="font-size:22px;margin-top:8px">Supply-chain finance platforms</h3>
-        <p class="body" style="font-size:17px">Already sit between buyer and supplier, and already hold the buyer's approval. They are where the acknowledgment comes from.</p>
-      </article>
-      <article class="card">
-        <p class="lbl">buys the disclosure</p>
-        <h3 style="font-size:22px;margin-top:8px">Insolvency practitioners</h3>
-        <p class="body" style="font-size:17px">Arrive after the failure and need to open specific records, with an opening nobody can dispute and everybody can see happened.</p>
-      </article>
-    </div>
-
-    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;margin-top:30px;align-items:stretch">
-      <div class="card" style="display:flex;flex-direction:column">
-        <h3 style="font-size:24px">The adoption path runs through one platform, not fifty banks</h3>
-        <ol class="grid g3" style="gap:26px;margin-top:20px">
-          <li class="seq"><p class="n">01</p><p class="body" style="margin:0;font-size:17px">A supply-chain finance platform integrates the SDK. Its own book becomes the first registry — useful on day one, with no counterparty needed to start, because it already double-finances itself by accident.</p></li>
-          <li class="seq"><p class="n">02</p><p class="body" style="margin:0;font-size:17px">A second financier joins because the first one can now refuse what it cannot see. Neither has to show the other anything, which is the only reason the second one can join at all.</p></li>
-          <li class="seq"><p class="n">03</p><p class="body" style="margin:0;font-size:17px">The consortium operator admits members after off-chain KYB. The contract gives that operator no power to read a record, take a pledge, settle one or open a disclosure.</p></li>
-        </ol>
-        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:18px">Nothing in the design needs a second member on day one — which is the only way a registry like this ever gets a second member.</p>
-      </div>
-      <div style="display:grid;gap:18px;height:100%">
-        <article class="card" style="display:flex;flex-direction:column">
-          <h3 style="font-size:22px">How it is paid for</h3>
-          <ul class="dots" style="margin-top:14px">
-            <li><span>The consortium licenses the registry and runs the admission.</span></li>
-            <li><span>The financier pays per receivable checked. The refusal is the unit.</span></li>
-            <li><span>Disclosure is sold to the practitioners who need it, separately from the register.</span></li>
-          </ul>
-          <p class="note" style="margin-top:auto;padding-top:16px;font-size:16.5px">Priced against the loss it prevents rather than the data it stores — because it stores none.</p>
+        <p class="cap" style="margin-top:0">The double pledge, refused in the browser tab in 24 ms, with nothing reaching the ledger.</p>
+        <article class="card" style="padding:19px 21px;margin-top:auto">
+          <h3 style="font-size:22px">Re-check it without us</h3>
+          <p class="body" style="font-size:17px"><b style="font-family:var(--mono);font-size:15px">verify</b> needs no wallet, no mnemonic, no proof server and no proving keys. It reads the deployed contract through the public indexer, re-derives the projection the SDK uses, and re-checks the evidence's own claims against the chain.</p>
         </article>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ 13 · honest limits ═══════════════════════════════════════ -->
-<section class="slide" data-rh="13 · honest limits">
+<!-- ═══ 15 · who pays ════════════════════════════════════════════ -->
+<section class="slide" id="s15" data-rh="15 · who pays">
+  <div class="sheet">
+    <div class="opener" style="margin-bottom:14px">
+      <h2 class="title" data-ghost="Who pays for a refusal.">Who pays for a refusal.</h2>
+      <p class="dek" style="margin-top:12px;max-width:none">The code is Apache-2.0 and always will be, so self-hosting is permitted and expected. The revenue sits in the <i>operator</i> role — running the instance, holding one of the three disclosure keys, answering for uptime — never in a licence.</p>
+    </div>
+    <hr class="dotrule" style="margin-bottom:22px">
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;align-items:start">
+      <div style="display:grid;grid-template-rows:auto 1fr;gap:18px;height:100%">
+        <article class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h3 style="font-size:21px">The pot the fee comes out of</h3>
+            <span class="lbl">every figure published by somebody else</span>
+          </div>
+          <div class="mkt" style="margin-top:10px">
+            <b>€4.04 tn</b><span>global factoring volume, 2025, up 3.7% — Europe €2,658bn</span><i>FCI world industry statistics, 5 May 2026</i>
+            <b>£21.2 bn</b><span>UK invoice-finance and ABL advances outstanding, 34,000 businesses</span><i>UK Finance, 13 Mar 2025</i>
+            <b>$537 bn</b><span>US asset-based-lending commitments, 2024; US factoring ~$148bn</span><i>SFNet 2025 Market Sizing Study</i>
+            <b>~$5 bn</b><span>a year, the <i>modelled</i> cost of duplicate financing: 1% of a $5tn market taken as susceptible, 10% of those as losses. No measured number exists, and we say so first</span><i>ICC UK, via GTR, Oct 2022</i>
+            <b>1 in 4</b><span>attempts even confident European receivables lenders think they miss; 89% say fraud rose</span><i>Lenvi Riskfactor survey, via FCI</i>
+          </div>
+        </article>
+        <article class="card" style="display:flex;flex-direction:column">
+          <h3 style="font-size:21px">The headroom, the unit, and who signs first</h3>
+          <p class="body" style="font-size:17px;margin-top:8px">A factor charges <b>1–5% of invoice value</b> per roughly thirty days: on a €20,000 invoice, <b>€200–€1,000</b> of fee income, so a <b>$2</b> registration is 0.2–1% of that. A government registry already charges for this act — NZ's PPSR takes <b>NZ$14</b> to register and <b>NZ$2</b> to search.</p>
+          <div class="mkt tiers" style="margin-top:14px">
+            <b>Small factor</b><span>~£20m of advances · 25,000 pledges a year</span><i>$50k</i>
+            <b>Mid-market ABL</b><span>~£200m · 150,000 a year — the realistic first paying tier</span><i>$300k</i>
+            <b>A platform</b><span>PrimeRevenue alone: $300bn+ a year across 100+ funders, ~15m invoices</span><i>$4m+</i>
+          </div>
+          <p class="body" style="font-size:17px;margin-top:auto;padding-top:12px;border-top:1px solid var(--hair)"><b>The first signature comes from a mid-market specialty receivables lender</b> — £20m–£500m of advances, one credit committee, a written-off fraud in living memory — and from its <b>Head of Credit</b>.</p>
+        </article>
+      </div>
+
+      <div style="display:grid;grid-template-rows:auto 1fr;gap:20px;height:100%">
+        <article class="card" style="padding:19px 21px">
+          <h3 style="font-size:21px">Three models, in the order we would sell them</h3>
+          <div class="mkt models" style="margin-top:11px">
+            <b>B</b><span>operator subscription — first, because it is the one a Head of Credit can sign without a procurement cycle</span><i>$30k–120k / yr</i>
+            <b>A</b><span>per registration, paid by the financier taking the pledge; searching and refusal free</span><i>$1–3 / pledge</i>
+            <b>C</b><span>consortium membership, with governance seats and keyholders drawn from the members</span><i>$50k–250k / member</i>
+          </div>
+          <p class="body" style="font-size:16.5px;margin-top:12px"><b>C is the sale the Wave 1 review correctly called hard, and nothing above it depends on reaching it.</b> Lenders would share one instance for governance — admission, who holds the keys, who answers in an insolvency — not to detect duplicates.</p>
+        </article>
+        <article class="card flag" style="padding:19px 21px;display:flex;flex-direction:column">
+          <p class="lbl">what is true today, stated plainly</p>
+          <h3 style="margin-top:6px">No customer, no pilot, no reply yet.</h3>
+          <p class="body" style="font-size:16.5px;margin-top:9px">A written contact pack is going out to <b>FCI</b>, <b>SFNet</b> — whose own February 2026 Fraud Task Force report names First Brands' double-pledging — <b>ITFA</b>, <b>ICC United Kingdom</b> and the <b>EUF</b>, and to <b>Finverity</b>, <b>Evolution Credit Partners</b>, <b>White Oak Commercial Finance</b> and <b>Tokio Marine HCC</b>. Every address was read off the organisation's own site; none is a guessed pattern. <b>Nobody has answered yet, and we will not claim it until somebody has.</b></p>
+          <p class="body" style="font-size:16.5px;margin-top:auto;padding-top:12px;border-top:1px solid rgba(0,0,175,.2)"><b>The hard gate is an external audit.</b> No regulated lender pays for an unaudited registry that holds its collateral position, and no amount of outreach substitutes for it.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 16 · honest limits ═══════════════════════════════════════ -->
+<section class="slide" id="s16" data-rh="16 · honest limits">
   <div class="sheet">
     <div class="opener">
       <h2 class="title" data-ghost="Honest limits.">Honest limits.</h2>
-      <p class="dek">Every item below has a test that reproduces it, so "not defended" is a measured statement rather than an assumption.</p>
+      <p class="dek">Every item below has a test that reproduces it, so "not defended" is a measured statement rather than an assumption. Three of them were found this wave by running the thing on a real network.</p>
     </div>
     <hr class="dotrule">
     <div class="fill grid g2" style="gap:0 60px">
-      <ul class="dots" style="gap:19px;align-content:start;font-size:17.5px">
+      <ul class="dots" style="gap:15px;align-content:start;font-size:17px">
+        <li><span><b>It has never seen a real invoice.</b> Every run is synthetic: our personas, our numbers. No lender has used this, no pilot has run, and nothing here has been tested against a real book.</span></li>
+        <li><span><b>One registry cannot see another.</b> A ledger cannot read another ledger, so a second registry will accept a receivable already pledged in the first — Harbour did, on preview, at block 1322275. Only the lender's own cross-registry check stops the advance, and <i>registerPeer</i> is a declaration, not a proof that a peer is honest.</span></li>
         <li><span><b>Collusion still works.</b> A buyer who colludes with a supplier can acknowledge an invoice that does not exist. The registry makes that acknowledgment non-repudiable; it does not prevent it.</span></li>
         <li><span><b>Settlement is public.</b> The settlement token is unshielded, so amounts and payer and payee addresses are visible at payment time. Contract custody of shielded coins is blocked upstream.</span></li>
         <li><span><b>The operator is trusted twice.</b> It decides who is admitted, and as the deployer it holds the contract's maintenance authority — a strictly larger power. Production should move that authority to a multi-party key, or burn it.</span></li>
-        <li><span><b>The keys are dealt, not generated.</b> A ceremony splits the disclosure key rather than a distributed protocol, and two colluding keyholders reconstruct it off-chain with no public request at all.</span></li>
-        <li><span><b>Approvals are per record, not per case.</b> A keyholder's share is bound to the record, so two requests naming one record with one approval each open it. The threshold holds; the per-request trail does not.</span></li>
-        <li><span><b>A certificate names a lender it cannot bind.</b> The holder tags on its locked slots come from the seller, and no circuit can tie them to that lender. The lender recomputes every tag from public state before it advances.</span></li>
-        <li><span><b>A certificate shows its markers.</b> A borrowing base publishes the markers of the invoices it locks. That is exactly what makes the lock verifiable.</span></li>
+        <li><span><b>The keys are dealt, not generated.</b> A ceremony splits the disclosure key rather than a distributed protocol, and <b>two colluding keyholders</b> reconstruct it off-chain with no public request at all.</span></li>
+        <li><span><b>Single-record approvals can still be pooled.</b> A keyholder's share is bound to the record, so two requests naming one record with one approval each open it. <i>openCase</i> closes this for an insolvency by binding shares to a case reference; the single-record path is unchanged.</span></li>
       </ul>
-      <ul class="dots" style="gap:19px;align-content:start;font-size:17.5px">
-        <li><span><b>A seller can leak its own records.</b> Reusing a sealing scalar makes two records comparable to anyone, and re-offering with the same scalar overwrites the earlier record. The SDK draws a fresh one every time and can spot a repeat in public state — the discipline is still the caller's.</span></li>
-        <li><span><b>A settled, unfinanced book is linkable.</b> An opened record reveals the supplier's id, and the seller payee tag is derived from it, so every settled-but-unfinanced receivable of that supplier becomes recognisable without any further approval.</span></li>
+      <ul class="dots" style="gap:15px;align-content:start;font-size:17px">
+        <li><span><b>A certificate names a lender it cannot bind.</b> The holder tags on its locked slots come from the seller, and no circuit can tie them to that lender. The lender recomputes every tag from public state before it advances.</span></li>
+        <li><span><b>A borrowing base shows its markers, and needs all four slots.</b> Publishing the markers it locks is what makes the lock verifiable. A partly filled pool passes the simulator and fails on a live network: the proof server rejects the zeroed curve point an unused slot leaves behind.</span></li>
+        <li><span><b>A seller can leak its own records.</b> Reusing a sealing scalar makes two records comparable to anyone, and re-offering with the same scalar overwrites the earlier one. The SDK draws a fresh scalar every time; the discipline is still the caller's.</span></li>
+        <li><span><b>A settled, unfinanced book is linkable.</b> An opened record reveals the supplier's id, and the seller payee tag derives from it, so every settled-but-unfinanced receivable of that supplier becomes recognisable without further approval.</span></li>
         <li><span><b>Timing correlates.</b> An observer can link an acknowledgment to a later offer by when each happened.</span></li>
         <li><span><b>Sealing rests on Poseidon.</b> The platform does not promise the hash stays stable across upgrades, which is why every record carries a version.</span></li>
-        <li><span><b>Test networks only.</b> Mainnet contract deployment on Midnight is gated by the Foundation's review process.</span></li>
-        <li><span><b>Not audited.</b> There has been an internal security review, with findings accepted on the record. There has been no external audit.</span></li>
+        <!-- MAINNET LINE — if the mainnet deployment lands, this is the only line to change. -->
+        <li><span><b>Preview, not mainnet.</b> Permissionless mainnet deployment opened on 28 September 2026: the gate is open and this registry is not through it yet. Two registries run on Midnight preview, a public testnet anyone can query. <i>--network mainnet</i> works, and the remaining gate is DUST.</span></li>
+        <li><span><b>Not audited.</b> An internal security review, with findings accepted on the record — one of them, F-08, is what case-scoped disclosure answers. No external audit.</span></li>
       </ul>
     </div>
     <p class="note" style="display:flex;justify-content:space-between;gap:40px;align-items:baseline;font-size:18px">
@@ -966,58 +1308,71 @@ non-zero exit on any mismatch.</i></pre>
   </div>
 </section>
 
-<!-- ═══ 14 · roadmap ═════════════════════════════════════════════ -->
-<section class="slide" data-rh="14 · roadmap">
+<!-- ═══ 17 · what changed ═══════════════════════════════════════ -->
+<section class="slide" id="s17" data-rh="17 · what changed in Wave 2">
   <div class="sheet">
-    <div class="opener">
-      <h2 class="title" data-ghost="Three waves, then a consortium.">Three waves, then a consortium.</h2>
-      <p class="dek">The contract is close to finished. What is not finished is the part that makes a registry worth joining: the other members.</p>
+    <div class="opener" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:60px;align-items:end;margin-bottom:16px">
+      <div>
+        <h2 class="title" data-ghost="What you told us,&#10;and what we did.">What you told us,<br>and what we did.</h2>
+        <p class="dek" style="margin-top:12px">Three notes came back from Wave 1. Two are answered here; the third is not done, and says so.</p>
+      </div>
+      <p class="src" style="padding-bottom:6px">Every change since the Wave 1 submission, item by item,<br>with what it is and why, is at <b style="font-family:var(--mono);font-size:13.5px">/whats-new</b> on the site —<br>nine shipped, one still being built.</p>
     </div>
     <hr class="dotrule">
-    <div class="grid g3 fill stretch">
-      <article class="card" style="display:flex;flex-direction:column">
-        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 1 · shipped<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
-        <h3>The register, and the three refusals</h3>
-        <ul class="dots" style="margin-top:18px;font-size:17px">
-          <li><span>Twelve circuits, one contract</span></li>
-          <li><span>177 tests, 49 of them adversarial</span></li>
-          <li><span>2-of-3 disclosure that self-verifies</span></li>
-          <li><span>Borrowing base that locks what it certifies</span></li>
-          <li><span>Settlement through the contract</span></li>
-          <li><span>A sandbox that needs no wallet</span></li>
-          <li><span>A deployment on a public testnet</span></li>
-          <li><span>A full lifecycle run with real proofs</span></li>
-        </ul>
-        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">Everything a first member needs to get value out of the registry on its own.</p>
+    <div class="grid g3 stretch" style="gap:26px">
+      <article class="card" style="display:flex;flex-direction:column;padding:21px 23px">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:11px">Communication<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i>answered</p>
+        <blockquote class="said"><i>“The presentation would be even better if it made it clearer who stands to benefit from using this.”</i></blockquote>
+        <h3 style="font-size:22px;margin-top:16px">Four named seats, first thing</h3>
+        <p class="body" style="font-size:16.5px;margin-top:8px">The credit officer at a factoring company, the supplier's CFO, the buyer's accounts-payable team and the insolvency practitioner — each with what they are stuck with today, what the registry hands them and the document they stop sending.</p>
+        <p class="src" style="margin-top:auto;padding-top:14px">slide 03 · four workspaces in /app · the site's /#who</p>
       </article>
-      <article class="card" style="display:flex;flex-direction:column">
-        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 2 · next<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
-        <h3>Nobody should need to hold a token to be checked</h3>
-        <ul class="dots" style="margin-top:18px;font-size:17px">
-          <li><span>Fee sponsorship, so participants need no DUST</span></li>
-          <li><span>In-browser proving through 1AM</span></li>
-          <li><span>Batch acceptance for a financier's book</span></li>
-          <li><span>Distributed key generation for the disclosure key</span></li>
-          <li><span>Bulk disclosure for an insolvency</span></li>
-        </ul>
-        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">The friction that stops a real financier from trying it: a token to hold, a prover to install, one pledge at a time.</p>
+
+      <article class="card" style="display:flex;flex-direction:column;padding:21px 23px">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:11px">Product<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i>answered</p>
+        <blockquote class="said"><i>“The catch is scale: it only works once many competing financiers join the same registry, a consortium sale that's hard for a startup.”</i></blockquote>
+        <h3 style="font-size:22px;margin-top:16px">Two registries, and a check across them</h3>
+        <p class="body" style="font-size:16.5px;margin-top:8px">Two deployments on preview, two operators, two ceremonies, each declaring the other a peer on chain. A lender asked both about one receivable <i>before</i> the second had seen it: its own book said FREE, the peer said ENCUMBERED, and it declined on that bit. It runs live in the reviewer's browser.</p>
+        <p class="src" style="margin-top:auto;padding-top:14px">slide 07 · the site's /#check · the gap it leaves, slide 16</p>
       </article>
-      <article class="card" style="display:flex;flex-direction:column">
-        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:10px">Wave 3 · after<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i></p>
-        <h3>Where the invoices already are</h3>
-        <ul class="dots" style="margin-top:18px;font-size:17px">
-          <li><span>Ledger-9 migration for contract events</span></li>
-          <li><span>ECDSA-signed e-invoices straight from ERP systems</span></li>
-          <li><span>Shielded settlement, once contract custody lands</span></li>
-          <li><span>A mainnet deployment request</span></li>
-          <li><span>An adapter for existing factoring platforms</span></li>
-        </ul>
-        <p class="note" style="margin-top:auto;padding-top:20px;border-top:1px solid var(--hair);font-size:17px">The integrations that make the registry the place a pledge gets recorded, rather than a second system to remember.</p>
+
+      <article class="card flag" style="display:flex;flex-direction:column;padding:21px 23px">
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:11px">Business Development<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i>not done</p>
+        <blockquote class="said"><i>“Since you'll soon be able to freely deploy contracts to the mainnet, please be sure to deploy your product there.”</i></blockquote>
+        <h3 style="font-size:22px;margin-top:16px">Not on mainnet. Here is exactly why</h3>
+        <p class="body" style="font-size:16.5px;margin-top:8px">The gate opened on 28 September 2026, and the stale sentence claiming otherwise is gone from our docs. What is left is DUST: there is no faucet and fees come from registered NIGHT, so a NIGHT registration is in flight. Every command already takes <i>--network mainnet</i>, prices the whole deploy against mainnet's own ledger parameters before a penny is spent, and refuses to submit without <i>--yes-mainnet</i>.</p>
+        <p class="src" style="margin-top:auto;padding-top:14px">docs/MAINNET.md · the runbook and the failure modes</p>
       </article>
     </div>
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin-top:26px">
-      <p class="note" style="font-size:20px;max-width:88ch">A register with one member is a private database. The work after Wave 3 is the consortium — the operator, the admission rules and the second financier — not the contract.</p>
-      <p style="font-family:var(--display);font-weight:800;font-stretch:80%;font-size:30px;color:var(--ink);letter-spacing:-.02em;text-align:right;line-height:1.1;flex:none">Every invoice can be pledged once.<br>Prove it without revealing it.</p>
+
+    <div class="fill" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:40px;margin-top:20px;align-items:start">
+      <div class="card" style="height:100%;display:flex;flex-direction:column;padding:21px 23px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <h3 style="font-size:22px">Also new this wave</h3>
+          <span class="lbl">none of it was in the Wave 1 submission</span>
+        </div>
+        <ul class="dots grid g2" style="margin-top:9px;gap:6px 34px">
+          <li><span><b>Four circuits, 12 → 16.</b> registerPeer, acceptBatch, openCase, approveCase.</span></li>
+          <li><span><b>Fee sponsorship:</b> a wallet with 0 DUST transacted.</span></li>
+          <li><span><b>Tests 177 → 362,</b> and CI on every push.</span></li>
+          <li><span><b>A second ceremony and deployment,</b> 11 txs each.</span></li>
+          <li><span><b>Screens rebuilt to read in one still frame.</b></span></li>
+          <li><span><b>A business model, adoption path and outreach list.</b></span></li>
+        </ul>
+        <p class="note" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--hair);font-size:17px"><b>Next, in order:</b> mainnet the moment DUST lands · an external audit, the gate before any lender pays · one pilot · then an operator who is not us.</p>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <article class="card">
+          <h3 style="font-size:22px">Where to look</h3>
+          <dl class="data" style="margin-top:12px">
+            <dt>The app, no wallet, 30 seconds</dt><dd>stock-and-foil.vercel.app</dd>
+            <dt>Every change this wave</dt><dd>/whats-new</dd>
+            <dt>The code, Apache-2.0</dt><dd>github.com/RaYYeR220/stock-and-foil</dd>
+            <dt>Every transaction, with links</dt><dd>PROOF.md</dd>
+          </dl>
+        </article>
+        <p style="font-family:var(--display);font-weight:800;font-stretch:80%;font-size:27px;color:var(--ink);letter-spacing:-.02em;line-height:1.12;margin-top:auto;padding-top:16px">Every invoice can be pledged once.<br>Prove it without revealing it.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1080,24 +1435,37 @@ addEventListener('hashchange', () => go((parseInt(location.hash.slice(1), 10) ||
 go((parseInt(location.hash.slice(1), 10) || 1) - 1);
 
 /* ── bar charts, drawn from the numbers themselves ────────────── */
-function bars(host, rows, unit, alt){
-  const max = Math.max(...rows.map(r => r[1]));
+function bars(host, rows, unit, scale){
+  const max = scale || Math.max(...rows.map(r => r[1]));
   host.innerHTML = rows.map(([k, v, flag]) =>
     `<div class="row"><span class="k">${k}</span>`
     + `<span class="t${flag ? ' alt' : ''}" style="width:${(v / max * 100).toFixed(1)}%"></span>`
     + `<span class="v">${typeof v === 'number' && unit === ' MB' ? v.toFixed(1) : v}${unit}</span></div>`).join('');
 }
+/* the four circuits added in Wave 2 are flagged, and print in the second ink */
 bars(D.getElementById('keyBars'), [
-  ['certifyBorrowingBase', 42.9], ['offer', 11.1], ['acknowledge', 10.0], ['payInvoice', 10.0],
-  ['accept', 5.2], ['claimAsSeller', 5.2], ['approveDisclosure', 3.1], ['requestDisclosure', 3.1],
-  ['admitDebtor', 2.8], ['admitFinancier', 2.8], ['claimAsHolder', 2.8], ['release', 2.8]
+  ['certifyBorrowingBase', 42.9], ['offer', 11.1], ['approveCase', 11.1, 1],
+  ['acknowledge', 10.0], ['payInvoice', 10.0], ['acceptBatch', 10.0, 1],
+  ['accept', 5.2], ['claimAsSeller', 5.2], ['registerPeer', 5.2, 1],
+  ['approveDisclosure', 3.1], ['requestDisclosure', 3.1],
+  ['admitDebtor', 2.8], ['admitFinancier', 2.8], ['claimAsHolder', 2.8], ['release', 2.8],
+  ['openCase', 1.3, 1]
 ], ' MB');
-bars(D.getElementById('testBars'), [
-  ['refusals', 49], ['lifecycle', 23], ['transcript', 10], ['disclosure', 10],
-  ['limits', 10], ['ceremony', 7], ['property model', 1],
-  ['sdk · simulator', 19, 1], ['sdk · keys', 14, 1], ['sdk · records', 12, 1],
-  ['sdk · audit', 9, 1], ['sdk · scalar', 7, 1]
-], '');
+bars(D.getElementById('testBarsContract'), [
+  ['refusals, one per code', 65], ['lifecycle', 27], ['disclosure, 2 of 3', 15],
+  ['public transcript', 14], ['documented limits', 10], ['deploy-time ceremony', 7],
+  ['property model', 1]
+], '', 65);
+bars(D.getElementById('testBarsSdk'), [
+  ['the whole scenario', 27], ['indexer client', 23], ['network table', 22],
+  ['sponsorship client', 16], ['key material', 14], ['record codec', 12],
+  ['certificate audit', 9], ['scalar and sharing', 7], ['sandbox snapshot', 6]
+], '', 65);
+bars(D.getElementById('testBarsSponsor'), [
+  ['the service, end to end', 26], ['allowlist and rate limit', 23],
+  ['which bucket it counts', 15], ['routes, over a socket', 13],
+  ['what it may log', 10]
+], '', 65);
 
 /* ══ the halftone press ═══════════════════════════════════════════
    The same press the product site uses: greyscale artwork is drawn
