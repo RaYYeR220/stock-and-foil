@@ -128,7 +128,15 @@ export async function sponsored(args: Args): Promise<number> {
         'Start one with:  npm run -w sponsor start   (see sponsor/README.md)',
     );
   }
+  // Only one circuit is wired here, and the flag exists so the refusal is explicit rather than
+  // the command quietly running `acknowledge` under someone else's label.
   const circuitName = flagValue(args, 'circuit') ?? 'acknowledge';
+  if (circuitName !== 'acknowledge') {
+    throw new UsageError(
+      `--circuit ${circuitName} is not wired into this command; it runs \`acknowledge\`, which is ` +
+        'the call made by the party least likely to hold NIGHT. Use the scenario for the rest.',
+    );
+  }
   const deployment = loadDeployment(network);
   const endpoints = cliEndpoints(args, network);
   const assets = zkAssetsPath(args);
