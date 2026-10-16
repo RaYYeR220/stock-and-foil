@@ -230,7 +230,7 @@ export function Replay() {
           title="The First Brands replay."
           level="h1"
           small
-          dek={`${REPLAY_STEPS.length} steps through one receivable: acknowledged, offered, pledged, paid and disclosed — with the frauds that broke First Brands refused on the way. Each step is a real circuit call in this tab, and every refusal is the contract's own assert, not a message this page invented.`}
+          dek={`One receivable, ${REPLAY_STEPS.length} steps: acknowledged, offered, pledged, paid, disclosed — and five frauds refused on the way. Every step is a real circuit call in this tab, and every refusal is the contract's own assert.`}
         />
       </div>
 
@@ -262,6 +262,10 @@ export function Replay() {
             <span className="stamp" aria-hidden="true">
               Refused
             </span>
+          ) : status === 'ok' && step.seal ? (
+            <span className="stamp stamp--ok" aria-hidden="true">
+              {step.seal}
+            </span>
           ) : null}
           <div className="stage-head">
             <h2>{step.title}</h2>
@@ -270,6 +274,44 @@ export function Replay() {
             </span>
           </div>
           <p className="stage-body">{step.body}</p>
+
+          {/* The verdict sits directly under what was attempted: in a still frame of this page,
+              the refusal code and the reason have to be visible without scrolling. */}
+          {busy && !result ? (
+            <p className="outcome" role="status">
+              <span className="meta">Running {step.cta.toLowerCase()} in this tab…</span>
+            </p>
+          ) : null}
+
+          {result?.status === 'refused' && result.refusal ? (
+            <div className="outcome outcome--refused" role="status">
+              <code className="code" data-testid="refusal-code">
+                {result.refusal.code}
+              </code>
+              <p>{REFUSAL_MESSAGES[result.refusal.code]}</p>
+              <p className="meta">
+                Refused by {result.refusal.circuit} while the transaction was being built, in {ms(result.durationMs)}.
+                Nothing reached the ledger.
+              </p>
+            </div>
+          ) : null}
+
+          {result?.status === 'ok' ? (
+            <div className="outcome" role="status">
+              <p>
+                <strong>Accepted.</strong> {step.chain}
+              </p>
+              <p className="meta">Circuits ran in {ms(result.durationMs)}.</p>
+            </div>
+          ) : null}
+
+          {result?.status === 'error' ? (
+            <div className="outcome outcome--refused" role="alert">
+              <p>
+                <strong>That did not run.</strong> {result.message}
+              </p>
+            </div>
+          ) : null}
 
           <div className="runbar">
             {result ? (
@@ -317,48 +359,19 @@ export function Replay() {
             </span>
           </div>
 
-          {busy && !result ? (
-            <p className="outcome" role="status">
-              <span className="meta">Running {step.cta.toLowerCase()} in this tab…</span>
-            </p>
-          ) : null}
-
-          {result?.status === 'refused' && result.refusal ? (
-            <div className="outcome outcome--refused" role="status">
-              <code className="code" data-testid="refusal-code">
-                {result.refusal.code}
-              </code>
-              <p>{REFUSAL_MESSAGES[result.refusal.code]}</p>
-              <p className="meta">
-                Refused by {result.refusal.circuit} while the transaction was being built, in {ms(result.durationMs)}.
-                Nothing reached the ledger.
-              </p>
-            </div>
-          ) : null}
-
-          {result?.status === 'ok' ? (
-            <div className="outcome" role="status">
-              <p>
-                <strong>Accepted.</strong> {step.chain}
-              </p>
-              <p className="meta">Circuits ran in {ms(result.durationMs)}.</p>
-            </div>
-          ) : null}
-
-          {result?.status === 'error' ? (
-            <div className="outcome outcome--refused" role="alert">
-              <p>
-                <strong>That did not run.</strong> {result.message}
-              </p>
-            </div>
-          ) : null}
-
           <div className="stage-split">
             <div>
               {result && result.facts.length > 0 ? (
                 <div data-testid="facts">
                   <p className="lbl">What came back</p>
-                  <KeyValues rows={result.facts.map((f) => ({ label: f.label, value: f.value, mono: f.mono }))} />
+                  <KeyValues
+                    rows={result.facts.map((f) => ({
+                      label: f.label,
+                      value: f.value,
+                      mono: f.mono,
+                      strong: f.strong,
+                    }))}
+                  />
                 </div>
               ) : null}
               <p className="ledgernote">

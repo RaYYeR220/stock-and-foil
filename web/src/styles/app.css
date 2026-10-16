@@ -12,9 +12,9 @@
   align-items: center;
   gap: var(--s4) var(--s5);
   flex-wrap: wrap;
-  padding-block: 9px;
+  padding-block: 10px;
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.5;
 }
 .rail-group {
@@ -32,15 +32,15 @@
 }
 .rail-status {
   margin-left: auto;
-  color: #d4d4ff;
-  max-width: 62ch;
+  color: #dcdcff;
+  max-width: 78ch;
 }
 .switch {
   display: inline-flex;
   border: 1.5px solid var(--paper);
 }
 .switch button {
-  font: 700 12px/1 var(--mono);
+  font: 700 13px/1 var(--mono);
   letter-spacing: 0.04em;
   padding: 7px 11px;
   background: transparent;
@@ -59,7 +59,7 @@
   background: var(--ink-3);
 }
 .chip {
-  font: 400 12px/1 var(--mono);
+  font: 400 13px/1 var(--mono);
   padding: 7px 10px;
   background: transparent;
   color: var(--paper);
@@ -77,7 +77,7 @@
 
 /* ── page heads ─────────────────────────────────────────── */
 .page {
-  padding-block: clamp(30px, 3.4vw, 52px) clamp(48px, 5vw, 80px);
+  padding-block: clamp(20px, 2.2vw, 32px) clamp(48px, 5vw, 80px);
 }
 /* Stacked plates on a working page need air between them; ruled sections carry their own. */
 .page .shell > .panel + .panel {
@@ -86,10 +86,22 @@
 .sec--tight {
   padding-block: clamp(26px, 2.8vw, 44px);
 }
+/*
+ * A working page's head has to cost as little height as it can: what the page is for is one line,
+ * and the instrument underneath is the thing worth looking at. On a wide frame the title and its
+ * standfirst sit side by side, which halves the head and puts the ledger, the step or the record
+ * above the fold of a 1440×900 still.
+ */
 .pagehead {
   display: grid;
-  gap: var(--s4);
-  margin-bottom: var(--s6);
+  gap: var(--s3);
+  margin-bottom: var(--s5);
+}
+.pagehead .opener {
+  margin-bottom: 0;
+}
+.pagehead .dotrule {
+  margin-bottom: 0;
 }
 .pagehead .lede {
   font-size: 18px;
@@ -98,7 +110,7 @@
 }
 .crumb {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--ink);
   display: flex;
   align-items: center;
@@ -138,13 +150,13 @@
 }
 .lbl {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink);
   display: block;
 }
 .mono {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
   word-break: break-all;
 }
 
@@ -153,26 +165,37 @@
   margin: 0;
   display: grid;
   grid-template-columns: auto 1fr;
-  font-size: 14.5px;
+  font-size: 16px;
 }
 .kv dt {
   grid-column: 1;
   color: var(--ink);
-  font-size: 13px;
-  padding: 8px var(--s4) 8px 0;
+  font-size: 14.5px;
+  padding: 9px var(--s4) 9px 0;
   border-top: 1px solid var(--hair);
 }
 .kv dd {
   grid-column: 2;
   margin: 0;
   text-align: right;
-  padding: 8px 0;
+  padding: 9px 0;
   border-top: 1px solid var(--hair);
   overflow-wrap: anywhere;
 }
 .kv dd.num {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 14px;
+}
+/* The row the step exists to produce: a disclosure that checked out against the ledger. */
+.kv dt.hot,
+.kv dd.hot {
+  border-top-color: var(--ink);
+  border-top-width: 2px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.kv dd.hot {
+  font-size: 17px;
 }
 
 .grid {
@@ -200,13 +223,13 @@
 }
 .field > span {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--ink);
 }
 .field input,
 .field select,
 .field textarea {
-  font: 400 15.5px/1.4 var(--text);
+  font: 400 16.5px/1.4 var(--text);
   color: var(--ink-2);
   background: var(--white);
   border: 1.5px solid var(--hair);
@@ -217,7 +240,7 @@
 .field input.mono,
 .field textarea.mono {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
 }
 .field input:hover,
 .field select:hover {
@@ -292,30 +315,32 @@
   border: 1px solid var(--hair);
   border-left: 5px solid var(--ink);
   background: var(--paper-2);
-  padding: var(--s4);
+  padding: var(--s4) var(--s5);
   display: grid;
-  gap: 6px;
-  font-size: 15px;
+  gap: 8px;
+  font-size: 17px;
   line-height: 1.5;
 }
 .outcome--refused {
+  border-left-width: 8px;
   border-left-color: var(--pink);
   background: var(--white);
 }
 .outcome .code {
   display: inline-block;
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 19px;
   font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--ink);
   background: var(--pink-2);
-  padding: 3px 7px;
+  padding: 5px 10px;
   mix-blend-mode: multiply;
   justify-self: start;
 }
 .outcome .meta {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-2);
 }
 .outcome strong {
@@ -350,8 +375,8 @@
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--hair);
-  padding: 9px var(--s4);
-  font: 500 14px/1.32 var(--text);
+  padding: 10px var(--s4);
+  font: 500 15.5px/1.32 var(--text);
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -370,12 +395,12 @@
 }
 .stepnav .n {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink);
 }
 .stepnav .state {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12.5px;
 }
 .stepnav button[data-state='ok'] .n::after {
   content: ' ✓';
@@ -410,15 +435,15 @@
 }
 .stage-head .who {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink);
   border: 1.5px solid var(--ink);
   padding: 4px 8px;
   white-space: nowrap;
 }
 .stage-body {
-  font-size: 17px;
-  line-height: 1.58;
+  font-size: 18.5px;
+  line-height: 1.52;
   max-width: 62ch;
 }
 .stage-art {
@@ -443,12 +468,12 @@
   gap: 4px;
   padding-top: var(--s4);
   border-top: 1px solid var(--hair);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
 }
 .ledgernote b {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink);
   font-weight: 400;
 }
@@ -457,13 +482,13 @@
   right: 18px;
   top: 18px;
   z-index: 3;
-  font: 700 19px/1 var(--mono);
+  font: 700 26px/1 var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-2);
   background: var(--pink);
-  border: 2.5px solid var(--ink-2);
-  padding: 6px 12px 5px;
+  border: 3px solid var(--ink-2);
+  padding: 9px 16px 8px;
   transform: rotate(-7deg) scale(0.86);
   opacity: 0;
   mix-blend-mode: multiply;
@@ -471,9 +496,17 @@
     opacity 0.2s,
     transform 0.28s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
-.stage-card[data-outcome='refused'] .stamp {
+.stage-card[data-outcome='refused'] .stamp,
+.stage-card[data-outcome='ok'] .stamp--ok {
   opacity: 1;
   transform: rotate(-7deg) scale(1);
+}
+/* A success worth stamping prints in ink on paper, not in the refusal's pink. */
+.stamp--ok {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--ink);
+  mix-blend-mode: normal;
 }
 .shudder {
   animation: shudder 0.36s steps(1) 3;
@@ -503,7 +536,7 @@
 }
 .progress {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink-2);
 }
 
@@ -527,13 +560,13 @@
   font-family: var(--display);
   font-weight: 800;
   font-stretch: 82%;
-  font-size: 30px;
+  font-size: 40px;
   line-height: 1;
   color: var(--ink);
 }
 .counts span {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.4;
   display: block;
   margin-top: 6px;
@@ -554,7 +587,7 @@
 }
 .rec-head .id {
   font-family: var(--mono);
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--ink);
   font-weight: 700;
   overflow-wrap: anywhere;
@@ -572,7 +605,7 @@
 }
 .rec-note {
   margin: var(--s5);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.5;
 }
 .rec-note:first-of-type {
@@ -582,7 +615,7 @@
 .empty {
   border: 1.5px dashed var(--hair);
   padding: var(--s6);
-  font-size: 15.5px;
+  font-size: 16.5px;
   line-height: 1.55;
   background: transparent;
 }
@@ -597,7 +630,7 @@
   padding: var(--s6);
 }
 .firstrun p {
-  font-size: 15.5px;
+  font-size: 16.5px;
   line-height: 1.55;
   max-width: 62ch;
 }
@@ -620,8 +653,8 @@
 }
 .personabar a {
   flex: 1 1 auto;
-  padding: 11px var(--s4);
-  font-size: 14.5px;
+  padding: 12px var(--s4);
+  font-size: 16px;
   font-weight: 500;
   color: var(--ink-2);
   text-decoration: none;
@@ -662,8 +695,8 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 10px;
-  font-size: 14.5px;
+  gap: 11px;
+  font-size: 15.5px;
   line-height: 1.45;
 }
 .seelist li {
@@ -685,11 +718,11 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14.5px;
+  font-size: 15.5px;
 }
 .table th {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 400;
   color: var(--ink);
   text-align: left;
@@ -709,11 +742,98 @@
 }
 .table .num {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .tablewrap {
   overflow-x: auto;
   max-width: 100%;
+}
+
+/* ── what changed in Wave 2 ─────────────────────────────── */
+.changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s5);
+}
+.change {
+  background: var(--white);
+  border: 1px solid var(--hair);
+  border-left: 6px solid var(--ink);
+  padding: var(--s5);
+  display: grid;
+  gap: var(--s4);
+}
+.change[data-status='in-flight'] {
+  background: var(--paper-2);
+  border-left-color: var(--rule);
+  border-left-style: dashed;
+}
+.change-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+.change-n {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.change-head h3 {
+  flex: 1 1 22ch;
+  font-weight: 800;
+  font-stretch: 86%;
+  font-variation-settings: 'opsz' 28;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.018em;
+}
+.change-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s5);
+}
+.change-body p + p,
+.change-body .lbl + p {
+  margin-top: 6px;
+}
+.change-body p {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.judge {
+  margin: var(--s4) 0 0;
+  padding: var(--s3) 0 var(--s3) var(--s4);
+  border-left: 3px solid var(--pink);
+}
+.judge p {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.judge cite {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-style: normal;
+  color: var(--ink-2);
+}
+.change-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3) var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--hair);
+  font-size: 15px;
+}
+.change-links--none {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-2);
 }
 
 /* ── proof ──────────────────────────────────────────────── */
@@ -727,9 +847,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--s3) var(--s5);
   align-items: baseline;
-  padding: 11px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--hair);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 /* ── responsive ─────────────────────────────────────────── */
@@ -758,6 +878,10 @@
   }
   .grid--3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .change-body {
+    grid-template-columns: 1fr;
+    gap: var(--s4);
   }
 }
 @media (max-width: 860px) {

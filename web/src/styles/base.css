@@ -241,7 +241,7 @@ ol {
 
 /* ── sections ───────────────────────────────────────────── */
 .sec {
-  padding-block: clamp(48px, 5.6vw, 82px);
+  padding-block: clamp(40px, 4.4vw, 64px);
   scroll-margin-top: 70px;
 }
 .sec--blue {
@@ -280,9 +280,9 @@ ol {
 }
 .opener .dek {
   margin-top: var(--s4);
-  max-width: 56ch;
-  font-size: 18px;
-  line-height: 1.56;
+  max-width: 58ch;
+  font-size: 18.5px;
+  line-height: 1.5;
 }
 .opener--sm h1,
 .opener--sm h2 {
@@ -292,14 +292,39 @@ ol {
 .dotrule {
   border: 0;
   height: 12px;
-  margin: 0 0 var(--s7);
+  margin: 0 0 var(--s6);
   background: radial-gradient(circle at 50% 50%, var(--pink) 0 1.7px, transparent 2.2px) 0 0 / 6px 6px;
   -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 30%, transparent 88%);
   mask-image: linear-gradient(90deg, #000 0%, #000 30%, transparent 88%);
   mix-blend-mode: multiply;
 }
 .dotrule--tight {
-  margin-bottom: var(--s5);
+  margin-bottom: var(--s4);
+}
+/*
+ * On a wide frame the standfirst sits beside the title rather than under it. A section opener
+ * used to cost 300px of height before the first thing worth looking at; this halves that, which
+ * is the difference between a screenshot that shows the instrument and one that shows a heading.
+ */
+@media (min-width: 1100px) {
+  .sec .opener,
+  .pagehead .opener {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    column-gap: var(--s7);
+    align-items: end;
+  }
+  .sec .opener h1,
+  .sec .opener h2,
+  .pagehead .opener h1,
+  .pagehead .opener h2 {
+    justify-self: start;
+  }
+  .sec .opener .dek,
+  .pagehead .opener .dek {
+    margin-top: 0;
+    max-width: 58ch;
+  }
 }
 
 /* ── print plates ───────────────────────────────────────── */

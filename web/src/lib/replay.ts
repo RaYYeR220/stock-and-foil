@@ -19,6 +19,8 @@ export interface Fact {
   label: string;
   value: string;
   mono?: boolean;
+  /** The row a reader should land on first — set on the fact the step exists to produce. */
+  strong?: boolean;
 }
 
 export interface ReplayStep {
@@ -30,6 +32,11 @@ export interface ReplayStep {
   cta: string;
   /** Set when the step is meant to be refused; the contract must produce exactly this code. */
   refusal?: RefusalCode;
+  /**
+   * The word stamped on the card when this step succeeds. Only steps whose success is the point
+   * carry one — a refusal always stamps `Refused`, and most acceptances need no stamp at all.
+   */
+  seal?: string;
   /** What this step writes to the public ledger. */
   chain: string;
   /** What never leaves the parties. */
@@ -437,6 +444,7 @@ export const REPLAY_STEPS: readonly ReplayStep[] = [
     title: 'The record opens, and proves itself',
     body: 'The auditor combines the two shares, decrypts the record, and re-derives the invoice fingerprint from what came out. The pledge marker it recomputes has to equal the one the record was filed under — so a doctored disclosure fails on its own arithmetic.',
     cta: 'Open the record',
+    seal: 'Verified',
     chain: 'Nothing. Opening happens off-chain; the ledger already holds the trail that it was allowed.',
     kept: 'Everything, from everyone except this auditor on this record.',
     async run(w) {
@@ -452,8 +460,8 @@ export const REPLAY_STEPS: readonly ReplayStep[] = [
         { label: 'Shares combined', value: opened.indices.join(' and ') },
         { label: 'Recomputed pledge marker', value: shortHex(opened.nullifier), mono: true },
         { label: 'Filed on the ledger under', value: shortHex(opened.nullifier), mono: true },
-        { label: 'Record id recomputes', value: opened.recordIdMatches ? 'yes' : 'no' },
-        { label: 'Disclosure verified', value: opened.verified ? 'yes' : 'no' },
+        { label: 'Record id recomputes', value: opened.recordIdMatches ? 'yes' : 'no', strong: true },
+        { label: 'Disclosure verified', value: opened.verified ? 'yes' : 'no', strong: true },
       ];
     },
   },

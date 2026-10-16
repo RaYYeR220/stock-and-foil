@@ -127,13 +127,17 @@ export function Select({
 }
 
 /** Key/value rows, the registry's own record format. */
-export function KeyValues({ rows }: { rows: Array<{ label: string; value: ReactNode; mono?: boolean }> }) {
+export function KeyValues({
+  rows,
+}: {
+  rows: Array<{ label: string; value: ReactNode; mono?: boolean; strong?: boolean }>;
+}) {
   return (
     <dl className="kv">
       {rows.map((row, i) => (
         <div key={`${row.label}-${i}`} style={{ display: 'contents' }}>
-          <dt>{row.label}</dt>
-          <dd className={row.mono ? 'num' : undefined}>{row.value}</dd>
+          <dt className={row.strong ? 'hot' : undefined}>{row.label}</dt>
+          <dd className={`${row.mono ? 'num' : ''}${row.strong ? ' hot' : ''}`.trim() || undefined}>{row.value}</dd>
         </div>
       ))}
     </dl>
