@@ -43,6 +43,7 @@ import {
 import { NetworkBackend } from '@stockandfoil/sdk';
 import { connectDeployed } from './deploy.js';
 import {
+  anchorToJson,
   COMPACT_VERSION,
   EVIDENCE_DIR,
   explorerFor,
@@ -834,10 +835,10 @@ export async function scenario(args: Args): Promise<number> {
       finishedAt: new Date().toISOString(),
       explorer: deployment.explorer ?? explorerFor(network),
       deployment: {
-        deployTx: anchors.get(deployment.deployTx) ?? { identifier: deployment.deployTx },
+        deployTx: anchorToJson(anchors.get(deployment.deployTx) ?? { identifier: deployment.deployTx }),
         maintenanceTxs: deployment.maintenanceTxs.map((t) => ({
           circuit: t.circuit,
-          ...(anchors.get(t.txId) ?? { identifier: t.txId }),
+          ...anchorToJson(anchors.get(t.txId) ?? { identifier: t.txId }),
         })),
       },
       steps: records,

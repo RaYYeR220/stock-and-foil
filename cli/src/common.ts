@@ -220,6 +220,19 @@ export const pointFromJson = (p: PointJson): Point => ({ x: BigInt(p.x), y: BigI
 const NON_ASCII = /[\u0080-\uffff]/g;
 
 /**
+ * Renders a bigint as a decimal string, which is what every number in these files already is.
+ *
+ * `JSON.stringify` throws on a bigint rather than guessing, and the guess it would have to make
+ * is the one this file format already documents: field elements and SPECK amounts are decimal
+ * strings, because they do not survive a double. Making it explicit here means a value that
+ * reaches `writeJson` as a bigint is written correctly instead of taking the whole run down at
+ * the last line \u2014 which is exactly what it did once, after thirty-three transactions had
+ * already landed on chain.
+ */
+const bigintToDecimalString = (_key: string, value: unknown): unknown =>
+  typeof value === 'bigint' ? value.toString() : value;
+
+/**
  * Writes JSON as pure ASCII, escaping anything above U+007F as `\uXXXX`.
  *
  * The file is still UTF-8 and still decodes to the same characters, but a reader that guesses a
@@ -228,7 +241,7 @@ const NON_ASCII = /[\u0080-\uffff]/g;
  */
 export function writeJson(path: string, value: unknown): void {
   ensureDir(resolve(path, '..'));
-  const json = JSON.stringify(value, null, 2).replace(
+  const json = JSON.stringify(value, bigintToDecimalString, 2).replace(
     NON_ASCII,
     (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
   );
@@ -586,6 +599,30 @@ export function serializeLedgerView(view: PublicLedgerView): LedgerViewJson {
 
 // -------------------------------------------------------------------------------- evidence file
 
+/**
+ * A `TxAnchor` as it appears in an evidence file: the fee as a decimal string rather than a
+ * bigint, so the shape the reader sees is the shape the type promises.
+ */
+export interface TxAnchorJson {
+  identifier: string;
+  txHash?: string;
+  blockHeight?: number;
+  blockHash?: string;
+  blockTimestamp?: string;
+  feeSpeck?: string;
+  status?: string;
+}
+
+export const anchorToJson = (anchor: TxAnchor): TxAnchorJson => ({
+  identifier: anchor.identifier,
+  txHash: anchor.txHash,
+  blockHeight: anchor.blockHeight,
+  blockHash: anchor.blockHash,
+  blockTimestamp: anchor.blockTimestamp,
+  feeSpeck: anchor.feeSpeck?.toString(),
+  status: anchor.status,
+});
+
 export interface StepRecord {
   id: string;
   label: string;
@@ -658,8 +695,8 @@ export interface EvidenceFile {
   explorer?: ExplorerTemplates;
   /** The seven transactions that put this contract on chain, resolved to explorer anchors. */
   deployment: {
-    deployTx: TxAnchor;
-    maintenanceTxs: Array<TxAnchor & { circuit: string }>;
+    deployTx: TxAnchorJson;
+    maintenanceTxs: Array<TxAnchorJson & { circuit: string }>;
   };
   steps: StepRecord[];
   summary: {
