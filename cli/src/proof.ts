@@ -360,16 +360,33 @@ function federationSection(path: string): string {
   const f = readJson<FederationEvidenceJson>(path);
   const explorer = f.explorer;
   const here = path.slice(path.lastIndexOf('evidence')).replace(/\\/g, '/');
+  // A truncated address is not a name. Resolve each answer back to the registry it came from,
+  // so a reader can tell which book said what without cross-referencing hex.
+  const nameOf = (address: string): string | undefined =>
+    f.registries.find((r) => r.contractAddress === address || r.contractAddress.startsWith(address))
+      ?.name;
+  const roleOf = (address: string): string | undefined =>
+    f.registries.find((r) => r.contractAddress === address || r.contractAddress.startsWith(address))
+      ?.role;
+  const label = (address: string): string => {
+    const name = nameOf(address);
+    return name === undefined
+      ? `an unlisted registry (\`${address.slice(0, 16)}...\`)`
+      : `**${roleOf(address)}** ${name} (\`${address.slice(0, 16)}...\`)`;
+  };
+
   const verdict = (v: FederationEvidenceJson['verdicts'][number]): string[] => {
-    const rows = [v.here, ...v.peers].map(
-      (r) =>
-        `| \`${r.contractAddress.slice(0, 16)}...\` | ${r.unreachable ? '**unreachable**' : r.encumbrance} |`,
-    );
+    const rows = [
+      `| ${label(v.here.contractAddress)} | ${v.here.unreachable ? '**unreachable**' : v.here.encumbrance} | the lender's own registry |`,
+      ...v.peers.map(
+        (r) => `| ${label(r.contractAddress)} | ${r.unreachable ? '**unreachable**' : r.encumbrance} | a declared peer |`,
+      ),
+    ];
     return [
       `**${v.subject}** — marker \`${v.nullifier}\``,
       '',
-      '| Registry | Answer |',
-      '|---|---|',
+      '| Registry | Answer | |',
+      '|---|---|---|',
       ...rows,
       '',
       `Verdict: **${v.encumberedAnywhere ? 'ENCUMBERED somewhere' : 'FREE everywhere asked'}**, ` +
