@@ -239,7 +239,8 @@ describe('refusals, all of which happen before any DUST moves', () => {
     const wallet = fakeSigner({ fee: 500n, dust: 100n });
     const harness = build({ signer: wallet.signer });
     const error = await expectRefused('SPONSOR_OUT_OF_DUST', harness);
-    expect(error.message).toContain('100 SPECK');
+    // The caller is told it cannot be served, not what the sponsor is holding; see privacy.test.ts.
+    expect(error.message).toBe('this sponsor cannot cover the fee right now.');
     expect(wallet.paid).toHaveLength(0);
   });
 
@@ -270,7 +271,9 @@ describe('refusals, all of which happen before any DUST moves', () => {
     });
     const error = await rejection(harness.service.sponsor(request(), caller));
     expect(error.code).toBe('SUBMIT_FAILED');
-    expect(error.message).toContain('exhaust the block limits');
+    // The node's own text can quote the transaction back, so it stops at the service.
+    expect(error.message).not.toContain('exhaust the block limits');
+    expect(error.message).toContain('may still have reached the chain');
     expect(harness.service.stats.spentSpeck).toBe(300n);
     expect(harness.service.stats.reservedSpeck).toBe(0n);
     expect(harness.logs.at(-1)).toMatchObject({ outcome: 'submit-failed', feeSpeck: '300' });

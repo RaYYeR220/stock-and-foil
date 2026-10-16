@@ -81,7 +81,9 @@ an open faucet; neither default is ours to pick.
 | `SPONSOR_MAX_ACTIONS` | `1` | Contract actions one transaction may carry |
 | `SPONSOR_API_KEYS` | none (open) | `name:key,name:key`. When set, a request must present one. |
 | `SPONSOR_ALLOWED_ORIGINS` | none | CORS origins, or `*` for a public demo |
-| `SPONSOR_TRUST_PROXY` | off | Trust `X-Forwarded-For` for the client address. Only behind a proxy that overwrites it. |
+| `SPONSOR_TRUSTED_PROXIES` | none | Socket addresses whose `X-Forwarded-For` is believed. Unset means the header is ignored. |
+| `SPONSOR_TRUST_PROXY_HOPS` | `1` | How many hops our own proxying appends, counted from the right |
+| `SPONSOR_DEBUG` | off | Attach upstream error text to the ledger. Never to an HTTP response. |
 | `SPONSOR_PORT` / `SPONSOR_HOST` | `7391` / `127.0.0.1` | Where to listen |
 | `SPONSOR_LOG` | `.secrets/sponsor-ledger.jsonl` | Append-only ledger of every decision |
 | `BLOCKFROST_PROJECT_ID_{PREPROD,MAINNET}` | — | Required on those two networks |
@@ -128,10 +130,45 @@ on: `CIRCUIT_NOT_ALLOWED`, `CONTRACT_NOT_ALLOWED`, `CIRCUIT_MISMATCH`, `NOT_A_CO
   wallet while our books said nothing had moved. A failure during fee *balancing*, which moves
   nothing, is not charged.
 - **The rate-limit bucket is not client-controlled.** It is the name behind the presented API
-  key, or the socket's remote address — never the `caller` field, which anyone can rotate.
-  `X-Forwarded-For` is ignored unless `SPONSOR_TRUST_PROXY=1`.
+  key, or the socket's remote address. Never the `caller` field, which anyone can rotate.
+  `X-Forwarded-For` is ignored entirely unless the request arrived from an address listed in
+  `SPONSOR_TRUSTED_PROXIES`, and even then only the hop our own proxy appended is read — the
+  *last* entry, or `SPONSOR_TRUST_PROXY_HOPS` from the right. The leftmost entries of that
+  header are whatever the client sent, so taking the first entry would hand every caller a
+  fresh bucket per request; `sponsor/test/server.test.ts` asserts that five different spoofed
+  headers all land in the same bucket.
 - **Everything is logged, paid or refused**, with the running total and the budget left, to
   stdout and to an append-only JSONL ledger.
+
+## What it logs, and what it never logs
+
+The whole reason this exists is that a user with no DUST should be able to transact without
+having to expose themselves. A sponsor that leaked what it was asked to pay for would be an
+own-goal, so the boundary is written down rather than left to judgement. The same list is in the
+header of `sponsor/src/service.ts`, and `sponsor/test/privacy.test.ts` holds it shut.
+
+**Logged**, to stdout and to the JSONL ledger: the timestamp; the rate-limit bucket (an API key
+*name* or a client address, never the key itself); the client's own label, stripped to printable
+ASCII and bounded, so it cannot forge a log line; the contract address called; the entry-point
+names; the fee in SPECK; the transaction id, which is public on chain the moment it lands; the
+running total, the budget left and the sponsor's remaining balance.
+
+**Never logged, and never echoed to the caller**: the transaction bytes; anything decoded out of
+them beyond the contract address and the entry-point names — no recipient addresses, no coin or
+UTXO identifiers, no amounts, no transcripts; and no raw error string from the proof server, the
+wallet or the node, because those quote transaction detail in their messages. A caller gets a
+stable code and a short, fixed sentence. The upstream text is attached to the *log entry* only
+when `SPONSOR_DEBUG=1`, and never to an HTTP response at all.
+
+Two things the caller is also not told: how much DUST the sponsor holds, and how much budget is
+left. Both are refused as "cannot cover the fee right now" / "no budget left to commit right
+now", because publishing either tells a prospective drainer exactly how close they are. The
+numbers go to the operator's ledger. The per-transaction fee cap *is* named in a `FEE_TOO_LARGE`
+refusal, because that is published policy and `GET /v1/policy` serves it anyway.
+
+No credential can reach a log line. The service never sees a mnemonic, a seed or a Blockfrost
+token — the wallet is injected as a `SponsorSigner` — the API key map is read but never printed,
+and endpoints are printed through the SDK's `redactEndpoint`, which strips `project_id`.
 
 ## Using it from a client
 

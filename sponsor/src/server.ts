@@ -26,33 +26,56 @@ export interface ServerOptions {
   /** Origins allowed to call this from a browser. `['*']` for a public demo sponsor. */
   allowedOrigins?: readonly string[];
   /**
-   * Trust `X-Forwarded-For` for the client address. Off by default, and it must stay off unless
-   * this really is behind a proxy that overwrites the header: a client that can set it chooses
-   * its own rate-limit bucket.
+   * Socket addresses whose `X-Forwarded-For` this service believes.
+   *
+   * Empty — the default — means the header is ignored entirely and the bucket is always the
+   * socket address. Only the reverse proxy's own address belongs here.
    */
-  trustProxy?: boolean;
+  trustedProxies?: readonly string[];
+  /**
+   * How many hops our own infrastructure appends to `X-Forwarded-For`, counted from the right.
+   * `1` (the default) means the last entry is the one our proxy wrote.
+   */
+  trustProxyHops?: number;
+}
+
+export interface BucketOptions {
+  /** Name behind a presented API key, when keys are configured. */
+  apiKeyName?: string;
+  trustedProxies?: readonly string[];
+  trustProxyHops?: number;
 }
 
 /**
  * The rate-limit bucket for a request.
  *
- * Never the `caller` field of the body. That is client-controlled, so bucketing on it means a
- * caller can rotate through unlimited buckets and the limit stops existing. With API keys
- * configured the bucket is the name behind the presented key; without them it is the socket's
- * remote address, which a client cannot choose (and `X-Forwarded-For` only when a proxy in
- * front of us is explicitly trusted).
+ * Two things a caller can set are deliberately not used.
+ *
+ * The body's `caller` field, because a client can rotate it forever and the limit would stop
+ * existing. And the *left* of `X-Forwarded-For`, which is the same trap wearing a header: a
+ * client can send `X-Forwarded-For: <anything>` and a proxy appends to it, so the leftmost
+ * entries are attacker-chosen. Only the rightmost entries were written by infrastructure we
+ * control, so the hop our own proxy appended is taken by counting from the right — and only
+ * when the request actually arrived from a proxy we named.
+ *
+ * With API keys configured none of that matters: the bucket is the name behind the key.
  */
-export function rateLimitBucket(
-  request: IncomingMessage,
-  options: { apiKeyName?: string; trustProxy?: boolean },
-): string {
+export function rateLimitBucket(request: IncomingMessage, options: BucketOptions): string {
   if (options.apiKeyName !== undefined) return `key:${options.apiKeyName}`;
-  if (options.trustProxy === true) {
-    const forwarded = request.headers['x-forwarded-for'];
-    const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim();
-    if (first) return `ip:${first}`;
-  }
-  return `ip:${request.socket.remoteAddress ?? 'unknown'}`;
+
+  const remote = request.socket.remoteAddress ?? 'unknown';
+  const trusted = options.trustedProxies ?? [];
+  if (trusted.length === 0 || !trusted.includes(remote)) return `ip:${remote}`;
+
+  const raw = request.headers['x-forwarded-for'];
+  const chain = (Array.isArray(raw) ? raw.join(',') : (raw ?? ''))
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part !== '');
+  const hops = Math.max(1, Math.floor(options.trustProxyHops ?? 1));
+  // Counting from the right: hops=1 is the last entry, the one the trusted proxy appended.
+  const hop = chain[chain.length - hops];
+  return `ip:${hop ?? remote}`;
 }
 
 const json = (response: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void => {
@@ -90,6 +113,13 @@ async function readBody(request: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+/** Client-supplied free text that will be written to a log: printable ASCII, bounded. */
+export const sanitizeLabel = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value.replace(/[^\x20-\x7e]/g, ' ').trim().slice(0, 64);
+  return cleaned === '' ? undefined : cleaned;
+};
+
 const statusFor = (code: SponsorErrorBody['code']): number => {
   switch (code) {
     case 'RATE_LIMITED':
@@ -109,7 +139,8 @@ export function createSponsorServer(options: ServerOptions): Server {
   const { service } = options;
   const apiKeys = options.apiKeys ?? new Map<string, string>();
   const allowedOrigins = options.allowedOrigins ?? [];
-  const trustProxy = options.trustProxy ?? false;
+  const trustedProxies = options.trustedProxies ?? [];
+  const trustProxyHops = options.trustProxyHops ?? 1;
 
   return createServer((request, response) => {
     void handle(request, response).catch((error: unknown) => {
@@ -206,7 +237,7 @@ export function createSponsorServer(options: ServerOptions): Server {
         return;
       }
     }
-    const callerId = rateLimitBucket(request, { apiKeyName, trustProxy });
+    const callerId = rateLimitBucket(request, { apiKeyName, trustedProxies, trustProxyHops });
 
     let body: SponsorRequest;
     try {
@@ -227,8 +258,9 @@ export function createSponsorServer(options: ServerOptions): Server {
       return;
     }
 
-    // `body.caller` is a label for the log and nothing else. It does not reach the bucket.
-    const label = typeof body.caller === 'string' && body.caller !== '' ? body.caller.slice(0, 64) : undefined;
+    // `body.caller` is a label for the log and nothing else. It does not reach the bucket, and
+    // it is stripped to printable ASCII first so a caller cannot forge log lines with newlines.
+    const label = sanitizeLabel(body.caller);
 
     try {
       const result = await service.sponsor(body, { id: callerId, label });

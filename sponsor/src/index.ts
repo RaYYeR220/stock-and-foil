@@ -20,4 +20,10 @@ export {
   type SponsorServiceOptions,
   type SponsorSigner,
 } from './service.js';
-export { createSponsorServer, rateLimitBucket, type ServerOptions } from './server.js';
+export {
+  createSponsorServer,
+  rateLimitBucket,
+  sanitizeLabel,
+  type BucketOptions,
+  type ServerOptions,
+} from './server.js';

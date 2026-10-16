@@ -15,6 +15,32 @@
 //
 // Everything that is paid for is logged, including the running total, because a service that
 // spends money and does not say what it spent is not a service anyone should run.
+//
+// ---------------------------------------------------------------------------------------------
+// What this service logs, and what it never logs
+//
+// The whole reason it exists is that a user with no DUST should be able to transact without
+// having to expose themselves. A sponsor that leaked what it was asked to pay for would be an
+// own-goal, so the boundary is written down rather than left to judgement.
+//
+// Logged, to stdout and to the JSONL ledger: the timestamp; the rate-limit bucket (an API key
+// *name* or a client address, never the key itself); the client's own label, stripped to
+// printable ASCII; the contract address called; the entry-point names; the fee in SPECK; the
+// transaction id, which is public on chain the moment it lands; the running total, the budget
+// left and the sponsor's remaining balance.
+//
+// Never logged and never echoed: the transaction bytes; anything decoded out of them beyond the
+// contract address and the entry-point names — no recipient addresses, no coin or UTXO
+// identifiers, no amounts, no transcripts; and no raw error string from the proof server, the
+// wallet or the node, because those carry transaction detail in their messages. A caller gets a
+// stable code and a short, fixed reason. The upstream text is attached to the log entry only
+// when SPONSOR_DEBUG is on, which it is not by default.
+//
+// Credentials cannot reach a log line at all: this module never sees a mnemonic, a seed or a
+// Blockfrost token (the wallet is injected as a `SponsorSigner`), and the only API key material
+// in the process lives in the server's key map, which is read but never printed. Endpoints are
+// printed through the SDK's `redactEndpoint`.
+// ---------------------------------------------------------------------------------------------
 import {
   describeTransaction,
   deserializeSponsoredTx,
@@ -54,7 +80,15 @@ export interface SponsorLogEntry {
    */
   outcome: 'paid' | 'refused' | 'submit-failed';
   code?: SponsorRefusalCode;
+  /** A short, fixed explanation. Safe to show a caller, and the caller is shown exactly this. */
   reason?: string;
+  /**
+   * Upstream error text, attached only when the service is built with `debug: true`.
+   *
+   * A proof server or node error can quote transaction detail, so it is kept out of the ledger
+   * by default and out of the HTTP response always.
+   */
+  detail?: string;
   feeSpeck?: string;
   txId?: string;
   /** Client-supplied tag, for reading the log. Never used to decide anything. */
@@ -83,6 +117,13 @@ export interface SponsorServiceOptions {
    */
   deserialize?: (txHex: string) => FinalizedTransaction;
   describe?: (tx: FinalizedTransaction) => TransactionDescription;
+  /**
+   * Attach upstream error text to log entries. Off by default.
+   *
+   * Even on, it never reaches the HTTP response: it is for an operator reading their own
+   * ledger while debugging, not for the caller.
+   */
+  debug?: boolean;
 }
 
 export interface CallerIdentity {
@@ -106,6 +147,7 @@ export class SponsorService {
   private readonly now: () => number;
   private readonly deserialize: (txHex: string) => FinalizedTransaction;
   private readonly describe: (tx: FinalizedTransaction) => TransactionDescription;
+  private readonly debug: boolean;
   private spentSpeck = 0n;
   /**
    * DUST committed by requests that are still in flight.
@@ -132,6 +174,7 @@ export class SponsorService {
     this.onLog = options.onLog ?? (() => {});
     this.deserialize = options.deserialize ?? deserializeSponsoredTx;
     this.describe = options.describe ?? describeTransaction;
+    this.debug = options.debug ?? false;
   }
 
   get stats(): {
@@ -185,9 +228,24 @@ export class SponsorService {
         ...extra,
       });
     };
-    const refuse = (code: SponsorRefusalCode, reason: string, circuits: string[] = [], contractAddress?: string): never => {
+    /**
+     * Refuses, logs, and throws. `reason` is the whole of what the caller is told; `detail`
+     * never leaves this process unless the operator turned debug on, and even then only into
+     * their own ledger.
+     */
+    const refuse = (
+      code: SponsorRefusalCode,
+      reason: string,
+      extra: { circuits?: string[]; contractAddress?: string; detail?: unknown } = {},
+    ): never => {
       this.refusedCount += 1;
-      log('refused', { code, reason, circuits, contractAddress });
+      log('refused', {
+        code,
+        reason,
+        circuits: extra.circuits ?? [],
+        contractAddress: extra.contractAddress,
+        detail: this.debug ? upstreamText(extra.detail) : undefined,
+      });
       throw new SponsorError(reason, code);
     };
 
@@ -221,7 +279,14 @@ export class SponsorService {
         return this.deserialize(request.tx);
       } catch (error) {
         this.limiter.refund(caller.id);
-        return refuse('UNREADABLE_TRANSACTION', error instanceof Error ? error.message : String(error));
+        // Fixed text. The deserializer's own message is ours and harmless, but anything it
+        // wraps is not, and telling the two apart at this point is not worth the risk.
+        return refuse(
+          'UNREADABLE_TRANSACTION',
+          'the transaction did not deserialize as a signed, proven, bound transaction. Balance ' +
+            "it with tokenKindsToBalance ['shielded','unshielded'], sign it, then finalize it.",
+          { detail: error },
+        );
       }
     })();
 
@@ -230,7 +295,10 @@ export class SponsorService {
     const decision = checkTransaction(this.policy, description, request.circuit);
     if (!decision.allowed) {
       this.limiter.refund(caller.id);
-      refuse(decision.code!, decision.reason!, decision.circuits, decision.contractAddress);
+      refuse(decision.code!, decision.reason!, {
+        circuits: decision.circuits,
+        contractAddress: decision.contractAddress,
+      });
     }
 
     // Reserve, synchronously, the most this request could cost. Everything from here to the
@@ -239,14 +307,16 @@ export class SponsorService {
     const reservation = this.policy.maxFeeSpeck;
     if (this.spentSpeck + this.reservedSpeck + reservation > this.policy.budgetSpeck) {
       this.limiter.refund(caller.id);
-      refuse(
-        'SPONSOR_OUT_OF_DUST',
-        `this sponsor's budget is ${this.policy.budgetSpeck} SPECK, of which ${this.spentSpeck} is ` +
-          `spent and ${this.reservedSpeck} is reserved by requests in flight; there is no room to ` +
-          `commit a further ${reservation}.`,
-        decision.circuits,
-        decision.contractAddress,
-      );
+      // The caller is told it cannot be served, not how much is left: the sponsor's remaining
+      // budget is operational detail, and publishing it tells a prospective drainer exactly how
+      // close they are. The numbers go to the ledger instead.
+      refuse('SPONSOR_OUT_OF_DUST', 'this sponsor has no budget left to commit right now.', {
+        circuits: decision.circuits,
+        contractAddress: decision.contractAddress,
+        detail:
+          `budget ${this.policy.budgetSpeck}, spent ${this.spentSpeck}, reserved ` +
+          `${this.reservedSpeck}, wanted ${reservation}`,
+      });
     }
     this.reservedSpeck += reservation;
 
@@ -267,12 +337,13 @@ export class SponsorService {
     try {
       const feeSpeck: bigint = await this.signer.estimateFee(tx).catch((error: unknown) => {
         this.limiter.refund(caller.id);
-        return refuse(
-          'UNREADABLE_TRANSACTION',
-          `the transaction could not be priced: ${(error as Error).message}`,
-          decision.circuits,
-          decision.contractAddress,
-        );
+        // The proof server and the node quote transaction detail in their error messages, so
+        // the upstream text stops here.
+        return refuse('UNREADABLE_TRANSACTION', 'the transaction could not be priced.', {
+          circuits: decision.circuits,
+          contractAddress: decision.contractAddress,
+          detail: error,
+        });
       });
 
       // The reservation already covers the budget; this catches a single transaction that costs
@@ -280,19 +351,29 @@ export class SponsorService {
       const budget = checkFee(this.policy, feeSpeck, this.spentSpeck + this.reservedSpeck - reservation);
       if (!budget.allowed) {
         this.limiter.refund(caller.id);
-        refuse(budget.code!, budget.reason!, decision.circuits, decision.contractAddress);
+        // FEE_TOO_LARGE names the fee and the cap, which are this sponsor's published policy
+        // (GET /v1/policy) and not the caller's secret. A budget refusal says only that.
+        const caller_safe =
+          budget.code === 'FEE_TOO_LARGE'
+            ? budget.reason!
+            : 'this sponsor has no budget left to commit right now.';
+        refuse(budget.code!, caller_safe, {
+          circuits: decision.circuits,
+          contractAddress: decision.contractAddress,
+          detail: budget.reason,
+        });
       }
 
       const held = await this.signer.dustSpeck();
       if (held < feeSpeck) {
         this.limiter.refund(caller.id);
-        refuse(
-          'SPONSOR_OUT_OF_DUST',
-          `this sponsor holds ${held} SPECK and the transaction costs ${feeSpeck}. Top it up, or ` +
-            'wait for its registered NIGHT to generate more DUST.',
-          decision.circuits,
-          decision.contractAddress,
-        );
+        // How much DUST the sponsor is holding is its own business; the operator sees it in the
+        // ledger, the caller sees only that it cannot be served.
+        refuse('SPONSOR_OUT_OF_DUST', 'this sponsor cannot cover the fee right now.', {
+          circuits: decision.circuits,
+          contractAddress: decision.contractAddress,
+          detail: `holds ${held} SPECK, transaction costs ${feeSpeck}`,
+        });
       }
 
       // Balancing builds a transaction and moves nothing, so a failure there is still free.
@@ -301,12 +382,11 @@ export class SponsorService {
       // us a little budget; under-counting would let a flood of failing submissions drain the
       // wallet while the ledger said nothing had been spent.
       const sponsored = await this.signer.addDustFees(tx).catch((error: unknown) =>
-        refuse(
-          'SUBMIT_FAILED',
-          `the sponsored transaction could not be balanced for fees: ${(error as Error).message}`,
-          decision.circuits,
-          decision.contractAddress,
-        ),
+        refuse('SUBMIT_FAILED', 'the sponsored transaction could not be balanced for fees.', {
+          circuits: decision.circuits,
+          contractAddress: decision.contractAddress,
+          detail: error,
+        }),
       );
 
       let txId: string;
@@ -315,15 +395,18 @@ export class SponsorService {
       } catch (error) {
         commit(feeSpeck);
         this.refusedCount += 1;
+        // The node's rejection text can quote the transaction, so the caller gets the stable
+        // sentence and the operator's ledger gets the rest.
         const reason =
-          `the sponsored transaction was rejected on submission: ${(error as Error).message}. ` +
-          `Counting ${feeSpeck} SPECK against the budget, because the node may have taken it.`;
+          'the sponsored transaction was rejected on submission. It may still have reached the ' +
+          'chain, so the fee is counted as spent; check the transaction before retrying.';
         log('submit-failed', {
           code: 'SUBMIT_FAILED',
           reason,
           circuits: decision.circuits,
           contractAddress: decision.contractAddress,
           feeSpeck: feeSpeck.toString(),
+          detail: this.debug ? upstreamText(error) : undefined,
         });
         throw new SponsorError(reason, 'SUBMIT_FAILED');
       }
@@ -357,6 +440,18 @@ export class SponsorService {
   pruneRateLimiter(): void {
     this.limiter.prune();
   }
+}
+
+/**
+ * Upstream error text, bounded and flattened onto one line.
+ *
+ * Only ever reaches a log entry, and only when debug is on. Bounded because a wallet error can
+ * carry a serialized transaction in its message, and flattened so it cannot forge log lines.
+ */
+function upstreamText(error: unknown): string | undefined {
+  if (error === undefined) return undefined;
+  const text = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return text.replace(/\s+/g, ' ').slice(0, 500);
 }
 
 export { serializeSponsoredTx };

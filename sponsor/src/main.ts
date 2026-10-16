@@ -148,14 +148,19 @@ async function main(): Promise<void> {
     );
   };
 
-  const service = new SponsorService({ policy, signer, onLog });
+  // SPONSOR_DEBUG attaches upstream error text to the ledger. It never reaches an HTTP
+  // response, and it is off unless asked for, because a wallet or node error can quote the
+  // user's transaction back.
+  const service = new SponsorService({ policy, signer, onLog, debug: env.SPONSOR_DEBUG === '1' });
   const server = createSponsorServer({
     service,
     apiKeys,
     allowedOrigins: csv(env.SPONSOR_ALLOWED_ORIGINS),
-    // Only when something in front of us overwrites the header; otherwise a client would be
-    // choosing its own rate-limit bucket.
-    trustProxy: env.SPONSOR_TRUST_PROXY === '1',
+    // X-Forwarded-For is believed only for requests that arrive from one of these addresses,
+    // and only the hop our own proxy appended (counting from the right) is read. Unset means
+    // the header is ignored and the bucket is the socket address.
+    trustedProxies: csv(env.SPONSOR_TRUSTED_PROXIES),
+    trustProxyHops: Number(env.SPONSOR_TRUST_PROXY_HOPS ?? 1),
   });
 
   const pruner = setInterval(() => service.pruneRateLimiter(), policy.rateLimit.windowMs);
