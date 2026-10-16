@@ -9,6 +9,8 @@ import { KeyValues, SectionOpener, useTitle } from '../components/ui.js';
 import {
   DEPLOYMENTS,
   EVIDENCE,
+  FEDERATION,
+  SPONSORSHIP,
   addressUrl,
   hasProof,
   isLocal,
@@ -16,6 +18,7 @@ import {
   txUrl,
   when,
   type Deployment,
+  type FederationVerdict,
 } from '../lib/evidence.js';
 import { ms, shortHex } from '../lib/format.js';
 
@@ -23,6 +26,20 @@ const NETWORK_LABEL: Record<string, string> = {
   undeployed: 'local devnet',
   preview: 'preview',
   preprod: 'preprod',
+};
+
+/**
+ * One network now holds two registries, so a deployment is named by the cross-registry run that
+ * used it rather than by its network alone. A deployment no run has touched keeps its own name.
+ */
+const registryOf = (address: string) => FEDERATION?.registries.find((r) => r.contractAddress === address);
+
+const deploymentTitle = (deployment: Deployment): string => {
+  const registry = registryOf(deployment.contractAddress);
+  const where = NETWORK_LABEL[deployment.network] ?? deployment.network;
+  return registry
+    ? `Registry ${registry.role} — ${registry.name}, on ${where}`
+    : `Deployed on the ${where}`;
 };
 
 /**
@@ -59,8 +76,46 @@ function TxLink({
   );
 }
 
+/**
+ * One cross-registry answer: who was asked, what each said, and what the lender concludes. The
+ * conclusion is the file's own, not this page's arithmetic — and an incomplete answer says so
+ * rather than being rounded to "free".
+ */
+function Verdict({ verdict }: { verdict: FederationVerdict }) {
+  const rows = [
+    { ...verdict.here, role: 'the lender’s own registry' },
+    ...verdict.peers.map((peer) => ({ ...peer, role: 'a declared peer' })),
+  ];
+  return (
+    <div className="verdict-block">
+      <p className="verdict-subject">{verdict.subject}</p>
+      <p className="mono">marker {verdict.nullifier}</p>
+      <ol className="steps-list">
+        {rows.map((row) => (
+          <li key={row.contractAddress}>
+            <span>
+              <strong>{registryOf(row.contractAddress)?.name ?? shortHex(row.contractAddress, 10, 6)}</strong>
+              <span className="mono"> · {row.role}</span>
+            </span>
+            <span className="mono">{row.unreachable ? 'did not answer' : row.encumbrance}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="verdict-sum">
+        <strong>{verdict.encumberedAnywhere ? 'Encumbered somewhere.' : 'Free everywhere asked.'}</strong>{' '}
+        {verdict.complete
+          ? 'Every registry answered.'
+          : 'One registry did not answer, so this is what was learned, not what is true everywhere.'}
+      </p>
+    </div>
+  );
+}
+
 export function Proof() {
   useTitle('Proof');
+  // Local aliases: an imported binding is not narrowed inside the callbacks below.
+  const sponsorship = SPONSORSHIP;
+  const federation = FEDERATION;
   return (
     <>
       <a className="skip" href="#main">
@@ -111,9 +166,17 @@ export function Proof() {
           {DEPLOYMENTS.map((deployment) => {
             const local = isLocal(deployment.network);
             const address = addressUrl(deployment.network, deployment.contractAddress, deployment);
+            const registry = registryOf(deployment.contractAddress);
             return (
-              <section className="panel" key={deployment.network}>
-                <h3>Deployed on the {NETWORK_LABEL[deployment.network] ?? deployment.network}</h3>
+              <section className="panel" key={deployment.scope}>
+                <h3>{deploymentTitle(deployment)}</h3>
+                {registry ? (
+                  <p>
+                    Its own key ceremony: a different operator, a different disclosure key and a different three
+                    keyholders from the other registry. It runs the same sixteen-circuit build from the same compiled
+                    artifacts — a rival running the same software, not a second copy of our book.
+                  </p>
+                ) : null}
                 {local ? (
                   <p>
                     A devnet running on the machine that built this site. It proves the contract compiles, deploys and
@@ -147,6 +210,21 @@ export function Proof() {
                       mono: true,
                     },
                     { label: 'Deployed at', value: when(deployment.deployedAt) },
+                    ...(registry?.operatorId
+                      ? [{ label: 'Operator id', value: shortHex(registry.operatorId, 12, 6), mono: true }]
+                      : []),
+                    ...(registry
+                      ? [
+                          {
+                            label: 'Peers declared on chain',
+                            value:
+                              FEDERATION?.registries
+                                .filter((other) => other.contractAddress !== registry.contractAddress)
+                                .map((other) => `${other.name} (${shortHex(other.contractAddress, 8, 4)})`)
+                                .join(', ') || 'none',
+                          },
+                        ]
+                      : []),
                     {
                       label: 'Verifier keys added afterwards',
                       value:
@@ -294,6 +372,138 @@ export function Proof() {
             );
           })}
 
+          {sponsorship && sponsorship.steps.length > 0 ? (
+            <section className="panel">
+              <h3>A party holding zero DUST transacted anyway</h3>
+              <p className="mono">{sponsorship.file}</p>
+              <p>{sponsorship.claim}</p>
+              <KeyValues
+                rows={[
+                  { label: 'Network', value: NETWORK_LABEL[sponsorship.network] ?? sponsorship.network },
+                  { label: 'Acting wallet', value: sponsorship.wallet.address ?? '—', mono: true },
+                  { label: 'Its DUST before', value: `${sponsorship.wallet.dustBefore ?? '—'} SPECK`, strong: true },
+                  { label: 'Its DUST after', value: `${sponsorship.wallet.dustAfter ?? '—'} SPECK`, strong: true },
+                  {
+                    label: 'Its NIGHT',
+                    value: `${sponsorship.wallet.nightStar ?? '—'} STAR · ${sponsorship.wallet.registered ?? 0} UTXO(s) registered for DUST generation`,
+                  },
+                  { label: 'Paid by the sponsor', value: `${sponsorship.totalFeeSpeck ?? '—'} SPECK` },
+                  { label: 'Run at', value: when(sponsorship.at) },
+                ]}
+              />
+              <p className="lbl">What it submitted</p>
+              <ol className="steps-list">
+                {sponsorship.steps.map((step, i) => (
+                  <li key={step.txId ?? i}>
+                    <span>
+                      <strong>{step.label}</strong>
+                      {step.circuit ? <span className="mono"> · {step.circuit}</span> : null}
+                    </span>
+                    <span className="mono">
+                      <TxLink
+                        network={sponsorship.network}
+                        txId={step.txId}
+                        txHash={step.txHash}
+                        blockHeight={step.blockHeight}
+                      />
+                      {step.blockHeight ? ` · block ${step.blockHeight}` : ''}
+                      {step.feeSpeck ? ` · ${step.feeSpeck} SPECK` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+
+          {federation ? (
+            <section className="panel">
+              <h3>Two registries, and the question a lender puts to both</h3>
+              <p className="mono">{federation.file}</p>
+              <p>{federation.claim}</p>
+
+              <p className="lbl">The registries</p>
+              <ol className="steps-list">
+                {federation.registries.map((registry) => {
+                  const url = addressUrl(federation.network, registry.contractAddress);
+                  return (
+                    <li key={registry.contractAddress}>
+                      <span>
+                        <strong>
+                          {registry.role} · {registry.name}
+                        </strong>
+                        {registry.operatorId ? (
+                          <span className="mono"> · operator {shortHex(registry.operatorId, 10, 4)}</span>
+                        ) : null}
+                      </span>
+                      <span className="mono">
+                        {url ? (
+                          <a href={url}>{shortHex(registry.contractAddress, 12, 8)}</a>
+                        ) : (
+                          shortHex(registry.contractAddress, 12, 8)
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              {federation.marker ? (
+                <KeyValues
+                  rows={[
+                    { label: 'Receivable', value: `invoice #${federation.marker.invoiceNo ?? '—'}` },
+                    { label: 'Marker on A’s ledger', value: federation.marker.computedInA ?? '—', mono: true },
+                    { label: 'Marker on B’s ledger', value: federation.marker.computedInB ?? '—', mono: true },
+                    {
+                      label: 'Keyed identically by both',
+                      value: federation.marker.identical ? 'yes' : 'no',
+                      strong: true,
+                    },
+                  ]}
+                />
+              ) : null}
+
+              <p className="lbl">What happened, in order</p>
+              <ol className="steps-list">
+                {federation.steps.map((step, i) => (
+                  <li key={step.id ?? i}>
+                    <span>
+                      <strong>{step.label}</strong>
+                      {step.registry ? <span className="mono"> · {step.registry}</span> : null}
+                      {step.circuit ? <span className="mono"> · {step.circuit}</span> : null}
+                      {step.refused ? (
+                        <>
+                          {' '}
+                          <code className="code">{step.refused}</code>
+                        </>
+                      ) : null}
+                      {step.note ? <span className="fed-step-note">{step.note}</span> : null}
+                    </span>
+                    <span className="mono">
+                      {step.txId ? (
+                        <TxLink
+                          network={federation.network}
+                          txId={step.txId}
+                          txHash={step.txHash}
+                          blockHeight={step.blockHeight}
+                        />
+                      ) : step.refused ? (
+                        'never submitted'
+                      ) : (
+                        'off chain'
+                      )}
+                      {step.blockHeight ? ` · block ${step.blockHeight}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
+              <p className="lbl">The answers a lender gets</p>
+              {federation.verdicts.map((verdict) => (
+                <Verdict key={verdict.subject} verdict={verdict} />
+              ))}
+            </section>
+          ) : null}
+
           <section className="panel panel--quiet">
             <h3>Honest limits</h3>
             <ul className="seelist seelist--blind">
@@ -305,6 +515,13 @@ export function Proof() {
                   Nothing is deployed to Midnight mainnet. Permissionless mainnet contract deployment went live on
                   28 September 2026, so there is no longer a gate to point at — the registry simply is not there yet,
                   and this page will say so until it is.
+                </span>
+              </li>
+              <li>
+                <span>
+                  One registry cannot see another. Harbour’s contract accepted a receivable already pledged in Stock
+                  &amp; Foil, in block 1322275, and no contract could have refused it — what catches that is the
+                  lender’s cross-registry check, run before the advance, not the ledger.
                 </span>
               </li>
               <li>

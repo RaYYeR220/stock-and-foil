@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Footer, Mark } from '../components/chrome.js';
 import { Federation } from '../components/Federation.js';
 import { Press } from '../components/Press.js';
+import { Sponsorship } from '../components/Sponsorship.js';
 import { SectionOpener } from '../components/ui.js';
 import { BENEFICIARIES } from '../lib/audience.js';
 import { inflate, notches, type Notch } from '../lib/press.js';
@@ -404,6 +405,22 @@ export function Landing() {
               }
             />
             <Federation />
+          </div>
+        </section>
+
+        <section className="sec sec--tight" id="sponsorship">
+          <div className="shell">
+            <SectionOpener
+              title="Nobody has to buy a token first."
+              dek={
+                <>
+                  A buyer’s accounts-payable clerk confirming that an invoice is real is not going to acquire a
+                  network fee token to do it. They do not have to: a party holding no DUST can still transact, and one
+                  already has, on preview.
+                </>
+              }
+            />
+            <Sponsorship />
           </div>
         </section>
 

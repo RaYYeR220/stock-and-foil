@@ -56,7 +56,7 @@ export const CHANGES: readonly Change[] = [
   {
     id: 'federation',
     title: 'The cold-start answer, on the page and in the type system',
-    what: 'A pledge marker is a deterministic function of the invoice, so the same receivable produces the same marker in every registry that exists. A lender computes it once and reads it against every registry address it holds — three independent reads, no shared operator, no data-sharing agreement. The page draws that, and a single factoring house running its own registry already catches the same invoice pledged twice across its own branches on day one.',
+    what: 'A pledge marker is a deterministic function of the invoice, so the same receivable produces the same marker in every registry that exists. A lender computes it once and reads it against every registry address it holds — three independent reads, no shared operator, no data-sharing agreement. The page draws that, the panel underneath it runs it against two live deployments, and a single factoring house running its own registry already catches the same invoice pledged twice across its own branches on day one.',
     why: 'The only criticism of the product in Wave 1 was that it needed everybody in one place before it was worth anything. That is a property of a shared database, not of this design, and the page now says so where the objection is raised.',
     judge: {
       quote:
@@ -67,6 +67,31 @@ export const CHANGES: readonly Change[] = [
     links: [
       { label: 'It does not need a consortium', href: '/#federation' },
       { label: 'The refusal, run for real', to: '/app/replay' },
+    ],
+  },
+  {
+    id: 'registry-b',
+    title: 'A second registry, run by somebody else',
+    what: 'Harbour: a second deployment of the same contract on Midnight preview, from its own key ceremony — a different operator, a different disclosure key, a different three keyholders. Eleven transactions deployed it. Each registry has declared the other a peer on chain with `registerPeer`, so a lender that finds either one finds the other, and neither can read the other’s state.',
+    why: 'Two addresses in one config file prove nothing about federation. Two deployments that cannot see each other, with one receivable keyed by the same marker in both, is the actual claim — and it is now a thing on a public testnet rather than an argument.',
+    status: 'shipped',
+    links: [
+      {
+        label: 'Harbour on the explorer',
+        href: 'https://preview.midnightexplorer.com/contracts/2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd',
+      },
+      { label: 'Both registries, on the proof page', to: '/proof' },
+    ],
+  },
+  {
+    id: 'live-check',
+    title: 'The cross-registry check, running in the visitor’s browser',
+    what: 'The federation panel on the landing page is no longer a drawing. It reads both deployed contracts’ public state straight from the preview indexer, derives the verdict per registry the way a lender’s own client would, and prints the one bit the asking lender learns. Two markers from the recorded runs are there to try, and anything else can be pasted in. A registry that does not answer is printed as “no answer”, never as “free”.',
+    why: 'The Wave 1 objection was that the idea needs a consortium. The strongest available rebuttal is not an explanation — it is two registries a reviewer can watch being asked, from their own machine, with nothing of ours in the path.',
+    status: 'shipped',
+    links: [
+      { label: 'Run it', href: '/#check' },
+      { label: 'The same check from the command line', to: '/proof' },
     ],
   },
   {
@@ -98,8 +123,42 @@ export const CHANGES: readonly Change[] = [
     links: [{ label: 'The list this is built from', href: 'https://github.com/RaYYeR220/stock-and-foil/blob/main/web/src/lib/whatsnew.ts' }],
   },
 
+  {
+    id: 'sponsorship',
+    title: 'Fee sponsorship, so a first-time user needs no DUST',
+    what: 'A sponsored submission path: the acting party proves the circuit, balances the shielded and unshielded sides, signs and binds, and a sponsor balances the DUST and submits. A wallet holding 0 SPECK before and 0 SPECK after acknowledged an invoice on preview; the sponsor paid 1 SPECK. The registry authenticates by secret knowledge, not by who paid, so the sponsor learns nothing.',
+    why: 'A buyer’s accounts-payable clerk is not going to acquire a fee token to confirm that an invoice is real. Until this existed, network mode needed a funded wallet for every party.',
+    status: 'shipped',
+    links: [
+      { label: 'What it is, on the landing page', href: '/#sponsorship' },
+      {
+        label: 'The zero-DUST transaction',
+        href: 'https://preview.midnightexplorer.com/transactions/a46d2c3a01b49d1ebca0ef7c9bb65d0f3c5927623cfedad116550daeffd06e07',
+      },
+      { label: 'The wallet balances, before and after', to: '/proof' },
+    ],
+  },
+  {
+    id: 'circuits',
+    title: 'Peer registration, batch acceptance and case-scoped disclosure',
+    what: 'Three new circuits, taking the contract from twelve to sixteen: `registerPeer` records another registry’s address and a commitment to the label this one files it under; `acceptBatch` takes a batch of offers in one transaction; `openCase`/`approveCase` scope a disclosure to a case reference, so an approval cannot be reused for a second record. All sixteen are deployed on preview, in both registries.',
+    why: 'The first is what turns the federation section from arithmetic into something a registry can advertise and a lender can discover. The third closes F-08 from this project’s own threat model — an approval that could be replayed against a record the keyholders never saw.',
+    status: 'shipped',
+    links: [
+      {
+        label: 'The sixteen-circuit deployment',
+        href: 'https://github.com/RaYYeR220/stock-and-foil/blob/main/PROOF.md#preview-the-deployed-registry',
+      },
+      { label: 'Peer declarations and the verdicts', to: '/proof' },
+      { label: 'Case-scoped disclosure, run in the browser', to: '/app/replay' },
+    ],
+  },
+
   // ── not shipped ────────────────────────────────────────────────────────────
-  // These stay 'in-flight' until the thing exists. Flip the status and add the link.
+  //
+  // One entry, and it stays here until the deployment exists. To flip it: set `status` to
+  // 'shipped' and add `links` — the explorer page for the mainnet contract, and `/proof`. The
+  // changelog page needs no other change, and the counts in its standfirst follow from this file.
   {
     id: 'mainnet',
     title: 'The registry on Midnight mainnet',
@@ -110,20 +169,6 @@ export const CHANGES: readonly Change[] = [
         'Since you’ll soon be able to freely deploy contracts to the mainnet, please be sure to deploy your product there.',
       source: 'Wave 1 review, Business Development',
     },
-    status: 'in-flight',
-  },
-  {
-    id: 'sponsorship',
-    title: 'Fee sponsorship, so a first-time user needs no DUST',
-    what: 'A sponsored submission path, so that a party admitted to a registry can acknowledge or pledge without first holding the network’s fee token.',
-    why: 'A credit officer is not going to acquire a fee token before checking whether an invoice is encumbered. Until this exists, network mode needs a funded wallet.',
-    status: 'in-flight',
-  },
-  {
-    id: 'circuits',
-    title: 'Peer registration, batch acceptance and case-scoped disclosure',
-    what: 'New circuits: registering a peer registry on-chain, accepting a batch of offers in one transaction, and scoping a disclosure to a case reference so that an approval cannot be reused for a second record.',
-    why: 'The first is what turns the federation section from arithmetic into something a registry can advertise; the third closes a finding from this project’s own threat model.',
     status: 'in-flight',
   },
 ];

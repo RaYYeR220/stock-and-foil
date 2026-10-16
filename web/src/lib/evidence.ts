@@ -7,6 +7,8 @@ import { moment } from './format.js';
 
 export interface Deployment {
   network: string;
+  /** The deployment file's own name — `preview`, `preview-b` — so one network can hold two. */
+  scope: string;
   contractAddress: string;
   deployTx?: string;
   deployedAt?: string;
@@ -91,9 +93,11 @@ export const DEPLOYMENTS: Deployment[] = Object.entries(deploymentModules).flatM
   const address = text(raw.contractAddress);
   if (!address) return [];
   const maintenance = Array.isArray(raw.maintenanceTxs) ? raw.maintenanceTxs : [];
+  const scope = path.split('/').pop()?.replace('.json', '') ?? 'unknown';
   const deployment: Deployment = {
     ...raw,
-    network: text(raw.network) ?? path.split('/').pop()?.replace('.json', '') ?? 'unknown',
+    scope,
+    network: text(raw.network) ?? scope,
     contractAddress: address,
     deployTx: text(raw.deployTx),
     deployTxHash: text(raw.deployTxHash),
@@ -107,11 +111,21 @@ export const DEPLOYMENTS: Deployment[] = Object.entries(deploymentModules).flatM
     explorer: asRecord(raw.explorer) as Deployment['explorer'],
   };
   return [deployment];
-});
+})
+  // A public network before a devnet, and the registry a reader came for before its peer:
+  // the glob is alphabetical, which would otherwise print `preview-b` above `preview`.
+  .sort(
+    (a, b) =>
+      Number(a.network === 'undeployed' || a.network === 'local') -
+        Number(b.network === 'undeployed' || b.network === 'local') || a.scope.localeCompare(b.scope),
+  );
 
 export const EVIDENCE: Evidence[] = Object.entries(evidenceModules)
   .flatMap(([path, module]) => {
     const raw = unwrap(module);
+    // The CLI writes three kinds of evidence into this directory. A scenario run carries no
+    // `kind` at all; the other two have their own shapes and their own sections below.
+    if (text(raw.kind) !== undefined) return [];
     const steps = Array.isArray(raw.steps) ? raw.steps : [];
     const summary = asRecord(raw.summary);
     const refusals = Array.isArray(summary.refusals) ? summary.refusals : [];
@@ -171,7 +185,188 @@ export const EVIDENCE: Evidence[] = Object.entries(evidenceModules)
   })
   .sort((a, b) => (a.file < b.file ? 1 : -1));
 
-export const hasProof = DEPLOYMENTS.length > 0 || EVIDENCE.length > 0;
+// ------------------------------------------------------------------- the other two kinds of run
+//
+// Beside the scenario, the CLI writes two evidence files with shapes of their own: the
+// cross-registry check across two deployments, and the proof that a wallet holding no DUST
+// transacted anyway. Both are parsed here so that `/proof` reports them from the file rather
+// than from prose somebody typed.
+
+export interface FederationStep {
+  id?: string;
+  label: string;
+  circuit?: string;
+  registry?: string;
+  persona?: string;
+  txId?: string;
+  txHash?: string;
+  blockHeight?: number;
+  refused?: string;
+  note?: string;
+}
+
+export interface FederationRegistry {
+  role: string;
+  name: string;
+  scope?: string;
+  contractAddress: string;
+  operatorId?: string;
+}
+
+export interface FederationVerdict {
+  subject: string;
+  nullifier: string;
+  here: { contractAddress: string; encumbrance: string; unreachable: boolean };
+  peers: Array<{ contractAddress: string; encumbrance: string; unreachable: boolean }>;
+  encumberedAnywhere: boolean;
+  complete: boolean;
+}
+
+export interface FederationEvidence {
+  file: string;
+  network: string;
+  at?: string;
+  claim?: string;
+  registries: FederationRegistry[];
+  marker?: { nullifier?: string; invoiceNo?: string; computedInA?: string; computedInB?: string; identical: boolean };
+  steps: FederationStep[];
+  verdicts: FederationVerdict[];
+}
+
+export interface SponsoredStep {
+  label: string;
+  circuit?: string;
+  persona?: string;
+  txId?: string;
+  txHash?: string;
+  blockHeight?: number;
+  feeSpeck?: string;
+}
+
+export interface SponsorshipEvidence {
+  file: string;
+  network: string;
+  at?: string;
+  claim?: string;
+  contractAddress?: string;
+  wallet: { address?: string; dustBefore?: string; dustAfter?: string; nightStar?: string; registered?: number };
+  steps: SponsoredStep[];
+  totalFeeSpeck?: string;
+  totalFeeDust?: string;
+}
+
+const ofKind = (kind: string): Array<[string, Record<string, unknown>]> =>
+  Object.entries(evidenceModules)
+    .map(([path, module]) => [path.split('/').pop() ?? path, unwrap(module)] as [string, Record<string, unknown>])
+    .filter(([, raw]) => text(raw.kind) === kind)
+    .sort(([a], [b]) => (a < b ? 1 : -1));
+
+const encumbranceRow = (value: unknown): { contractAddress: string; encumbrance: string; unreachable: boolean } => {
+  const r = asRecord(value);
+  return {
+    contractAddress: text(r.contractAddress) ?? '',
+    encumbrance: text(r.encumbrance) ?? 'UNKNOWN',
+    unreachable: r.unreachable === true,
+  };
+};
+
+/** The most recent cross-registry run, if the CLI has made one. */
+export const FEDERATION: FederationEvidence | undefined = ofKind('cross-registry-encumbrance-check').map(
+  ([file, raw]): FederationEvidence => {
+    const marker = asRecord(raw.marker);
+    return {
+      file,
+      network: text(raw.network) ?? 'unknown',
+      at: text(raw.at),
+      claim: text(raw.claim),
+      registries: (Array.isArray(raw.registries) ? raw.registries : []).flatMap((entry) => {
+        const r = asRecord(entry);
+        const address = text(r.contractAddress);
+        return address
+          ? [
+              {
+                role: text(r.role) ?? '?',
+                name: text(r.name) ?? address.slice(0, 10),
+                scope: text(r.scope),
+                contractAddress: address,
+                operatorId: text(r.operatorId),
+              },
+            ]
+          : [];
+      }),
+      marker: {
+        nullifier: text(marker.nullifier),
+        invoiceNo: text(marker.invoiceNo),
+        computedInA: text(marker.computedInA),
+        computedInB: text(marker.computedInB),
+        identical: marker.identical === true,
+      },
+      steps: (Array.isArray(raw.steps) ? raw.steps : []).map((entry): FederationStep => {
+        const s = asRecord(entry);
+        return {
+          id: text(s.id),
+          label: text(s.label) ?? text(s.circuit) ?? 'step',
+          circuit: text(s.circuit),
+          registry: text(s.registry),
+          persona: text(s.persona),
+          txId: text(s.txId),
+          txHash: text(s.txHash),
+          blockHeight: num(s.blockHeight),
+          refused: text(s.refused),
+          note: text(s.note),
+        };
+      }),
+      verdicts: (Array.isArray(raw.verdicts) ? raw.verdicts : []).map((entry): FederationVerdict => {
+        const v = asRecord(entry);
+        return {
+          subject: text(v.subject) ?? 'a receivable',
+          nullifier: text(v.nullifier) ?? '',
+          here: encumbranceRow(v.here),
+          peers: (Array.isArray(v.peers) ? v.peers : []).map(encumbranceRow),
+          encumberedAnywhere: v.encumberedAnywhere === true,
+          complete: v.complete === true,
+        };
+      }),
+    };
+  },
+)[0];
+
+/** The most recent zero-DUST run, if the CLI has made one. */
+export const SPONSORSHIP: SponsorshipEvidence | undefined = ofKind('dust-sponsorship-proof').map(
+  ([file, raw]): SponsorshipEvidence => {
+    const wallet = asRecord(raw.actingWallet);
+    return {
+      file,
+      network: text(raw.network) ?? 'unknown',
+      at: text(raw.at),
+      claim: text(raw.claim),
+      contractAddress: text(raw.contractAddress),
+      wallet: {
+        address: text(wallet.address),
+        dustBefore: text(wallet.dustSpeckBefore),
+        dustAfter: text(wallet.dustSpeckAfter),
+        nightStar: text(wallet.nightStar),
+        registered: num(wallet.registeredForDustGeneration),
+      },
+      steps: (Array.isArray(raw.steps) ? raw.steps : []).map((entry): SponsoredStep => {
+        const s = asRecord(entry);
+        return {
+          label: text(s.label) ?? text(s.circuit) ?? 'step',
+          circuit: text(s.circuit),
+          persona: text(s.persona),
+          txId: text(s.txId),
+          txHash: text(s.txHash),
+          blockHeight: num(s.blockHeight),
+          feeSpeck: text(s.feeSpeck) ?? text(s.sponsorReportedFeeSpeck),
+        };
+      }),
+      totalFeeSpeck: text(raw.totalSponsoredFeeSpeck),
+      totalFeeDust: text(raw.totalSponsoredFeeDust),
+    };
+  },
+)[0];
+
+export const hasProof = DEPLOYMENTS.length > 0 || EVIDENCE.length > 0 || FEDERATION !== undefined;
 
 /** A local devnet proves the code runs; it does not prove anything anyone else can check. */
 export const isLocal = (network: string): boolean => network === 'undeployed' || network === 'local';

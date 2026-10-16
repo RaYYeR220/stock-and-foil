@@ -285,6 +285,173 @@
   font-size: 16px;
   line-height: 1.5;
 }
+/* the live read: two deployed registries, one marker, one bit */
+.fed-live {
+  margin-top: var(--s5);
+}
+.fed-live-head > * + * {
+  margin-top: 8px;
+}
+.fed-live-head p:not(.lbl) {
+  font-size: 16px;
+  line-height: 1.5;
+  max-width: 76ch;
+}
+.fed-ask {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  background: var(--paper);
+  border: 1px solid var(--hair);
+}
+.fed-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.fed-presets .btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.fed-ask-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s3);
+  align-items: end;
+}
+.fed-ask .hint {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  max-width: 88ch;
+}
+.fed-ask input[aria-invalid='true'] + .hint {
+  color: var(--ink);
+}
+.fed-answers {
+  display: grid;
+  gap: var(--s4);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+}
+.fed-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair);
+}
+.fed-rows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: var(--s3) var(--s4);
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--hair);
+}
+.fed-rows li[data-verdict='encumbered'] {
+  border-bottom-color: var(--ink);
+}
+.fed-row-who {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.fed-row-who strong {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 88%;
+  font-size: 21px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.fed-row-who span {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.fed-row-who .mono {
+  font-size: 12.5px;
+}
+.fed-row-said {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  padding-left: var(--s4);
+  border-left: 3px solid var(--hair);
+}
+.fed-rows li[data-verdict='encumbered'] .fed-row-said,
+.fed-rows li[data-verdict='settled'] .fed-row-said {
+  border-left-color: var(--ink);
+}
+.fed-verdict {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 84%;
+  font-size: 27px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.fed-rows li[data-verdict='pending'] .fed-verdict {
+  color: var(--ink-2);
+  font-size: 21px;
+}
+.fed-row-note {
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+/* Specific enough to beat `.mono`, whose break-anywhere is right for a 64-character marker and
+   wrong for a sentence: it was splitting "the other" across two lines. */
+.fed-row-said .fed-row-meta {
+  font-size: 12px;
+  color: var(--ink-2);
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.fed-bit {
+  background: var(--ink);
+  color: var(--paper);
+  padding: var(--s4) var(--s5);
+}
+.fed-bit .lbl,
+.fed-bit p {
+  color: var(--paper);
+}
+.fed-bit > * + * {
+  margin-top: 6px;
+}
+.fed-bit p:last-child {
+  font-size: 15px;
+  line-height: 1.45;
+}
+.fed-bit-word {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 82%;
+  font-size: clamp(30px, 3.2vw, 40px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.fed-bit[data-bit='no-answer'],
+.fed-bit[data-bit='pending'] {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+.fed-bit[data-bit='no-answer'] .lbl,
+.fed-bit[data-bit='pending'] .lbl,
+.fed-bit[data-bit='no-answer'] p,
+.fed-bit[data-bit='pending'] p {
+  color: var(--ink-2);
+}
+.fed-bit[data-bit='no-answer'] .fed-bit-word,
+.fed-bit[data-bit='pending'] .fed-bit-word {
+  color: var(--ink);
+}
+.fed-prov {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
 .fed-seam {
   margin-top: var(--s5);
   display: grid;
@@ -298,6 +465,42 @@
 .fed-seam p {
   font-size: 16px;
   line-height: 1.5;
+}
+.fed-own h3 {
+  color: var(--ink);
+}
+/* Printed only while the live read above is actually showing what this paragraph describes. */
+.fed-seam .fed-own-live {
+  border-left: 3px solid var(--ink);
+  padding-left: var(--s4);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+/* ── fee sponsorship: a first transaction that costs the user nothing ── */
+.spons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: var(--s5) var(--s6);
+  align-items: start;
+}
+.spons-copy > * + * {
+  margin-top: var(--s3);
+}
+.spons-copy p {
+  font-size: 16.5px;
+  line-height: 1.52;
+  max-width: 62ch;
+}
+.spons-copy .spons-live {
+  border-left: 3px solid var(--pink);
+  padding-left: var(--s4);
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.spons-proof .hint {
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 /* ── First Brands band ──────────────────────────────────── */
@@ -625,6 +828,12 @@
   .fed-seam {
     grid-template-columns: 1fr;
   }
+  .fed-answers {
+    grid-template-columns: 1fr;
+  }
+  .spons {
+    grid-template-columns: 1fr;
+  }
   .demos {
     grid-template-columns: 1fr;
     gap: var(--s6);
@@ -698,6 +907,19 @@
   .fed-notes {
     grid-template-columns: 1fr;
     gap: var(--s4);
+  }
+  .fed-rows li {
+    grid-template-columns: 1fr;
+  }
+  .fed-row-said {
+    padding-left: var(--s3);
+  }
+  .fed-ask-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .fed-ask-row .btn {
+    justify-self: start;
   }
   .compare {
     grid-template-columns: 1fr;
