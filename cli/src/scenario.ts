@@ -667,12 +667,27 @@ export async function scenario(args: Args): Promise<number> {
       },
       {
         id: 'open-case',
-        label: 'Auditor opens an insolvency case over two receivables at once',
+        // Four records, not two, and not by preference.
+        //
+        // A case has four fixed slots and the contract allows fewer to be used, but a partly
+        // filled case cannot be *proved* on a real network: the untaken branch of an unused slot
+        // leaves a zeroed curve point in the public transcript, and the proof server rejects it
+        // during ZKIR preprocessing with a `JubjubExtended::into_subgroup` assertion — "Point
+        // should be part of the subgroup", surfaced to the caller only as a 500 from /check.
+        // The simulator does not preprocess ZKIR, so the contract's own suite passes with two.
+        // This is the same constraint the borrowing-base pool already works around, and it was
+        // found here the hard way: a two-slot case deployed, and then failed to prove.
+        label: 'Auditor opens an insolvency case over four receivables at once',
         circuit: 'openCase',
         persona: 'auditor',
         run: async () =>
           asOutcome(
-            await auditor.openCase(insolvencyRef, [await currentRecordId(), await poolRecordId('2001')]),
+            await auditor.openCase(insolvencyRef, [
+              await currentRecordId(),
+              await poolRecordId('2001'),
+              await poolRecordId('2002'),
+              await poolRecordId('2003'),
+            ]),
           ),
       },
       {
@@ -684,7 +699,7 @@ export async function scenario(args: Args): Promise<number> {
       },
       {
         id: 'approve-case-keyholder-3',
-        label: 'Keyholder 3 approves: two of three, for every record the case names',
+        label: 'Keyholder 3 approves: two of three, for all four records the case names',
         circuit: 'approveCase',
         persona: 'keyholder3',
         run: async () => asOutcome(await keyholders[2]!.approveCase(insolvencyRef)),
