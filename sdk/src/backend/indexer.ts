@@ -122,6 +122,27 @@ export function indexerFeeShape(indexerHttpUrl: string): Promise<FeeShape> {
   return probe;
 }
 
+/**
+ * How many aliased sub-queries go in one request.
+ *
+ * The indexer enforces a complexity limit and answers `Query is too complex.` past it. Measured
+ * against preview 4.3.5 on 2026-10-16: twenty aliases of
+ * `transactions { hash block { height hash timestamp } ... on RegularTransaction { ... } }`
+ * are accepted and twenty-five are not. Ten leaves room for a stricter limit on another
+ * deployment, and a scenario's twenty-seven transactions still cost three round trips.
+ *
+ * This is not a theoretical limit. A Wave-2 evidence run has twenty-seven transactions, and
+ * asking for them in one query returned nothing at all — every fee and every explorer link
+ * silently absent from the evidence file.
+ */
+export const INDEXER_BATCH_SIZE = 10;
+
+const chunk = <T>(values: readonly T[], size: number): T[][] => {
+  const batches: T[][] = [];
+  for (let i = 0; i < values.length; i += size) batches.push(values.slice(i, i + size));
+  return batches;
+};
+
 /** Forgets the cached probes. Tests use it; nothing else needs to. */
 export const clearIndexerSchemaCache = (): void => {
   feeShapeCache.clear();
@@ -190,8 +211,53 @@ interface IndexerTx {
   block?: { height?: number; hash?: string; timestamp?: number };
 }
 
+export interface BatchOptions {
+  /** Aliases per request. Lower it if an endpoint has a stricter complexity limit. */
+  batchSize?: number;
+  /**
+   * Called when a batch could not be read.
+   *
+   * A lookup failure is survivable — the transactions are on chain either way — but it must not
+   * be invisible, because the result is an evidence file quietly missing its explorer links.
+   */
+  onWarn?: (message: string) => void;
+}
+
 /**
- * Resolves identifiers to on-chain anchors in one aliased query.
+ * Runs an aliased query in batches, retrying a failed batch one identifier at a time.
+ *
+ * The retry is what turns "the indexer refused a query of ten" into "nine resolved and one
+ * did not", instead of losing all ten to whichever one it choked on.
+ */
+async function batched<T>(
+  indexerHttpUrl: string,
+  identifiers: readonly string[],
+  selection: (id: string, alias: string) => string,
+  take: (identifier: string, row: T | undefined) => void,
+  options: BatchOptions,
+): Promise<void> {
+  const warn = options.onWarn ?? (() => {});
+  const run = async (ids: readonly string[]): Promise<boolean> => {
+    const query = `{ ${ids.map((id, i) => selection(id, `t${i}`)).join(' ')} }`;
+    try {
+      const data = await indexerQuery<Record<string, T[]>>(indexerHttpUrl, query);
+      ids.forEach((id, i) => take(id, data[`t${i}`]?.[0]));
+      return true;
+    } catch (error) {
+      warn(`${(error as Error).message}`);
+      return false;
+    }
+  };
+
+  for (const batch of chunk(identifiers, Math.max(1, options.batchSize ?? INDEXER_BATCH_SIZE))) {
+    if (await run(batch)) continue;
+    if (batch.length === 1) continue;
+    for (const id of batch) await run([id]);
+  }
+}
+
+/**
+ * Resolves identifiers to on-chain anchors.
  *
  * Identifiers the indexer does not know come back carrying only the identifier, which is what a
  * caller wants: a transaction that has not been indexed yet is not an error.
@@ -199,6 +265,7 @@ interface IndexerTx {
 export async function resolveTransactions(
   indexerHttpUrl: string,
   identifiers: readonly string[],
+  options: BatchOptions = {},
 ): Promise<Map<string, TxAnchor>> {
   const unique = [...new Set(identifiers)].filter((id) => id !== '');
   const anchors = new Map<string, TxAnchor>(unique.map((identifier) => [identifier, { identifier }]));
@@ -208,36 +275,27 @@ export async function resolveTransactions(
   // interface, so they go inside an inline fragment or the whole query is rejected.
   const shape = await indexerFeeShape(indexerHttpUrl);
   const fragment = `... on RegularTransaction { transactionResult { status } ${feeSelection(shape)} }`;
-  const query = `{ ${unique
-    .map(
-      (id, i) =>
-        `t${i}: transactions(offset: {identifier: ${JSON.stringify(id)}}) ` +
-        `{ hash block { height hash timestamp } ${fragment} }`,
-    )
-    .join(' ')} }`;
 
-  let data: Record<string, IndexerTx[]>;
-  try {
-    data = await indexerQuery<Record<string, IndexerTx[]>>(indexerHttpUrl, query);
-  } catch {
-    // Anchors are a convenience: a scenario that already landed on chain must not fail because
-    // the lookup did. Callers get back identifiers with nothing resolved.
-    return anchors;
-  }
-
-  unique.forEach((identifier, i) => {
-    const tx = data[`t${i}`]?.[0];
-    if (!tx) return;
-    anchors.set(identifier, {
-      identifier,
-      txHash: tx.hash,
-      blockHeight: tx.block?.height,
-      blockHash: tx.block?.hash,
-      blockTimestamp: tx.block?.timestamp === undefined ? undefined : new Date(tx.block.timestamp).toISOString(),
-      feeSpeck: readFee(tx),
-      status: tx.transactionResult?.status,
-    });
-  });
+  await batched<IndexerTx>(
+    indexerHttpUrl,
+    unique,
+    (id, alias) =>
+      `${alias}: transactions(offset: {identifier: ${JSON.stringify(id)}}) ` +
+      `{ hash block { height hash timestamp } ${fragment} }`,
+    (identifier, tx) => {
+      if (!tx) return;
+      anchors.set(identifier, {
+        identifier,
+        txHash: tx.hash,
+        blockHeight: tx.block?.height,
+        blockHash: tx.block?.hash,
+        blockTimestamp: tx.block?.timestamp === undefined ? undefined : new Date(tx.block.timestamp).toISOString(),
+        feeSpeck: readFee(tx),
+        status: tx.transactionResult?.status,
+      });
+    },
+    options,
+  );
   return anchors;
 }
 
@@ -259,19 +317,22 @@ export const totalFeeSpeck = (anchors: Iterable<TxAnchor>): bigint => {
 export async function fetchRawTransactions(
   indexerHttpUrl: string,
   identifiers: readonly string[],
+  options: BatchOptions = {},
 ): Promise<Map<string, string>> {
   const unique = [...new Set(identifiers)].filter((id) => id !== '');
   const raws = new Map<string, string>();
   if (unique.length === 0) return raws;
 
-  // One aliased query per batch; a run of thirty transactions is one round trip.
-  const query = `{ ${unique
-    .map((id, i) => `t${i}: transactions(offset: {identifier: ${JSON.stringify(id)}}) { raw }`)
-    .join(' ')} }`;
-  const data = await indexerQuery<Record<string, Array<{ raw?: string }>>>(indexerHttpUrl, query);
-  unique.forEach((identifier, i) => {
-    const raw = data[`t${i}`]?.[0]?.raw;
-    if (raw) raws.set(identifier, raw);
-  });
+  // Raw bytes are the heaviest thing the indexer serves — a deploy carrying six verifier keys
+  // runs to tens of kilobytes — so these go in smaller batches than the anchors.
+  await batched<{ raw?: string }>(
+    indexerHttpUrl,
+    unique,
+    (id, alias) => `${alias}: transactions(offset: {identifier: ${JSON.stringify(id)}}) { raw }`,
+    (identifier, row) => {
+      if (row?.raw) raws.set(identifier, row.raw);
+    },
+    { batchSize: 5, ...options },
+  );
   return raws;
 }

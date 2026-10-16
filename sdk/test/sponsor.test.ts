@@ -106,6 +106,15 @@ describe('deserializeSponsoredTx', () => {
   });
 });
 
+/** Awaits a call expected to fail, and hands back the error rather than a union. */
+const rejection = (promise: Promise<unknown>): Promise<SponsorError> =>
+  promise.then(
+    () => {
+      throw new Error('expected a refusal');
+    },
+    (error: unknown) => error as SponsorError,
+  );
+
 describe('requestSponsorship', () => {
   const ok = {
     protocol: SPONSOR_PROTOCOL_VERSION,
@@ -160,7 +169,7 @@ describe('requestSponsorship', () => {
           ),
       ),
     );
-    const error = await requestSponsorship('aa', { endpoint: 'http://host:1' }).catch((e: SponsorError) => e);
+    const error = await rejection(requestSponsorship('aa', { endpoint: 'http://host:1' }));
     expect(error).toBeInstanceOf(SponsorError);
     expect(error.code).toBe('RATE_LIMITED');
     expect(error.retryAfterSeconds).toBe(17);
@@ -174,7 +183,7 @@ describe('requestSponsorship', () => {
         throw new Error('ECONNREFUSED');
       }),
     );
-    const error = await requestSponsorship('aa', { endpoint: 'http://host:1' }).catch((e: SponsorError) => e);
+    const error = await rejection(requestSponsorship('aa', { endpoint: 'http://host:1' }));
     expect(error.code).toBe('TRANSPORT');
     expect(error.message).toContain('http://host:1');
   });

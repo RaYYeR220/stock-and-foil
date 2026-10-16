@@ -13,6 +13,7 @@ import {
   formatDust,
   indexerFeeShape,
   IndexerError,
+  INDEXER_BATCH_SIZE,
   indexerQuery,
   latestBlock,
   resolveTransactions,
@@ -70,7 +71,10 @@ describe('error reporting', () => {
     stubFetch([], { status: 403 });
     await expect(indexerQuery(BLOCKFROST, '{ block { height } }')).rejects.toThrow(IndexerError);
     await expect(indexerQuery(BLOCKFROST, '{ block { height } }')).rejects.toThrow(/Blockfrost project token/);
-    const error = await indexerQuery(BLOCKFROST, '{ block { height } }').catch((e: Error) => e);
+    const error = await indexerQuery(BLOCKFROST, '{ block { height } }').then(
+      () => new Error('expected a failure'),
+      (e: unknown) => e as Error,
+    );
     expect(error.message).not.toContain('nightmainnetSECRET');
     expect(error.message).toContain('project_id=REDACTED');
   });
@@ -208,6 +212,77 @@ describe('resolving transactions', () => {
         { identifier: 'c', feeSpeck: 32n },
       ]),
     ).toBe(42n);
+  });
+});
+
+describe('batching, because the indexer has a complexity limit', () => {
+  // Measured against preview 4.3.5 on 2026-10-16: twenty aliases of the anchor query are
+  // accepted, twenty-five are rejected with "Query is too complex." A Wave-2 evidence run has
+  // twenty-seven transactions, so asking for them in one query returned nothing at all — every
+  // fee and every explorer link silently missing from the evidence file.
+  const tooComplex = (limit: number) => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const query = JSON.parse(String(init?.body ?? '{}')).query as string;
+        calls.push(query);
+        if (query.includes('__type')) {
+          return new Response(JSON.stringify({ data: { __type: { fields: [{ name: 'fee' }] } } }), { status: 200 });
+        }
+        const aliases = query.match(/t\d+: transactions/g) ?? [];
+        if (aliases.length > limit) {
+          return new Response(JSON.stringify({ errors: [{ message: 'Query is too complex.' }] }), { status: 200 });
+        }
+        const data: Record<string, unknown> = {};
+        aliases.forEach((_, i) => {
+          data[`t${i}`] = [{ hash: `h${i}`, fee: '7', block: { height: 100 + i } }];
+        });
+        return new Response(JSON.stringify({ data }), { status: 200 });
+      }),
+    );
+    return calls;
+  };
+
+  const ids = Array.from({ length: 27 }, (_, i) => `id-${i}`);
+
+  it('splits a run of twenty-seven into requests the indexer will accept', async () => {
+    const calls = tooComplex(20);
+    const anchors = await resolveTransactions(PREVIEW, ids);
+    expect(anchors.size).toBe(27);
+    expect([...anchors.values()].every((a) => a.feeSpeck === 7n)).toBe(true);
+    const anchorQueries = calls.filter((q) => !q.includes('__type'));
+    expect(anchorQueries).toHaveLength(3);
+    for (const query of anchorQueries) {
+      expect((query.match(/t\d+: transactions/g) ?? []).length).toBeLessThanOrEqual(INDEXER_BATCH_SIZE);
+    }
+  });
+
+  it('retries a refused batch one identifier at a time rather than losing all of it', async () => {
+    // An endpoint so strict that even a batch of ten is refused.
+    const calls = tooComplex(1);
+    const anchors = await resolveTransactions(PREVIEW, ids.slice(0, 10));
+    expect([...anchors.values()].every((a) => a.feeSpeck === 7n)).toBe(true);
+    const anchorQueries = calls.filter((q) => !q.includes('__type'));
+    // One batch of ten that failed, then ten singles.
+    expect(anchorQueries).toHaveLength(11);
+  });
+
+  it('reports a failure rather than silently returning nothing', async () => {
+    tooComplex(0);
+    const warnings: string[] = [];
+    const anchors = await resolveTransactions(PREVIEW, ids.slice(0, 3), { onWarn: (m) => warnings.push(m) });
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toContain('too complex');
+    // And the identifiers still come back, because the transactions are on chain either way.
+    expect(anchors.size).toBe(3);
+    expect([...anchors.values()].every((a) => a.feeSpeck === undefined)).toBe(true);
+  });
+
+  it('honours an explicit batch size', async () => {
+    const calls = tooComplex(20);
+    await resolveTransactions(PREVIEW, ids.slice(0, 9), { batchSize: 3 });
+    expect(calls.filter((q) => !q.includes('__type'))).toHaveLength(3);
   });
 });
 
