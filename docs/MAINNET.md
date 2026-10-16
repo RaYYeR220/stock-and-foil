@@ -111,9 +111,10 @@ ledger's own charge. On mainnet, where the parameters are not nominal, the two p
 `--offline` skips the wallet entirely and reports only what the reference network charged. Run
 that before the token exists.
 
-For calibration: **preview charges 1 SPECK per transaction** — 27 SPECK for a whole deploy plus
-scenario, which is 0.000000027 DUST. Preview is not a guide to mainnet pricing; it is a guide to
-nothing except that the code works.
+For calibration: **preview charges 1 SPECK per transaction**. The 2026-10-16 preview run —
+eleven deployment transactions plus twenty-four scenario transactions — cost 24 SPECK of
+scenario fees, which is 0.000000024 DUST. Preview is not a guide to mainnet pricing; it is a
+guide to nothing except that the code works.
 
 ---
 
