@@ -256,22 +256,30 @@ claim circuits call `sendUnshielded(...)` to a `UserAddress`, which on the TypeS
 
 ## Circuits and proving keys
 
-Compiled with compactc 0.31.1 (language 0.23.0), 12 circuits, about 1 m 54 s with keys.
+Compiled with compactc 0.31.1 (language 0.23.0), 16 circuits, about 3 m 20 s with keys.
 
 | Circuit | Prover key |
 |---|---|
 | `certifyBorrowingBase` | 42.9 MB |
 | `offer` | 11.1 MB |
-| `acknowledge` | 10.0 MB |
+| `approveCase` | 11.1 MB |
 | `payInvoice` | 10.0 MB |
+| `acknowledge` | 10.0 MB |
+| `acceptBatch` | 10.0 MB |
 | `accept` | 5.2 MB |
 | `claimAsSeller` | 5.2 MB |
+| `registerPeer` | 5.2 MB |
 | `approveDisclosure` | 3.1 MB |
 | `requestDisclosure` | 3.1 MB |
 | `admitDebtor` | 2.8 MB |
 | `admitFinancier` | 2.8 MB |
 | `claimAsHolder` | 2.8 MB |
 | `release` | 2.8 MB |
+| `openCase` | 1.3 MB |
+
+The sixteen verifier keys total about 34 kB (1.6–2.3 kB each), up from about 26 kB for twelve, so
+a deploy still cannot carry them all: `VERIFIER_KEYS_PER_TX = 6` in `sdk/src/backend/network.ts`
+puts six in the deploy and the remaining ten in `VerifierKeyInsert` maintenance transactions.
 
 SHA-256 (`persistentHash`) dominates key size and proof time, so every circuit computes an
 invoice fingerprint at most once and derives the ack leaf and the nullifier from it. Poseidon,

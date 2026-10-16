@@ -44,7 +44,7 @@ state; the public ledger sees only what it needs to enforce uniqueness.
 
 ## How it works
 
-Four parties, one registry contract, twelve circuits.
+Four parties, one registry contract, sixteen circuits.
 
 1. **The buyer acknowledges.** The debtor proves membership of the registry anonymously and writes
    one leaf into an acknowledgment tree — a commitment to the exact invoice: buyer, supplier,
@@ -170,7 +170,7 @@ Counts and the live evidence are in [PROOF.md](./PROOF.md).
 ## Built with
 
 [Midnight](https://midnight.network) · Compact 0.31.1 (language 0.23) · compact-runtime 0.16.0 ·
-midnight-js 4.1.1 · Midnight wallet SDK 1.2.0 · DApp Connector 4.0.1 · proof server 8.1.0 ·
+midnight-js 4.1.1 · Midnight wallet SDK 1.2.0 · DApp Connector 4.0.1 · proof server 8.1.3 ·
 TypeScript · React · Vite · Vitest · fast-check · Playwright.
 
 Licensed under [Apache 2.0](./LICENSE).

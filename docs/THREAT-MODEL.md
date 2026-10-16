@@ -45,9 +45,9 @@ them:
    `claimAsHolder`, stranding settled proceeds — or replace one with a differently-compiled
    circuit at the same entry point. This is a strictly larger power than "admits participants",
    which is how the README describes the operator. A production deployment should replace the
-   maintenance authority with a multi-party key, or burn it, once the twelve verifier keys are in.
-2. **Deployment is staged.** All twelve verifier keys do not fit in one transaction
-   (`VERIFIER_KEYS_PER_TX = 6`, see `sdk/src/backend/network.ts`), so a deploy is followed by six
+   maintenance authority with a multi-party key, or burn it, once the sixteen verifier keys are in.
+2. **Deployment is staged.** All sixteen verifier keys do not fit in one transaction
+   (`VERIFIER_KEYS_PER_TX = 6`, see `sdk/src/backend/network.ts`), so a deploy is followed by ten
    maintenance transactions. Between them the registry is live with `admitDebtor`,
    `admitFinancier`, `acknowledge`, `offer`, `accept` and `release` only — it can take pledges it
    cannot yet settle or pay out. Do not publish a contract address until every circuit has a key.

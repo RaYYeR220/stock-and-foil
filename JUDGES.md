@@ -37,7 +37,7 @@ same registry from each party's side, with what that role can and cannot see.
 
 ## 3. The engineering
 
-- `contract/src/stock-and-foil.compact` — 12 circuits; `contract/README.md` documents every refusal
+- `contract/src/stock-and-foil.compact` — 16 circuits; `contract/README.md` documents every refusal
   code, the sealing construction, the time-semantics limitation and prover key sizes.
 - Authorization is always a proof of knowledge of a secret hashed into the ledger — never
   `ownPublicKey()`, which on Midnight is a witness and cannot authenticate anyone.
