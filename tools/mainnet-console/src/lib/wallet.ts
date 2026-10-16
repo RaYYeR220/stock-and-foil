@@ -116,34 +116,3 @@ export async function readWallet(api: OneAmConnectedAPI): Promise<WalletReading>
     unshieldedBalances,
   };
 }
-
-/**
- * Bech32m → the encodings midnight-js wants, loaded lazily because the wallet-sdk address
- * format decodes into Node `Buffer`s and needs the polyfill in place first.
- */
-export async function addressCodecs(networkId: string): Promise<{
-  decodeKey: (bech32m: string) => string;
-  decodeAddress: (bech32m: string) => Uint8Array;
-}> {
-  const { Buffer } = await import('buffer');
-  (globalThis as { Buffer?: unknown }).Buffer ??= Buffer;
-  const { MidnightBech32m, ShieldedCoinPublicKey, ShieldedEncryptionPublicKey, UnshieldedAddress } = await import(
-    '@midnight-ntwrk/wallet-sdk-address-format'
-  );
-  return {
-    decodeKey: (value: string) => {
-      const parsed = MidnightBech32m.parse(value);
-      const target =
-        parsed.type.includes('esk') || parsed.type.includes('enc')
-          ? ShieldedEncryptionPublicKey
-          : ShieldedCoinPublicKey;
-      return (parsed.decode(target as never, networkId) as unknown as { toHexString(): string }).toHexString();
-    },
-    decodeAddress: (value: string) => {
-      const decoded = MidnightBech32m.parse(value).decode(UnshieldedAddress as never, networkId) as unknown as {
-        data: Uint8Array;
-      };
-      return new Uint8Array(decoded.data);
-    },
-  };
-}

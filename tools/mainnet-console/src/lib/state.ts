@@ -64,7 +64,7 @@ export interface RunFailure {
   at: string;
   stepId: string;
   /** Who said no. */
-  by: 'contract' | 'operator' | 'sponsor' | 'network' | 'console';
+  by: 'contract' | 'operator' | 'wallet' | 'sponsor' | 'network' | 'console';
   /** The upstream text, verbatim, not a summary of it. */
   message: string;
   /** The refusal code, when the contract is the one refusing. */
@@ -102,6 +102,36 @@ export class ConsoleStop extends Error {
 }
 
 /**
+ * An error, with everything it is wrapping.
+ *
+ * Libraries in this stack wrap generously — `effect` in particular reports a tagged error whose
+ * real cause is one or two `cause` links down, and whose own message names only the operation
+ * that failed. "Failed to read verifier key" is true and useless; the 404, the CORS refusal or
+ * the type error underneath it is the thing the operator can act on. So the whole chain is
+ * rendered, plus any extra fields the top error carries.
+ */
+export function describeError(error: unknown, depth = 6): string {
+  const parts: string[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  for (let i = 0; i < depth && current !== undefined && current !== null && !seen.has(current); i += 1) {
+    seen.add(current);
+    const e = current as { name?: string; message?: string; cause?: unknown };
+    const text = typeof e.message === 'string' && e.message !== '' ? e.message : String(current);
+    parts.push(i === 0 ? text : `caused by ${e.name ? `${e.name}: ` : ''}${text}`);
+    if (i === 0 && typeof current === 'object') {
+      // Tagged errors keep the interesting part in their own fields rather than the message.
+      const extras = Object.entries(current as Record<string, unknown>)
+        .filter(([k, v]) => !['name', 'message', 'stack', 'cause'].includes(k) && typeof v !== 'function')
+        .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v)?.slice(0, 120) : String(v)}`);
+      if (extras.length > 0) parts.push(`(${extras.join(', ')})`);
+    }
+    current = e.cause;
+  }
+  return parts.join('\n  ');
+}
+
+/**
  * Who refused, read off whatever the stack threw.
  *
  * Deliberately conservative: anything it cannot attribute is `network`, because a wrong
@@ -110,12 +140,17 @@ export class ConsoleStop extends Error {
  * untouched so the operator reads the upstream reason rather than this function's opinion of it.
  */
 export function attribute(error: unknown, stepId: string): RunFailure {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = describeError(error);
   const lower = message.toLowerCase();
   const refusal = error as { name?: string; code?: string; by?: RunFailure['by'] };
   const at = new Date().toISOString();
 
   if (refusal?.name === 'ConsoleStop' && refusal.by) return { at, stepId, by: refusal.by, message };
+  // The console could not read what the wallet handed it. No signature was requested, and the
+  // message already names the call and the value, so it is carried through untouched.
+  if (refusal?.name === 'AddressDecodeError') return { at, stepId, by: 'console', message };
+  // The wallet answered, but with something unusable. Not a refusal, and not the network.
+  if (refusal?.name === 'WalletResponseError') return { at, stepId, by: 'wallet', message };
   if (refusal?.name === 'Refusal' && typeof refusal.code === 'string') {
     return { at, stepId, by: 'contract', message, code: refusal.code };
   }
@@ -150,6 +185,9 @@ export const whoRefused = (failure: RunFailure): string =>
   ({
     contract: 'The Stock & Foil contract refused this call. Nothing was submitted and nothing was paid for.',
     operator: 'You declined the wallet prompt. Nothing was submitted.',
+    wallet:
+      'The 1AM wallet answered, but with something this console cannot use. It did not refuse — ' +
+      'it returned the wrong thing, which is a different problem with a different remedy.',
     sponsor: "1AM's sponsor refused to pay for this transaction. It is their refusal, not the contract's.",
     network: 'The network or the indexer failed. Nothing is known to have been submitted.',
     console: 'The console stopped before asking the wallet to sign anything.',

@@ -18,6 +18,8 @@ import {
   dappConnectorWalletAdapter,
   fetchZkConfigProvider,
   fromHex,
+  hex,
+  loadAddressCodecs,
   NetworkBackend,
   type NetworkEndpoints,
   type RegistryConstructorArgs,
@@ -32,7 +34,7 @@ import { pointFromJson, type KeysFile } from '../../../../cli/src/records.js';
 import { getPrivateState, putPrivateState } from './api.js';
 import { withoutSessionQuery, withSessionQuery } from './session-token.js';
 import { ConsoleStop } from './state.js';
-import { addressCodecs, readWallet, type OneAmConnectedAPI, type WalletReading } from './wallet.js';
+import { readWallet, type OneAmConnectedAPI, type WalletReading } from './wallet.js';
 
 /** Where the staged proving material is served. Absolute: `FetchZkConfigProvider` parses it as a URL. */
 export const ZK_BASE_URL = new URL('/zk', globalThis.location?.origin ?? 'http://127.0.0.1:5174').toString();
@@ -166,6 +168,14 @@ export interface ConsoleSession {
   zkBaseUrl: string;
   /** The indexer URL with the console's session secret removed, for display and logs. */
   publicIndexerUrl: string;
+  /**
+   * What the wallet's keys decoded to, evaluated at connect time.
+   *
+   * midnight-js asks for these lazily, which meant the first time anyone found out whether the
+   * wallet's encoding was one we understand was in the middle of `deployContract`. Doing it
+   * here moves that discovery to before the preflight, where it costs nothing.
+   */
+  decoded: { coinPublicKey: string; encryptionPublicKey: string; unshieldedAddress: string; encoding: string };
 }
 
 export interface OpenSessionOptions {
@@ -192,7 +202,10 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
   if (config.networkId !== 'mainnet') throw new WalletNetworkMismatch(config.networkId);
 
   const reading = await readWallet(api);
-  const { decodeKey, decodeAddress } = await addressCodecs('mainnet');
+  // The SDK's codecs, not a copy of them. They accept hex (which 1AM reports) and Bech32m
+  // (which every other Midnight wallet reports) and produce the hex midnight-js needs on both
+  // the call sites that convert and the ones that do not. See sdk/src/backend/address.ts.
+  const codecs = await loadAddressCodecs('mainnet');
 
   const base = dappConnectorWalletAdapter(
     api,
@@ -203,7 +216,7 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
     // 1AM balances with DUST from its own pool, so the wallet does pay the fee — from the
     // registry's point of view this is an ordinary self-funded wallet that happens to hold no
     // DUST of its own. `payFees: false` here would be a lie and would break balancing.
-    { decodeKey, decodeAddress, payFees: true },
+    { ...codecs, payFees: true },
   );
 
   const submitted: string[] = [];
@@ -233,6 +246,16 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
     proofServerUrl: config.proverServerUri ?? 'https://api.1am.xyz',
   };
 
+  // Exercise every decode now. `getCoinPublicKey()` is the first thing `deployContract` calls,
+  // and a wallet whose keys we cannot read has to stop the run here rather than eleven
+  // transactions later. AddressDecodeError names the call and shows the value.
+  const decoded = {
+    coinPublicKey: base.getCoinPublicKey(),
+    encryptionPublicKey: base.getEncryptionPublicKey(),
+    unshieldedAddress: hex((await base.userAddress!()).bytes),
+    encoding: reading.shieldedCoinPublicKey.startsWith('mn_') ? 'Bech32m' : 'hex',
+  };
+
   const zkConfigProvider = fetchZkConfigProvider(ZK_BASE_URL);
   const provingProvider = await api.getProvingProvider(zkConfigProvider);
   const providers = createProviders({
@@ -257,6 +280,7 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
     submitted,
     zkBaseUrl: ZK_BASE_URL,
     publicIndexerUrl: withoutSessionQuery(endpoints.indexerHttpUrl),
+    decoded,
   };
 }
 

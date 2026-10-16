@@ -6,11 +6,18 @@
 // operator: run it as often as you like, on mainnet, and nothing will be built, proved,
 // balanced or submitted. The first irreversible act in this console is a wallet dialog the
 // operator has read.
-import { CIRCUIT_IDS, chainTimeSeconds, formatDust, VERIFIER_KEYS_PER_TX } from '@stockandfoil/sdk';
+import {
+  CIRCUIT_IDS,
+  chainTimeSeconds,
+  fetchZkConfigProvider,
+  formatDust,
+  VERIFIER_KEYS_PER_TX,
+} from '@stockandfoil/sdk';
 import type { Check } from '../../server/preflight.js';
 import { DEPLOY_TOTAL, describeDeployTx } from './deploy.js';
 import { FROZEN_CIRCUITS, VERIFIER_KEYS_IN_DEPLOY_TX } from './frozen.js';
 import { LIFECYCLE_PLAN, LIFECYCLE_PROMPTS } from './lifecycle.js';
+import { describeError } from './state.js';
 import type { ConsoleSession } from './session.js';
 
 const ok = (id: string, title: string, detail: string): Check => ({ id, title, status: 'ok', detail });
@@ -67,14 +74,32 @@ export async function checkZkOverHttp(zkBaseUrl: string): Promise<Check> {
       return fail('zk-http', 'Proving keys over HTTP', `${broken.map((p) => p.path).join(', ')} did not answer 200.`);
     }
     const cors = probes[0]?.cors;
+
+    // And then the same thing through the provider the deploy actually uses. A reachable URL
+    // is not the same fact as a readable verifier key: the deploy reads these through
+    // `FetchZkConfigProvider`, and the first time that was exercised in a browser it failed
+    // while a plain `fetch` of the identical URL succeeded. Probing the real path is the whole
+    // lesson of that bug.
+    const provider = fetchZkConfigProvider(zkBaseUrl);
+    const [verifier, zkir] = await Promise.all([provider.getVerifierKey('offer'), provider.getZKIR('offer')]);
+    const verifierBytes = (verifier as unknown as { length?: number }).length ?? 0;
+    const zkirBytes = (zkir as unknown as { length?: number }).length ?? 0;
+    if (verifierBytes === 0) {
+      return fail('zk-http', 'Proving keys over HTTP', 'the provider read a verifier key of zero bytes.');
+    }
     return ok(
       'zk-http',
       'Proving keys over HTTP',
-      `served from ${base} with Access-Control-Allow-Origin: ${cors ?? 'absent'}. 1AM's proving ` +
-        'provider fetches these; its guide requires the CORS header.',
+      `served from ${base} with Access-Control-Allow-Origin: ${cors ?? 'absent'}, and read back ` +
+        `through the deploy's own provider: offer.verifier ${verifierBytes} bytes, offer.bzkir ` +
+        `${zkirBytes} bytes. 1AM's proving provider fetches these; its guide requires the CORS header.`,
     );
   } catch (cause) {
-    return fail('zk-http', 'Proving keys over HTTP', `could not be fetched: ${(cause as Error).message}`);
+    return fail(
+      'zk-http',
+      'Proving keys over HTTP',
+      `the compiled material could not be read: ${describeError(cause)}`,
+    );
   }
 }
 
@@ -105,6 +130,17 @@ export function checkWallet(session: ConsoleSession): Check[] {
             'zero-DUST claim.',
       ),
   ];
+
+  checks.push(
+    ok(
+      'wallet-keys',
+      'Wallet keys, decoded',
+      `the wallet reports its keys in ${session.decoded.encoding}; they decode to coin ` +
+        `${session.decoded.coinPublicKey.slice(0, 16)}… and encryption ` +
+        `${session.decoded.encryptionPublicKey.slice(0, 16)}…, both as the hex midnight-js ` +
+        'needs. Checked at connect time, because this is the first thing a deploy asks for.',
+    ),
+  );
 
   // The wallet's own endpoint table is shown because it is wrong, and knowing that it is wrong
   // is part of understanding what this console does.

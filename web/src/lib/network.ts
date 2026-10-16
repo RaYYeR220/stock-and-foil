@@ -11,6 +11,7 @@ import {
   createProviders,
   dappConnectorWalletAdapter,
   fetchZkConfigProvider,
+  loadAddressCodecs,
   NETWORKS,
   type ChainNetwork,
   type DAppConnectorWallet,
@@ -75,46 +76,6 @@ export async function probeZkArtifacts(baseUrl: string, circuit = 'offer'): Prom
 
 const ensureSlash = (url: string): string => (url.endsWith('/') ? url : `${url}/`);
 
-/**
- * Bech32m → the encodings midnight-js wants. The wallet-sdk address format decodes into Node
- * Buffers, so this is imported lazily and behind a try: if it cannot load, Network mode says so
- * rather than taking the page down.
- */
-async function addressCodecs(networkId: string): Promise<{
-  decodeKey: (bech32m: string) => string;
-  decodeAddress: (bech32m: string) => Uint8Array;
-}> {
-  try {
-    const { Buffer } = await import('buffer');
-    (globalThis as { Buffer?: unknown }).Buffer ??= Buffer;
-    const format = await import('@midnight-ntwrk/wallet-sdk-address-format');
-    const { MidnightBech32m, ShieldedCoinPublicKey, ShieldedEncryptionPublicKey, UnshieldedAddress } = format;
-    return {
-      decodeKey: (value: string) => {
-        const parsed = MidnightBech32m.parse(value);
-        const target =
-          parsed.type.includes('esk') || parsed.type.includes('enc')
-            ? ShieldedEncryptionPublicKey
-            : ShieldedCoinPublicKey;
-        const key = parsed.decode(target as never, networkId) as unknown as { toHexString(): string };
-        return key.toHexString();
-      },
-      decodeAddress: (value: string) => {
-        const decoded = MidnightBech32m.parse(value).decode(UnshieldedAddress as never, networkId) as unknown as {
-          data: Uint8Array;
-        };
-        return new Uint8Array(decoded.data);
-      },
-    };
-  } catch (cause) {
-    throw new NetworkModeError(
-      'ADDRESS_FORMAT',
-      'This build cannot decode the wallet’s Bech32m keys, so it cannot talk to a deployed contract.',
-      { cause },
-    );
-  }
-}
-
 export interface ConnectOptions {
   walletKey: string;
   network: ChainNetwork;
@@ -177,14 +138,25 @@ export async function connectNetwork(options: ConnectOptions): Promise<NetworkSe
     );
   }
 
-  const { decodeKey, decodeAddress } = await addressCodecs(options.network);
+  // Loaded lazily by the SDK, which also installs the Buffer polyfill the Bech32m decoder
+  // reaches for. A failure here is reported as ADDRESS_FORMAT rather than taking the page down.
+  let codecs;
+  try {
+    codecs = await loadAddressCodecs(options.network);
+  } catch (cause) {
+    throw new NetworkModeError(
+      'ADDRESS_FORMAT',
+      'This build cannot decode the wallet’s keys, so it cannot talk to a deployed contract.',
+      { cause },
+    );
+  }
   const shielded = await connected.getShieldedAddresses();
   const { unshieldedAddress } = await connected.getUnshieldedAddress();
 
   const wallet = dappConnectorWalletAdapter(
     connected,
     { coinPublicKey: shielded.shieldedCoinPublicKey, encryptionPublicKey: shielded.shieldedEncryptionPublicKey },
-    { decodeKey, decodeAddress },
+    { ...codecs },
   );
 
   try {
