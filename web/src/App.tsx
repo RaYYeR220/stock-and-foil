@@ -11,13 +11,23 @@ import { NotFound } from './routes/NotFound.js';
 import { Persona } from './routes/Persona.js';
 import { Proof } from './routes/Proof.js';
 import { Replay } from './routes/Replay.js';
+import { WhatsNew } from './routes/WhatsNew.js';
 import { RegistryProvider } from './state/registry.js';
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
+    // A link into a section — `/#who` from the changelog, say — has to keep its anchor, so only
+    // a plain route change goes back to the top.
+    if (hash) {
+      const target = document.getElementById(hash.slice(1));
+      if (target) {
+        target.scrollIntoView({ block: 'start', behavior: 'auto' });
+        return;
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [pathname]);
+  }, [pathname, hash]);
   return null;
 }
 
@@ -29,6 +39,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/proof" element={<Proof />} />
+          <Route path="/whats-new" element={<WhatsNew />} />
           <Route path="/app" element={<AppShell />}>
             <Route index element={<Navigate to="/app/replay" replace />} />
             <Route path="replay" element={<Replay />} />

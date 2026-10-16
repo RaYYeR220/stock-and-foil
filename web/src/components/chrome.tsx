@@ -23,6 +23,7 @@ const NAV = [
   { to: '/app/replay', label: 'Guided replay' },
   { to: '/app/ledger', label: 'Public ledger' },
   { to: '/app/operator', label: 'Workspaces' },
+  { to: '/whats-new', label: 'New in Wave 2' },
   { to: '/proof', label: 'Proof' },
 ];
 
@@ -131,6 +132,9 @@ export function Footer() {
               </li>
               <li>
                 <Link to="/app/seller">Persona workspaces</Link>
+              </li>
+              <li>
+                <Link to="/whats-new">What changed in Wave 2</Link>
               </li>
               <li>
                 <Link to="/proof">Proof</Link>
