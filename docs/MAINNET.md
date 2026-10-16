@@ -204,6 +204,31 @@ budget accounting holds under concurrency rather than only between requests.
 
 ---
 
+## 4b. A second registry on the same network
+
+The federation claim — a lender asks every registry it knows, because a marker is a function of
+the invoice and of nothing else — is only demonstrable with two registries. `--instance <name>`
+gives a second one its own ceremony keys, deployment record, run state and private-state store,
+under `<network>-<name>`:
+
+```sh
+npm run -w cli ceremony   -- --network <id> --instance b
+npm run -w cli deploy     -- --network <id> --instance b --mnemonic-file <path>   # + --yes-mainnet
+npm run -w cli federation -- --network <id> --peer-instance b --mnemonic-file <path>
+npm run -w cli proof      -- --network <id>
+```
+
+`federation` reuses registry A's debtor, seller and one of its pledged receivables, because a
+marker is only comparable across registries when the parties behind it are the same — which is
+also how it works in reality: a debtor that deals with two financiers has one identity with
+both. It declares each registry as the other's peer in both directions, shows the two ledgers
+keying the same receivable by the same 32 bytes, shows that registry B's contract *cannot*
+refuse a receivable pledged in A, and shows the lender's cross-registry check catching it.
+
+One funded wallet pays for both registries; the two provider bundles are kept separate because
+the private-state provider is scoped to a contract address and sharing one would file B's
+witnesses under A.
+
 ## 5. Version pins, and why each one
 
 The matrix is identical across preview, preprod and mainnet as of 2026-10-09.
