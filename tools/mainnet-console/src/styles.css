@@ -1,0 +1,254 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Operator tooling, not a product surface: legible, dense, and visually unlike the published
+ * site so that nobody mistakes one for the other in a screenshot. */
+
+:root {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --line: #2a313c;
+  --ink: #e6edf3;
+  --dim: #9aa6b2;
+  --good: #3fb950;
+  --warn: #d29922;
+  --bad: #f85149;
+  --accent: #58a6ff;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+main {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 6rem;
+}
+
+header {
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.35rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.sub {
+  color: var(--dim);
+  margin: 0;
+  max-width: 54rem;
+}
+
+.busy {
+  color: var(--warn);
+}
+
+section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.fine {
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.mono {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  word-break: break-all;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+button {
+  background: #21262d;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+ul.checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.check:first-child {
+  border-top: 0;
+}
+
+.check p {
+  margin: 0.15rem 0 0;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+
+.check .mark {
+  font-weight: 700;
+  text-align: center;
+}
+
+.check-ok .mark {
+  color: var(--good);
+}
+
+.check-warn .mark {
+  color: var(--warn);
+}
+
+.check-fail .mark {
+  color: var(--bad);
+}
+
+dl.facts {
+  display: grid;
+  grid-template-columns: 13rem 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0 0;
+}
+
+dl.facts dt {
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+
+dl.facts dd {
+  margin: 0;
+}
+
+ol.plan {
+  margin: 0.5rem 0 0;
+  padding-left: 1.4rem;
+}
+
+ol.plan li {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--line);
+}
+
+ol.plan li p {
+  margin: 0.2rem 0 0;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+
+ol.plan li.no-prompt strong,
+ol.plan li.no-prompt em {
+  color: var(--good);
+}
+
+ol.plan li.done strong {
+  color: var(--good);
+}
+
+ol.plan li.next-step {
+  background: #1b2430;
+  margin-left: -0.6rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent);
+}
+
+.next {
+  background: #1b2430;
+  border-left: 3px solid var(--accent);
+  padding: 0.6rem 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.next p {
+  margin: 0.25rem 0 0;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+
+.failure {
+  border-color: var(--bad);
+}
+
+.failure .who {
+  color: var(--bad);
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.failure pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #0b0e13;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+ol.log {
+  margin: 0;
+  padding-left: 1.4rem;
+  font-size: 0.9rem;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+ol.log li.good {
+  color: var(--good);
+}
+
+ol.log li.bad {
+  color: var(--bad);
+}
+
+code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  background: #0b0e13;
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.85em;
+}

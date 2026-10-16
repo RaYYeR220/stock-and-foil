@@ -9,7 +9,8 @@
     "sdk",
     "cli",
     "sponsor",
-    "web"
+    "web",
+    "tools/mainnet-console"
   ],
   "engines": {
     "node": ">=22"
@@ -28,6 +29,7 @@
     "sponsored": "npm run -w cli sponsored --",
     "sponsor": "npm run -w sponsor start",
     "proof": "npm run -w cli proof --",
+    "console": "npm run -w @stockandfoil/mainnet-console dev",
     "federation": "npm run -w cli federation --"
   },
   "overrides": {

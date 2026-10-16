@@ -1,0 +1,30 @@
+{
+  "name": "@stockandfoil/mainnet-console",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Local-only operator console: deploys and drives the registry through a browser wallet. Never built, never published.",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stockandfoil/contract": "0.1.0",
+    "@stockandfoil/sdk": "0.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "buffer": "^6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "vite-plugin-wasm": "^3.5.0"
+  }
+}
