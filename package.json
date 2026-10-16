@@ -8,6 +8,7 @@
     "contract",
     "sdk",
     "cli",
+    "sponsor",
     "web"
   ],
   "engines": {
@@ -25,7 +26,11 @@
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
-    "@midnight-ntwrk/ledger-v8": "8.1.0",
+    "@midnight-ntwrk/ledger-v8": "8.1.3",
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/compact-js": "2.5.1",
+    "@midnight-ntwrk/platform-js": "2.2.4",
+    "@midnight-ntwrk/wallet-sdk": "1.2.0",
     "@midnight-ntwrk/wallet-sdk-abstractions": "2.1.0",
     "@midnight-ntwrk/wallet-sdk-address-format": "3.1.2",
     "@midnight-ntwrk/wallet-sdk-capabilities": "3.3.1",
@@ -39,5 +44,9 @@
     "@midnight-ntwrk/wallet-sdk-shielded": "3.0.2",
     "@midnight-ntwrk/wallet-sdk-unshielded-wallet": "3.1.0",
     "@midnight-ntwrk/wallet-sdk-utilities": "1.2.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true
   }
 }
