@@ -15,7 +15,9 @@ already split cannot be split again.
 |---|---|
 | Live app, no wallet needed | **https://stock-and-foil.vercel.app** |
 | Three-minute walkthrough | https://youtu.be/rDnDGqp-ekE |
-| Deployed contract (Midnight preview) | `9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7` |
+| Deployed contract (Midnight preview) | `74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad` |
+| A second, independent registry (Harbour) | `2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd` |
+| Ask both about one receivable, live in your browser | https://stock-and-foil.vercel.app/#check |
 | Every transaction, with explorer links | [PROOF.md](./PROOF.md) · `npm run verify:onchain` |
 | Review it in five minutes | [JUDGES.md](./JUDGES.md) |
 
@@ -161,11 +163,14 @@ Counts and the live evidence are in [PROOF.md](./PROOF.md).
 
 ## Roadmap
 
-- **Next:** fee sponsorship so participants need no DUST, in-browser proving through 1AM, batch
-  acceptance, distributed key generation for the disclosure key, bulk disclosure for insolvency.
-- **After that:** ledger-9 migration for contract events and ECDSA-signed e-invoices straight from
-  ERP systems, shielded settlement once contract custody lands, a mainnet deployment request, and an
-  adapter for existing factoring platforms.
+- **Done since the first submission:** federation — a second, independent registry and the
+  cross-registry check that makes a consortium unnecessary; fee sponsorship, so a party holding no
+  DUST can still transact; batch acceptance; case-scoped disclosure for an insolvency practitioner;
+  four more circuits, sixteen in all. See [what changed](https://stock-and-foil.vercel.app/whats-new).
+- **Next:** mainnet, in-browser proving through 1AM, distributed key generation for the disclosure
+  key, and an ERP connector so invoices arrive signed rather than typed.
+- **After that:** the ledger-9 migration for contract events and ECDSA-signed e-invoices, shielded
+  settlement once contract custody lands, and an adapter for existing factoring platforms.
 
 ## Built with
 
