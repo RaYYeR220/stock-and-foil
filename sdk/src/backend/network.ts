@@ -74,8 +74,38 @@ export interface NetworkDeployOptions extends NetworkBackendOptionsBase {
    * not fit in one deploy. Lower it if a deploy is refused as exhausting the block limits.
    */
   verifierKeysPerTx?: number;
+  /**
+   * Finish a staged deployment that stopped part-way instead of starting a new one.
+   *
+   * A staged deployment is a sequence of transactions, and anything that interrupts it — a
+   * dropped connection, a wallet prompt the signer declined — leaves a contract on chain that
+   * is missing some of its verifier keys. Re-running the deploy would put a *second* registry
+   * on chain; the repair is to carry on with the maintenance transactions that did not land,
+   * which is what this does.
+   *
+   * It needs the deployer's signing key to still be in `providers.privateStateProvider`: that
+   * key is the contract's maintenance authority and nothing else can insert a verifier key.
+   */
+  resume?: StagedDeployResume;
   /** Called once per transaction while a staged deployment runs, for CLI progress output. */
-  onProgress?: (step: { stage: 'deploy' | 'verifier-key'; circuit?: string; index: number; total: number }) => void;
+  onProgress?: (step: {
+    stage: 'deploy' | 'verifier-key';
+    circuit?: string;
+    index: number;
+    total: number;
+    /** The contract being maintained; present on every `verifier-key` step. */
+    contractAddress?: string;
+  }) => void;
+}
+
+/** Where a staged deployment got to, as {@link NetworkDeployOptions.resume} takes it. */
+export interface StagedDeployResume {
+  /** The contract the interrupted run created. */
+  contractAddress: string;
+  /** Its deploy transaction, carried into the returned backend and the deployment record. */
+  deployTxId?: string;
+  /** Circuits whose verifier key is already on chain, so this run skips them. */
+  insertedCircuits?: readonly string[];
 }
 
 export interface NetworkConnectOptions extends NetworkBackendOptionsBase {
@@ -200,24 +230,45 @@ export class NetworkBackend implements RegistryBackend {
     const total = 1 + rest.length;
 
     const privateStateId = (options.privateStateId ?? defaultPrivateStateId)(options.operator);
-    progress({ stage: 'deploy', index: 1, total });
-    const deployed = await deployContract(options.providers as never, {
-      compiledContract: compileStockAndFoil(options.compiledAssetsPath, first) as never,
-      privateStateId,
-      initialPrivateState: options.operator,
-      args: [args.operatorId, args.disclosurePk, args.keyholderPks, args.auditorPk, args.settlementColor],
-    } as never);
-    const data = (deployed as unknown as { deployTxData: { public: { contractAddress: string; txId?: string } } })
-      .deployTxData.public;
+    const resume = options.resume;
+    let data: { contractAddress: string; txId?: string };
+    if (resume) {
+      // The constructor and its first keys are already on chain. Scope the private-state store
+      // to that contract so the deployer's stored signing key — the maintenance authority —
+      // is the one the maintenance interface picks up.
+      options.providers.privateStateProvider.setContractAddress(resume.contractAddress);
+      data = { contractAddress: resume.contractAddress, txId: resume.deployTxId };
+    } else {
+      progress({ stage: 'deploy', index: 1, total });
+      const deployed = await deployContract(options.providers as never, {
+        compiledContract: compileStockAndFoil(options.compiledAssetsPath, first) as never,
+        privateStateId,
+        initialPrivateState: options.operator,
+        args: [args.operatorId, args.disclosurePk, args.keyholderPks, args.auditorPk, args.settlementColor],
+      } as never);
+      data = (deployed as unknown as { deployTxData: { public: { contractAddress: string; txId?: string } } })
+        .deployTxData.public;
+    }
 
-    if (rest.length > 0) {
+    // Already-inserted keys are skipped, but the step numbers stay the ones the whole staged
+    // deployment has: a resumed run reporting "tx 9 of 11" is saying where the contract is, not
+    // where this process is.
+    const alreadyInserted = new Set(resume?.insertedCircuits ?? []);
+    const pending = rest.filter((circuit) => !alreadyInserted.has(circuit));
+    if (pending.length > 0) {
       const maintenance = createCircuitMaintenanceTxInterfaces(
         options.providers as never,
         compileStockAndFoil(options.compiledAssetsPath) as never,
         data.contractAddress,
       ) as unknown as Record<string, { insertVerifierKey(key: Uint8Array): Promise<unknown> }>;
-      for (const [i, circuit] of rest.entries()) {
-        progress({ stage: 'verifier-key', circuit, index: i + 2, total });
+      for (const circuit of pending) {
+        progress({
+          stage: 'verifier-key',
+          circuit,
+          index: rest.indexOf(circuit) + 2,
+          total,
+          contractAddress: data.contractAddress,
+        });
         const key = await options.providers.zkConfigProvider.getVerifierKey(circuit);
         await maintenance[circuit]!.insertVerifierKey(key);
       }

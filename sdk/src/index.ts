@@ -139,6 +139,7 @@ export {
   type NetworkBackendOptionsBase,
   type NetworkConnectOptions,
   type NetworkDeployOptions,
+  type StagedDeployResume,
 } from './backend/network.js';
 export {
   createProviders,

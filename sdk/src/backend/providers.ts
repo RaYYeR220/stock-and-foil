@@ -107,6 +107,15 @@ export interface CreateProvidersOptions {
   wallet: WalletAdapter;
   /** Where the proving keys and ZKIR come from: `FetchZkConfigProvider` or the Node one. */
   zkConfigProvider: ZKConfigProvider<string>;
+  /**
+   * Where proofs are generated. Defaults to the HTTP proof server at `endpoints.proofServerUrl`,
+   * which is where every self-hosted caller proves, because a proof server sees witness data in
+   * the clear.
+   *
+   * A wallet that proves on the caller's behalf — 1AM hands one back from `getProvingProvider` —
+   * passes its own provider here instead, and no local proof server is contacted.
+   */
+  proofProvider?: ProofProvider;
   /** Where per-persona private state is kept. Defaults to an in-memory store. */
   privateStateProvider?: PrivateStateProvider<PrivateStateId, StockAndFoilPrivateState>;
   endpoints?: Partial<NetworkEndpoints>;
@@ -146,9 +155,11 @@ export function createProviders(options: CreateProvidersOptions): RegistryProvid
       options.webSocket as never,
     ),
     zkConfigProvider,
-    proofProvider: httpClientProofProvider(endpoints.proofServerUrl, zkConfigProvider, {
-      timeout: options.proofTimeoutMs ?? DEFAULT_PROOF_TIMEOUT_MS,
-    }),
+    proofProvider:
+      options.proofProvider ??
+      httpClientProofProvider(endpoints.proofServerUrl, zkConfigProvider, {
+        timeout: options.proofTimeoutMs ?? DEFAULT_PROOF_TIMEOUT_MS,
+      }),
     walletProvider: options.wallet,
     midnightProvider: options.wallet,
   };
