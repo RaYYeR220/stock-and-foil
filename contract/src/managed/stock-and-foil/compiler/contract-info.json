@@ -920,6 +920,39 @@
       }
     },
     {
+      "name": "acceptBatch",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "ns",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          }
+        },
+        {
+          "name": "used",
+          "type": {
+            "type-name": "Vector",
+            "length": 4,
+            "type": {
+              "type-name": "Boolean"
+            }
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
       "name": "release",
       "pure": false,
       "proof": true,

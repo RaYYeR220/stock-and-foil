@@ -22,6 +22,7 @@ import {
   transcriptValues,
   userAddress,
   type CircuitResult,
+  ZERO32,
 } from './harness.js';
 import { randomBytes32 } from '../../sdk/src/crypto/scalar.js';
 
@@ -133,6 +134,21 @@ describe('accept, release and settle', () => {
     expectNoInvoiceFields(res, inv);
     // Membership is proved against a root: the financier's own leaf never appears.
     expect(published(res).has(keyHex(r.financierA.leaf))).toBe(false);
+  });
+
+  it('acceptBatch publishes only the markers it took up, and nothing of an unused slot', () => {
+    const r = setupRegistry();
+    const taken = offered(r, r.financierA, { invoiceNo: 7_777_111_222n, amount: 321_321_321n });
+    const parked = offered(r, r.financierA, { invoiceNo: 7_777_333_444n, amount: 456_456_456n });
+    const res = r.financierA.acceptBatchRaw([taken.n, parked.n, ZERO32, ZERO32], [true, false, false, false]);
+    const values = published(res);
+    expect(values.has(keyHex(taken.n))).toBe(true);
+    // An unused slot performs no ledger operation, so its marker is not in the transcript even
+    // though it was handed to the circuit as an argument.
+    expect(values.has(keyHex(parked.n))).toBe(false);
+    expectNoInvoiceFields(res, taken.inv);
+    // Membership is proved once per batch, against a root: the financier's leaf never appears.
+    expect(values.has(keyHex(r.financierA.leaf))).toBe(false);
   });
 
   it('payInvoice publishes the amount, because settlement is unshielded', () => {

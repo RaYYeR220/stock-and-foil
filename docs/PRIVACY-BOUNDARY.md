@@ -109,6 +109,20 @@ consequence is documented in `contract/README.md`: an offer must expire on or be
 | **Private** | `finSk`, the financier's leaf, the invoice, which financier this is |
 | **Effects** | none |
 
+### `acceptBatch(ns, used)`
+
+| | |
+|---|---|
+| **Public** | the `financiers` root, **once** for the whole batch; per used slot: the marker, its `PledgeState`, `blockTime < expiry`, and the marker written back as `PLEDGED` |
+| **Private** | `finSk`, the financier's leaf, the invoices, which financier this is, and **everything about an unused slot** — it performs no ledger operation, so a real marker parked in one leaves no trace |
+| **Effects** | none |
+
+A batch is indistinguishable from the same take-ups done one at a time, except that they share a
+transaction: an observer sees up to four markers move to `PLEDGED` together and can infer they
+have one holder — which is already visible when a borrowing base locks them together (§3.5). What
+it saves is one membership proof instead of four, and it is what makes a pool all-or-nothing: a
+refused batch writes nothing, so a partially-funded pool never appears on the ledger.
+
 ### `release(n)`
 
 | | |
@@ -274,6 +288,6 @@ Asserted in `contract/test/transcript.test.ts`, for every circuit that touches a
 - no secret key, no Shamir share, no decryption point `D`;
 - no member-tree leaf — membership is proved against roots;
 - no ack leaf — a Merkle insert stores the hash of the value;
-- nothing at all about an unused certificate slot;
+- nothing at all about an unused certificate, batch or case slot;
 - no lender nonce — only its two hashes;
 - no peer label and no peer-label salt — only `H("peerlabel", label, salt)`.

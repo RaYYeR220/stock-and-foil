@@ -20,6 +20,7 @@ import {
   setupRegistry,
   userAddress,
 } from './harness.js';
+import { PledgeStatus } from '../src/index.js';
 import { randomBytes32, randomScalar } from '../../sdk/src/crypto/scalar.js';
 
 const CASE_REF = new Uint8Array(32).fill(0xc7);
@@ -262,6 +263,63 @@ describe('accept and release refusals', () => {
     const { n } = offered(r);
     expectRefusal(() => r.financierA.release(n), 'NOT_PLEDGED');
     expectRefusal(() => r.financierA.release(randomBytes32()), 'NOT_PLEDGED');
+  });
+});
+
+describe('batch accept refusals', () => {
+  /** Offers `count` acknowledged invoices to financier A and returns their markers. */
+  function offers(r: ReturnType<typeof setupRegistry>, count: number, financier?: Financier) {
+    const to = financier ?? r.financierA;
+    return [...Array(count).keys()].map((k) => offered(r, to, { invoiceNo: BigInt(k + 1) }).n);
+  }
+
+  it('EMPTY_BATCH: a batch has to take up at least one offer', () => {
+    const r = setupRegistry();
+    offers(r, 1);
+    expectRefusal(() => r.financierA.acceptBatch([]), 'EMPTY_BATCH');
+    expect(r.ledger().pledges.size()).toBe(1n);
+  });
+
+  it('NOT_ADDRESSEE: one slot the caller does not hold refuses the whole batch', () => {
+    const r = setupRegistry();
+    const mine = offers(r, 2);
+    const theirs = offered(r, r.financierB, { invoiceNo: 3n }).n;
+    expectRefusal(() => r.financierA.acceptBatch([...mine, theirs]), 'NOT_ADDRESSEE');
+    // Refusals happen while the transaction is built, so no slot of a refused batch is taken up.
+    for (const n of [...mine, theirs]) {
+      expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.OFFERED);
+    }
+    // The two it really holds still go through together.
+    r.financierA.acceptBatch(mine);
+    for (const n of mine) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+  });
+
+  it('NOT_LICENSED: an unadmitted financier cannot batch-accept, even offers addressed to it', () => {
+    const r = setupRegistry();
+    const inv = acknowledged(r);
+    const n = pure.nullifierOf(inv);
+    const outsider = new Financier(r, { role: 'financier', secretKey: randomBytes32() });
+    r.seller.offer(inv, outsider.holderTag(n), r.now + 7n * DAY);
+    expectRefusal(() => outsider.acceptBatch([n]), 'NOT_LICENSED');
+  });
+
+  it('NO_SUCH_OFFER: an unknown marker, and the same marker twice, both refuse the batch', () => {
+    const r = setupRegistry();
+    const mine = offers(r, 2);
+    expectRefusal(() => r.financierA.acceptBatch([...mine, randomBytes32()]), 'NO_SUCH_OFFER');
+    // A repeated slot is the second take-up of an offer the first slot already moved to PLEDGED.
+    expectRefusal(() => r.financierA.acceptBatch([mine[0]!, mine[0]!]), 'NO_SUCH_OFFER');
+    for (const n of mine) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.OFFERED);
+  });
+
+  it('OFFER_EXPIRED: one expired slot refuses the batch', () => {
+    const r = setupRegistry();
+    const first = offered(r, r.financierA, { invoiceNo: 1n }).n;
+    r.advance(8n * DAY);
+    const second = offered(r, r.financierA, { invoiceNo: 2n }).n;
+    expectRefusal(() => r.financierA.acceptBatch([first, second]), 'OFFER_EXPIRED');
+    r.financierA.acceptBatch([second]);
+    expect(r.ledger().pledges.lookup(second).status).toBe(PledgeStatus.PLEDGED);
   });
 });
 

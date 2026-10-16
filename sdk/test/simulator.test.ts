@@ -278,6 +278,40 @@ describe('guided replay: borrowing-base certificate', () => {
     }
   });
 
+  it('the lender takes the whole pool in one batch, and a batch with a foreign slot takes none', async () => {
+    const slots = await pool([100_000n, 200_000n, 300_000n]);
+    await w.seller.certify(slots, {
+      lenderRef: LENDER_REF,
+      lenderNonce: LENDER_NONCE,
+      floor: 500_000n,
+      validUntil: T0 + 30n * DAY,
+    });
+    const markers = slots.map((s) => pureCircuits.nullifierOf(s.invoice));
+
+    // One slot of a second pool, offered to financier B instead.
+    const theirs = invoiceOf(w, { invoiceNo: 2999n, amount: 10_000n });
+    await w.debtor.acknowledge(theirs);
+    const foreign = pureCircuits.nullifierOf(theirs);
+    await w.seller.offer(theirs, w.financierB.holderTag(foreign), T0 + 7n * DAY);
+
+    await expectRefusal(
+      w.financierA.acceptBatch([markers[0]!, foreign, markers[1]!]),
+      'NOT_ADDRESSEE',
+      'acceptBatch',
+    );
+    const refused = await w.backend.publicState();
+    for (const n of [...markers, foreign]) expect(findPledge(refused, n)?.status).toBe('OFFERED');
+
+    const receipt = await w.financierA.acceptBatch(markers);
+    expect(receipt.circuit).toBe('acceptBatch');
+    const after = await w.backend.publicState();
+    for (const n of markers) expect(findPledge(after, n)?.status).toBe('PLEDGED');
+    expect(findPledge(after, foreign)?.status).toBe('OFFERED');
+
+    await expectRefusal(w.financierA.acceptBatch([]), 'EMPTY_BATCH', 'acceptBatch');
+    expect(() => w.financierA.acceptBatch([...markers, foreign, foreign])).toThrow(/at most 4/);
+  });
+
   it('BELOW_FLOOR: a pool worth less than the floor it claims is refused, and locks nothing', async () => {
     const slots = await pool([100_000n, 200_000n]);
     await expectRefusal(

@@ -63,6 +63,7 @@ replayed as another: `operator`, `debtor`, `seller`, `financier`, `acknul`, `inv
 | `acknowledge` | `NOT_REGISTERED_DEBTOR`, `NOT_YOUR_INVOICE`, `ALREADY_ACKNOWLEDGED` |
 | `offer` | `NOT_INVOICE_OWNER`, `NOT_ACKNOWLEDGED`, `BAD_EXPIRY`, `INVOICE_OVERDUE`, `ALREADY_SETTLED`, `ALREADY_ENCUMBERED`, `BAD_EPHEMERAL` |
 | `accept` | `NOT_LICENSED`, `NO_SUCH_OFFER`, `NOT_ADDRESSEE`, `OFFER_EXPIRED` |
+| `acceptBatch` | `NOT_LICENSED`, `EMPTY_BATCH`, `NO_SUCH_OFFER`, `NOT_ADDRESSEE`, `OFFER_EXPIRED` |
 | `release` | `NOT_PLEDGED`, `NOT_HOLDER` |
 | `certifyBorrowingBase` | `BAD_EXPIRY`, `DUPLICATE_CERTIFICATE`, `EMPTY_POOL`, `NOT_INVOICE_OWNER`, `NOT_ACKNOWLEDGED`, `INVOICE_OVERDUE`, `DUPLICATE_INVOICE`, `BELOW_FLOOR`, `ALREADY_SETTLED`, `ALREADY_ENCUMBERED`, `BAD_EPHEMERAL` |
 | `payInvoice` | `NOT_YOUR_INVOICE`, `NOT_ACKNOWLEDGED`, `ALREADY_SETTLED` |
@@ -111,6 +112,19 @@ request only carries `approvals: Vector<3, Boolean>`. Look shares up by the comp
 `Certificate { borrowerCommit, lenderRef, floor, count, validUntil, nullifiers: Vector<4, Bytes<32>> }`,
 with zero bytes in unused slots. Each used slot becomes an ordinary `OFFERED` pledge expiring at
 `validUntil`, with its own sealed record, which the lender takes up with the normal `accept(n)`.
+
+**`acceptBatch` is atomic, and its slots are four.** `acceptBatch(ns: Vector<4, Bytes<32>>, used:
+Vector<4, Boolean>)` takes up to four offers addressed to one financier in a single transaction —
+the partner of the pool offer, which locks up to four slots in one. Both vectors are circuit
+*arguments*, not witnesses: unused slots carry the zero marker and `used = false`, and an unused
+slot performs no ledger operation at all, so nothing about it reaches the transcript even when a
+real marker is parked in it (`transcript.test.ts`). Membership is proved **once** per batch
+instead of once per offer, and each used slot then runs the same asserts as `accept`, in the same
+order. There is no partial success: the first slot that fails takes the whole transaction down
+before any slot is written, which is what a lender that priced a pool wants. Listing one marker
+twice is therefore `NO_SUCH_OFFER` — the first slot moves it to `PLEDGED` and the second finds no
+open offer. `accept(n)` is now literally `takeOffer(assertLicensed(), n, true)`, so the two paths
+cannot drift apart.
 
 **Certificate slots are always four.** `certifyBorrowingBase` reads four witnesses —
 `certInvoices`, `certUsed`, `certHolderTags`, `certEphemerals` — each a fixed-size vector of 4.

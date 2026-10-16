@@ -17,6 +17,7 @@ import {
   setupRegistry,
   unpack,
   userAddress,
+  ZERO32,
 } from './harness.js';
 import { PledgeStatus } from '../src/index.js';
 import { FIELD_MODULUS, randomBytes32 } from '../../sdk/src/crypto/scalar.js';
@@ -308,6 +309,31 @@ describe('borrowing-base certificates', () => {
     const pool = borrowingBase(r);
     for (const n of pool.nullifiers) r.financierA.accept(n);
     for (const n of pool.nullifiers) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+  });
+
+  it('the lender takes up the whole pool in a single batch', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    r.financierA.acceptBatch(pool.nullifiers);
+    for (const n of pool.nullifiers) expect(r.ledger().pledges.lookup(n).status).toBe(PledgeStatus.PLEDGED);
+    // Holder tags are untouched by the take-up, so the lender can still prove them later.
+    for (const n of pool.nullifiers) expect(r.ledger().pledges.lookup(n).holderTag).toBe(r.financierA.holderTag(n));
+  });
+
+  it('a batch of one is the ordinary accept, and a partly used batch leaves the rest alone', () => {
+    const r = setupRegistry();
+    const pool = borrowingBase(r);
+    r.financierA.acceptBatch([pool.nullifiers[1]!]);
+    expect(r.ledger().pledges.lookup(pool.nullifiers[1]!).status).toBe(PledgeStatus.PLEDGED);
+    expect(r.ledger().pledges.lookup(pool.nullifiers[0]!).status).toBe(PledgeStatus.OFFERED);
+    expect(r.ledger().pledges.lookup(pool.nullifiers[2]!).status).toBe(PledgeStatus.OFFERED);
+    // An unused slot is inert even when a real marker is parked in it.
+    r.financierA.acceptBatchRaw(
+      [pool.nullifiers[0]!, pool.nullifiers[2]!, ZERO32, ZERO32],
+      [true, false, false, false],
+    );
+    expect(r.ledger().pledges.lookup(pool.nullifiers[0]!).status).toBe(PledgeStatus.PLEDGED);
+    expect(r.ledger().pledges.lookup(pool.nullifiers[2]!).status).toBe(PledgeStatus.OFFERED);
   });
 
   it('slots the lender never took up are re-offerable once the certificate expires', () => {

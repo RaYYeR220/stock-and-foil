@@ -87,6 +87,9 @@ export type ImpureCircuits<PS> = {
         holderTag_0: bigint,
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  acceptBatch(context: __compactRuntime.CircuitContext<PS>,
+              ns_0: Uint8Array[],
+              used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
                        lenderRef_0: Uint8Array,
@@ -121,6 +124,9 @@ export type ProvableCircuits<PS> = {
         holderTag_0: bigint,
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  acceptBatch(context: __compactRuntime.CircuitContext<PS>,
+              ns_0: Uint8Array[],
+              used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
                        lenderRef_0: Uint8Array,
@@ -248,6 +254,9 @@ export type Circuits<PS> = {
         holderTag_0: bigint,
         expiry_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   accept(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
+  acceptBatch(context: __compactRuntime.CircuitContext<PS>,
+              ns_0: Uint8Array[],
+              used_0: boolean[]): __compactRuntime.CircuitResults<PS, []>;
   release(context: __compactRuntime.CircuitContext<PS>, n_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   certifyBorrowingBase(context: __compactRuntime.CircuitContext<PS>,
                        lenderRef_0: Uint8Array,

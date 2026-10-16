@@ -7,7 +7,7 @@
 // "is this receivable already financed?" from public state alone, and reveals nothing about who
 // holds it or what it is worth.
 import { pureCircuits } from '@stockandfoil/contract';
-import { toBytes32, toHex, type UserAddress } from '../bytes.js';
+import { toBytes32, toHex, ZERO_BYTES32, type UserAddress } from '../bytes.js';
 import { randomBytes32 } from '../crypto/scalar.js';
 import {
   encumbranceOf,
@@ -202,6 +202,30 @@ export class FinancierClient extends RoleClient {
 
   accept(nullifier: Uint8Array): Promise<TxReceipt> {
     return this.call('accept', [nullifier]);
+  }
+
+  /**
+   * Takes up to four offers addressed to this financier in one transaction — the partner of the
+   * borrowing-base pool offer, which locks up to four slots in one.
+   *
+   * Every slot is authorised exactly as `accept` authorises one, and the batch is **atomic**: a
+   * single slot this financier does not hold, or that expired, or that nobody offered, refuses
+   * the whole call and leaves every marker where it was. That is what a lender wants when it
+   * priced a pool: all of the collateral it underwrote, or none of it. Run
+   * `checkCertificate(certId)` first if the batch comes from a certificate — it names the slots
+   * that would fail, instead of only the first one.
+   *
+   * An empty batch is refused on chain as `EMPTY_BATCH` rather than thrown here, so a caller
+   * that builds the list from public state gets the same typed refusal as any other.
+   */
+  acceptBatch(nullifiers: readonly Uint8Array[]): Promise<TxReceipt> {
+    if (nullifiers.length > 4) throw new Error(`a batch takes at most 4 offers, got ${nullifiers.length}`);
+    const pad4 = <T>(values: readonly T[], fill: T): [T, T, T, T] =>
+      [0, 1, 2, 3].map((i) => values[i] ?? fill) as [T, T, T, T];
+    return this.call('acceptBatch', [
+      pad4(nullifiers, ZERO_BYTES32),
+      pad4(nullifiers.map(() => true), false),
+    ]);
   }
 
   release(nullifier: Uint8Array): Promise<TxReceipt> {

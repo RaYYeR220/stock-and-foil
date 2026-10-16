@@ -242,19 +242,54 @@ export circuit offer(holderTag: Field, expiry: Uint<64>): [] {
                                   claimed: false });
 }
 
-export circuit accept(n: Bytes<32>): [] {
+/** Proves the caller is an admitted financier against a historic root, and returns its secret. */
+circuit assertLicensed(): Bytes<32> {
   const sk = localSecretKey();
   const leaf = financierLeaf(sk);
   const path = financierPathFor(leaf);
   assert(path.leaf == leaf, "NOT_LICENSED");
   assert(financiers.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "NOT_LICENSED");
+  return sk;
+}
+
+/** Takes up one offer addressed to `sk`. An unused slot performs no ledger operation at all. */
+circuit takeOffer(sk: Bytes<32>, n: Bytes<32>, used: Boolean): [] {
+  const u = disclose(used);
   const k = disclose(n);
-  assert(pledges.member(k), "NO_SUCH_OFFER");
-  const p = pledges.lookup(k);
-  assert(p.status == PledgeStatus.OFFERED, "NO_SUCH_OFFER");
-  assert(p.holderTag == holderTagOf(sk, k), "NOT_ADDRESSEE");
-  assert(blockTimeLt(p.expiry), "OFFER_EXPIRED");
-  pledges.insert(k, PledgeState { ...p, status: PledgeStatus.PLEDGED });
+  if (u) {
+    assert(pledges.member(k), "NO_SUCH_OFFER");
+    const p = pledges.lookup(k);
+    assert(p.status == PledgeStatus.OFFERED, "NO_SUCH_OFFER");
+    assert(p.holderTag == holderTagOf(sk, k), "NOT_ADDRESSEE");
+    assert(blockTimeLt(p.expiry), "OFFER_EXPIRED");
+    pledges.insert(k, PledgeState { ...p, status: PledgeStatus.PLEDGED });
+  }
+}
+
+export circuit accept(n: Bytes<32>): [] {
+  takeOffer(assertLicensed(), n, true);
+}
+
+/**
+ * The partner of the pool offer: one lender takes up to four offers addressed to it in a single
+ * transaction, with membership proved once instead of four times.
+ *
+ * Slots are authorised exactly as in `accept` — the holder tag of every used slot must be
+ * `H("holder", finSk, N)` — and the asserts are the ordinary ones, so a batch is refused whole:
+ * a single slot the caller does not hold, or that expired, or that nobody offered, takes the
+ * entire transaction down before any slot is written. That is the point of batching a pool: a
+ * lender either gets the collateral it priced or gets none of it.
+ *
+ * Listing one marker twice refuses the batch as `NO_SUCH_OFFER`: the first slot moves it to
+ * `PLEDGED` and the second finds no open offer.
+ */
+export circuit acceptBatch(ns: Vector<4, Bytes<32>>, used: Vector<4, Boolean>): [] {
+  const sk = assertLicensed();
+  assert(poolCount(used) > 0, "EMPTY_BATCH");
+  takeOffer(sk, ns[0], used[0]);
+  takeOffer(sk, ns[1], used[1]);
+  takeOffer(sk, ns[2], used[2]);
+  takeOffer(sk, ns[3], used[3]);
 }
 
 export circuit release(n: Bytes<32>): [] {

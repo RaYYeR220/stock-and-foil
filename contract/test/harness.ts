@@ -62,6 +62,13 @@ export const userAddress = (fill: number): { bytes: Bytes } => ({ bytes: new Uin
 /** Deterministic stand-in for another registry's contract address. */
 export const contractAddress = (fill: number): { bytes: Bytes } => ({ bytes: new Uint8Array(32).fill(fill) });
 
+/** The zero marker an unused batch or pool slot carries. */
+export const ZERO32 = new Uint8Array(32);
+
+/** Fixed four-slot vectors are the contract's batching idiom; this is the padding for them. */
+export const pad4 = <T>(values: readonly T[], fill: T): [T, T, T, T] =>
+  [0, 1, 2, 3].map((i) => values[i] ?? fill) as [T, T, T, T];
+
 type Token = { raw: string };
 type Recipient = { address: string };
 
@@ -331,7 +338,6 @@ export class Seller extends Persona {
     o: { lenderRef: Bytes; lenderNonce: Bytes; floor: bigint; validUntil: bigint },
     inputs: CallInputs = {},
   ) {
-    const pad4 = <T>(xs: T[], fill: T) => [0, 1, 2, 3].map((i) => xs[i] ?? fill) as [T, T, T, T];
     const zero: Invoice = { debtorId: 0n, sellerId: 0n, invoiceNo: 0n, amount: 0n, dueDate: 0n, salt: 0n };
     return this.call('certifyBorrowingBase', [o.lenderRef, o.lenderNonce, o.floor, o.validUntil], {
       invoices: pad4(slots.map((s) => s.invoice), zero),
@@ -352,6 +358,14 @@ export class Financier extends Persona {
   }
   accept(n: Bytes) {
     return this.call('accept', [n]);
+  }
+  /** Takes up to four offers in one call; the fixed four slots are padded here. */
+  acceptBatch(ns: Bytes[]) {
+    return this.call('acceptBatch', [pad4(ns, ZERO32), pad4(ns.map(() => true), false)]);
+  }
+  /** The raw four-slot form, for tests that need a used flag the padding would not produce. */
+  acceptBatchRaw(ns: [Bytes, Bytes, Bytes, Bytes], used: [boolean, boolean, boolean, boolean]) {
+    return this.call('acceptBatch', [ns, used]);
   }
   release(n: Bytes) {
     return this.call('release', [n]);

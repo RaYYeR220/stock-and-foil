@@ -125,6 +125,11 @@ The central adversary: the First Brands fraud pattern.
 **Cannot**
 - Accept an offer addressed to a competitor — `NOT_ADDRESSEE` — or accept without being admitted —
   `NOT_LICENSED` — or accept after expiry — `OFFER_EXPIRED`.
+- Slip a competitor's offer through a *batch*. `acceptBatch` proves membership once but authorises
+  every slot with the same per-slot asserts as `accept`, and a batch is all-or-nothing: one slot
+  the caller does not hold refuses the whole transaction and writes nothing.
+  `refusals.test.ts` "NOT_ADDRESSEE: one slot the caller does not hold refuses the whole batch";
+  `model.property.test.ts` `AcceptBatch`.
 - Release a pledge it does not hold — `NOT_HOLDER`.
 - Claim proceeds of a receivable it did not hold at settlement — `NOT_PAYEE`; or claim twice —
   `ALREADY_CLAIMED`.
@@ -268,7 +273,7 @@ with no on-chain request at all. That is inherent to 2-of-3 and is a published l
 | Pre-register a guessable `certId` so the real certificate is refused | anyone, if the lender nonce is predictable | closed by a 32-byte random nonce | `limits.test.ts` "lets a stranger burn the certificate id" |
 | Grow `records` / `pledges` / `requests` | seller / auditor | fees; one record per offer, and an offer needs a future expiry | — |
 | Concurrent transactions on one receivable | anyone | the transcript records each `pledges[N]` read result, so a state change between building and inclusion invalidates the loser, which retries. Reads are per key, and tree inserts commute, so unrelated receivables never conflict | — |
-| A block's `bytes_written` limit | — | `certifyBorrowingBase` is the largest call (4 records + 4 markers + 1 certificate ≈ 2 kB of state, 8.6 kB of transaction) and fits; the *deploy* does not, which is why verifier keys are staged | `sdk/src/backend/network.ts` |
+| A block's `bytes_written` limit | — | `certifyBorrowingBase` is the largest call (4 records + 4 markers + 1 certificate ≈ 2 kB of state, 8.6 kB of transaction) and fits; `acceptBatch` rewrites at most 4 markers and is far smaller; the *deploy* does not fit, which is why verifier keys are staged | `sdk/src/backend/network.ts` |
 
 ---
 

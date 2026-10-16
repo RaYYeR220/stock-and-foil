@@ -250,6 +250,65 @@ class Accept extends RegistryCommand {
   }
 }
 
+/**
+ * The pool offer's partner: one lender takes several offers in one transaction. The batch is
+ * authorised slot by slot with the ordinary asserts, so the model predicts the refusal of the
+ * *first* slot that fails — and, because a refusal aborts the whole call, predicts that a
+ * refused batch leaves every marker exactly where it was.
+ */
+class AcceptBatch extends RegistryCommand {
+  constructor(
+    raw: number,
+    focus: boolean,
+    readonly mask: number,
+    readonly asAddressee: boolean,
+  ) {
+    super(raw, focus);
+  }
+  protected wants(inv: InvoiceModel): boolean {
+    return inv.status === 'OFFERED';
+  }
+  run(m: Model, s: Real): void {
+    // A focused batch is what a lender actually sends: the open offers among the chosen that are
+    // addressed to one holder, lead picked by `raw` so the holder rotates. Unfocused batches keep
+    // the raw mask, which is where the refusals come from.
+    const chosen = [0, 1, 2].filter((k) => (this.mask >> k) & 1);
+    const open = chosen.filter((k) => this.wants(m.invoices[k]!));
+    const lead = open.length > 0 ? m.invoices[open[this.raw % open.length]!]!.holder : null;
+    const slots = this.focus ? open.filter((k) => m.invoices[k]!.holder === lead) : chosen;
+    const f = this.asAddressee ? (lead ?? 'A') : other(lead ?? 'A');
+
+    let expected: string | null = null;
+    if (slots.length === 0) {
+      expected = 'EMPTY_BATCH';
+    } else {
+      for (const k of slots) {
+        const inv = m.invoices[k]!;
+        if (inv.status !== 'OFFERED') {
+          expected = 'NO_SUCH_OFFER';
+          break;
+        }
+        if (inv.holder !== f) {
+          expected = 'NOT_ADDRESSEE';
+          break;
+        }
+        if (m.time >= inv.expiry) {
+          expected = 'OFFER_EXPIRED';
+          break;
+        }
+      }
+    }
+
+    const financier = f === 'A' ? s.r.financierA : s.r.financierB;
+    expectOutcome(this.toString(), expected, () => financier.acceptBatch(slots.map((k) => s.nullifiers[k]!)));
+    if (!expected) for (const k of slots) m.invoices[k]!.status = 'PLEDGED';
+    checkLedger(m, s);
+  }
+  toString(): string {
+    return `AcceptBatch(${this.mask.toString(2)}${this.focus ? '*' : ''}, ${this.asAddressee ? 'addressee' : 'outsider'})`;
+  }
+}
+
 class Release extends RegistryCommand {
   constructor(
     raw: number,
@@ -482,6 +541,9 @@ const commands = [
   fc.tuple(index, focus).map(([i, k]) => new Acknowledge(i, k)),
   fc.tuple(index, focus, financier, offerDays).map(([i, k, f, d]) => new Offer(i, k, f, d)),
   fc.tuple(index, focus, fc.boolean()).map(([i, k, b]) => new Accept(i, k, b)),
+  fc
+    .tuple(index, focus, fc.integer({ min: 0, max: 7 }), fc.boolean())
+    .map(([i, k, mask, b]) => new AcceptBatch(i, k, mask, b)),
   fc.tuple(index, focus, fc.boolean()).map(([i, k, b]) => new Release(i, k, b)),
   fc.tuple(index, focus).map(([i, k]) => new Pay(i, k)),
   fc
@@ -507,6 +569,11 @@ const REQUIRED_COVERAGE = [
   'Accept:NO_SUCH_OFFER',
   'Accept:NOT_ADDRESSEE',
   'Accept:OFFER_EXPIRED',
+  'AcceptBatch:OK',
+  'AcceptBatch:EMPTY_BATCH',
+  'AcceptBatch:NO_SUCH_OFFER',
+  'AcceptBatch:NOT_ADDRESSEE',
+  'AcceptBatch:OFFER_EXPIRED',
   'Release:OK',
   'Release:NOT_PLEDGED',
   'Release:NOT_HOLDER',
@@ -561,11 +628,13 @@ it('random lifecycles agree with the reference model and keep the registry invar
         return { model, real: { r, invoices, nullifiers: invoices.map((inv) => pure.nullifierOf(inv)) } };
       }, cmds);
     }),
-    // Fixed seed: the coverage assertions below have to hold on every run, not on most runs.
-    { numRuns: 200, seed: 0x5f0117, endOnFailure: true },
+    // Fixed seed: the coverage assertions below have to hold on every run, not on most runs. The
+    // thin outcomes are the ones that need an offer to expire while it is still open, so adding a
+    // command re-shuffles the stream and the seed has to be re-picked with it.
+    { numRuns: 200, seed: 0x5f5e9a, endOnFailure: true },
   );
 
-  for (const outcome of REQUIRED_COVERAGE) {
-    expect(seen.get(outcome) ?? 0, `command outcome never exercised: ${outcome}`).toBeGreaterThan(0);
-  }
+  const missing = REQUIRED_COVERAGE.filter((outcome) => (seen.get(outcome) ?? 0) === 0);
+  const table = [...seen.entries()].sort().map(([k, v]) => `${k}=${v}`).join(' ');
+  expect(missing, `command outcomes never exercised (saw: ${table})`).toEqual([]);
 });
