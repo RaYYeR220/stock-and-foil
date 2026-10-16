@@ -40,6 +40,7 @@ import {
   type StockAndFoilPrivateState,
   type TxReceipt,
 } from '@stockandfoil/sdk';
+import { NetworkBackend } from '@stockandfoil/sdk';
 import { connectDeployed } from './deploy.js';
 import {
   COMPACT_VERSION,
@@ -308,6 +309,29 @@ export async function scenario(args: Args): Promise<number> {
     };
     const currentRequestId = async (): Promise<Uint8Array> => auditor.requestIdOf(await currentRecordId(), caseRef);
 
+    /**
+     * A read-only backend for the declared peer registry, or `undefined` when none was declared.
+     *
+     * It shares this run's providers, so it needs no second wallet: `checkEncumbranceAcross`
+     * only reads public state and the chain's clock. Built once and reused.
+     */
+    let peerBackendCache: NetworkBackend | undefined | null = null;
+    const peerBackend = async (): Promise<NetworkBackend | undefined> => {
+      if (peerBackendCache !== null) return peerBackendCache ?? undefined;
+      if (peerAddress === undefined) {
+        peerBackendCache = undefined;
+        return undefined;
+      }
+      peerBackendCache = await NetworkBackend.connect({
+        network,
+        providers: session.providers,
+        compiledAssetsPath: session.assets,
+        contractAddress: peerAddress,
+        endpoints: session.endpoints,
+      });
+      return peerBackendCache;
+    };
+
     /** The record a pool pledge points at, for a case that covers more than one receivable. */
     const poolRecordId = async (key: string): Promise<Uint8Array> => {
       const pledge = findPledge(await backend.publicState(), pureCircuits.nullifierOf(invoice(key)));
@@ -378,6 +402,41 @@ export async function scenario(args: Args): Promise<number> {
         note:
           `shares ${opened.indices.join(' + ')} recombined; invoice #${opened.invoice.invoiceNo} ` +
           `${money(opened.invoice.amount)} recomputes nullifier ${evidence.recomputedNullifier}`,
+      };
+    };
+
+    /**
+     * The cross-registry question, asked for real.
+     *
+     * The standing objection to an encumbrance registry is that it only works once every
+     * competing financier has joined the same one — a consortium sale a startup cannot make. The
+     * answer is that a pledge marker is `H("pledge", fingerprint)` and nothing else: no registry
+     * identity, no operator key, no deployment salt. The same receivable therefore has the same
+     * marker in every Stock & Foil registry, and one lender can put the question to all of them
+     * without any of them federating, sharing state or agreeing to anything.
+     *
+     * This step asks it. Financier A checks invoice #1001 against this registry *and* against
+     * the peer the operator declared, and the answer has to distinguish three states, not two:
+     * encumbered here, encumbered there, or nobody answered. A peer that cannot be reached is
+     * reported `unreachable` and the result is marked incomplete, because "nobody answered" and
+     * "nobody has it" are precisely the two things a lender must never confuse.
+     */
+    const checkAcrossRegistries = async (): Promise<Outcome> => {
+      const startedAt = Date.now();
+      const peer = await peerBackend();
+      const across = await financierA.checkEncumbranceAcross(main, peer ? [peer] : []);
+      const here = across.here.encumbrance;
+      const elsewhere = across.peers
+        .map((r) => `${r.contractAddress.slice(0, 10)}...: ${r.unreachable ? 'unreachable' : r.encumbrance}`)
+        .join('; ');
+      return {
+        durationMs: Date.now() - startedAt,
+        note:
+          `marker ${across.nullifier.slice(0, 18)}... is ${here} in this registry` +
+          (across.peers.length === 0
+            ? '; no peer was declared, so nothing else was asked'
+            : ` and ${elsewhere}. Answer ${across.complete ? 'complete' : 'INCOMPLETE'}: ` +
+              `${across.complete ? 'every registry answered' : 'a peer did not answer, so this is not a "free" verdict'}`),
       };
     };
 
@@ -660,6 +719,13 @@ export async function scenario(args: Args): Promise<number> {
               },
             },
           ]),
+      {
+        id: 'check-across-registries',
+        label: 'A lender asks every registry it knows of whether the receivable is already pledged',
+        circuit: 'checkEncumbranceAcross (off chain)',
+        persona: 'financierA',
+        run: checkAcrossRegistries,
+      },
     ];
 
     // ------------------------------------------------------------------------------ the runner
