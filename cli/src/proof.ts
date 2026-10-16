@@ -278,6 +278,8 @@ function disclosureTable(evidence: EvidenceFile): string {
 function sponsorshipSection(path: string | undefined, explorer: ExplorerTemplates | undefined): string {
   if (path === undefined) return '';
   const s = readJson<SponsoredEvidence>(path);
+  // Repository-relative and forward-slashed, so the link works from a Markdown viewer on any OS.
+  const here = path.slice(path.lastIndexOf('evidence')).replace(/\\/g, '/');
   const total = s.totalSponsoredFeeSpeck ?? '0';
   return [
     '### A party holding zero DUST transacted anyway',
@@ -296,7 +298,7 @@ function sponsorshipSection(path: string | undefined, explorer: ExplorerTemplate
     `| Its DUST after | **${s.actingWallet.dustSpeckAfter} SPECK** |`,
     `| Its NIGHT | ${s.actingWallet.nightStar} STAR, ${s.actingWallet.registeredForDustGeneration} UTXO(s) registered for DUST generation |`,
     `| Run at | ${stamp(s.at)} |`,
-    `| Evidence | [\`${path.slice(path.lastIndexOf('evidence'))}\`](./cli/${path.slice(path.lastIndexOf('evidence')).replace(/\\/g, '/')}) |`,
+    `| Evidence | [\`cli/${here}\`](./cli/${here}) |`,
     '',
     '| Circuit | Transaction | Block | Fee paid by the sponsor |',
     '|---|---|---|---|',
