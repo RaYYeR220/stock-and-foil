@@ -63,11 +63,21 @@ npm test          # contract + SDK suites; no Docker, no network
 
 ## 5. The on-chain proof
 
-[PROOF.md](./PROOF.md) lists the deployed contract, every transaction with explorer links, and:
+[PROOF.md](./PROOF.md) lists the two deployed registries, every transaction with explorer links,
+a transaction paid for by a sponsor from a wallet holding zero DUST, and the cross-registry
+encumbrance check. To re-check any of it against the chain yourself:
 
 ```bash
-npm run -w cli verify -- --network preview   # re-reads the chain and checks it against the evidence
+npm run -w cli verify -- --network preview                            # registry A, 119 checks
+npm run -w cli verify -- --network preview --instance b --deployment-only   # registry B
 ```
+
+Neither needs a wallet, a mnemonic, a proof server or proving keys — only a network connection.
+`verify` is monotonic: everything the evidence recorded must still be on chain and unchanged,
+and a ledger map that shrank fails, but the chain having *more* than the snapshot saw is listed
+as informational rather than failed, because a public ledger keeps moving after a photograph of
+it. Today that surplus is one acknowledgment from the sponsorship proof and one peer entry from
+the cross-registry run, both named in the output. `--exact` demands strict equality instead.
 
 ## 6. What we do not claim
 

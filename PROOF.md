@@ -319,8 +319,11 @@ rival consortium running the same software, not a second copy of our book.
 
 ## Local devnet: the same run, with the deployment repeated
 
-Kept because it is reproducible by anyone with Docker and no faucet, and because the deployment
-artifacts here are machine-specific and therefore gitignored.
+**This is the September run, against the twelve-circuit build.** It is kept because it is
+reproducible by anyone with Docker and no faucet, and because the deployment artifacts are
+machine-specific and therefore gitignored. The devnet has been reset since, so the transactions
+below are no longer in its indexer — unlike everything above, this section cannot be re-checked
+against a chain today. Re-run it with `--network undeployed` to produce a current one.
 
 | | |
 |---|---|
@@ -328,7 +331,7 @@ artifacts here are machine-specific and therefore gitignored.
 | Scenario | 27 steps, 20 transactions, 5 refusals, blocks 5354 - 5464 |
 | Window | 2026-09-15 17:19:17 UTC - 17:30:51 UTC |
 | Final counts | identical to preview: 1 / 2 / 5 / 5 / 5 / 6 / 1 / 1 / 2 |
-| `verify` | 90 checks passed |
+| `verify` | 90 checks passed, against the September twelve-circuit build |
 | Integration suite | `sdk/test/network.devnet.test.ts`, 4 tests, 276.6 s, real proofs against the local node |
 
 A devnet has no public explorer, so the deployment file records no `explorer` templates and the
@@ -410,14 +413,17 @@ a file passed as `--mnemonic-file`; neither the phrase nor its path is in this r
 
 ```bash
 npm run -w cli ceremony -- --network preview   # 2-of-3 disclosure key ceremony -> cli/.secrets/
-npm run -w cli deploy   -- --network preview   # 7 transactions -> cli/deployments/preview.json
-npm run -w cli scenario -- --network preview   # 27 steps       -> cli/evidence/preview-<stamp>.json
+npm run -w cli deploy   -- --network preview   # 11 transactions -> cli/deployments/preview.json
+npm run -w cli scenario -- --network preview   # 33 steps        -> cli/evidence/preview-<stamp>.json
 npm run -w cli verify   -- --network preview
+npm run -w cli proof    -- --network preview   # rewrites the generated blocks of this file
 ```
 
-The wallet syncs from genesis on each invocation, which took 14-24 minutes against preview at
-~880 000 blocks; `deploy` and `scenario` print progress per transaction and `scenario` is
-resumable (`--from <step>`), so a dropped connection costs one step rather than the whole run.
+The wallet syncs from genesis on each invocation, which took about 16 minutes against preview
+on 2026-10-16 at ~1 320 000 blocks and 268 000 wallet-relevant events; all three commands print
+a sync percentage while they wait, `deploy` and `scenario` print progress per transaction, and
+`scenario` is resumable (`--from <step>`), so a dropped connection costs one step rather than
+the whole run.
 
 For the local devnet instead, start the node, indexer and proof server and use
 `--network undeployed`.
@@ -426,47 +432,103 @@ For the local devnet instead, start the node, indexer and proof server and use
 
 `verify` needs no wallet, no mnemonic, no proof server and no proving keys. It reads the deployed
 contract's state through the public indexer, re-derives the same projection the SDK uses, and
-compares it field by field with the evidence file - then re-checks the evidence's own claims
-against the chain. It exits non-zero on any mismatch.
+checks it against the evidence file - then re-checks the evidence's own claims against the chain.
+It exits non-zero on any contradiction.
+
+**What "matches" means, and why it is not equality.** An evidence file is a photograph of a
+public ledger at one moment, and the ledger then keeps going: the sponsorship demo adds an
+acknowledgment, a second registry declares this one a peer. None of that makes the photograph
+false. So the question is monotonic: *is everything this evidence recorded still on chain and
+unchanged, and has nothing it recorded gone backwards?* Every marker, status, claimed flag,
+certificate, approval and the disclosure equality is still compared exactly, and any of them
+changing or disappearing is a loud failure; a map that has **shrunk** is a failure. What is not
+a failure is the chain holding *more* than the evidence saw. That surplus is listed separately,
+and where another evidence file in this repository explains it, by name.
+
+`--exact` restores strict equality for regression runs against a devnet nothing else touches.
+Run against preview today it reports exactly the four surplus entries below as failures, which
+is the correct answer to a different question.
 
 ```bash
 npm run verify:onchain                         # same as: npm run -w cli verify -- --network preview
 ```
 
-Its output on 2026-09-15, with the absolute evidence path and two long hex values shortened to
-fit the page:
+Its output today, with the absolute paths shortened to fit the page:
 
 ```
 === verifying preview ===
-  contract  9be70aa1c3577ee5f941fa0019c67e64bc4445ec63097edecf21c4ec5833e8f7
-  evidence  cli/evidence/preview-2026-09-15T18-03-58Z.json
-  recorded  27 steps, 20 transactions, 5 refusals
+  contract  74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad
+  evidence  cli/evidence/preview-2026-10-16T11-21-09Z.json
+  indexer   https://indexer.preview.midnight.network/api/v4/graphql
+  recorded  33 steps, 24 transactions, 5 refusals
+  mode      monotonic — everything recorded must still hold; later activity is reported, not failed
 
 === checks ===
-  ok   contractAddress                            9be70aa1c3577ee5f941...
+  ok   contractAddress                            74fe0bf972edc0c6c1ed…
   ok   network                                    preview
   ok   config.disclosurePk                        {"x":"365724648556055276975297050201806719900438080425687697353106334257
   ok   config.auditorPk                           {"x":"128863235325853341205761880580203676656546555923829387434838977552
   ok   config.keyholderPks                        [{"x":"16399305735512160948718228855070862199308278067720241121342997533
-  ok   config.settlementColor                     00000000000000000000...
-  ok   config.operatorId                          79f27d5f98c126378f1a...
+  ok   config.settlementColor                     00000000000000000000…
+  ok   config.operatorId                          79f27d5f98c126378f1a…
   ok   config.threshold                           2
   ok   counts.debtors                             1
   ok   counts.financiers                          2
-  ok   counts.acks                                5
-  ok   counts.ackNullifiers                       5
   ok   counts.pledges                             5
   ok   counts.records                             6
   ok   counts.certificates                        1
   ok   counts.requests                            1
-  ok   counts.shares                              2
+  ok   counts.shares                              10
+  ok   counts.cases                               2
   ok   claim: refused steps submitted nothing     5 refusals, none carrying a transaction id
-  ok   claim: settled proceeds were claimed exactly once 1 settled pledge(s), amounts 230000
-  ok   claim: a borrowing-base certificate locks its pool floor 800000, 4 slot(s), valid until 1792086912
+  ok   claim: settled proceeds were claimed exactly once 1 settled pledge(s) from this run, amounts 230000
+  ok   claim: a borrowing-base certificate locks its pool floor 800000, 4 slot(s), valid until 1794739236
   ok   claim: disclosure carried at least the threshold of approvals approvals [true,false,true]
-  ok   claim: the opened record recomputed the on-ledger nullifier 6a49cd4c...d644e39a == 6a49cd4c...d644e39a
+  ok   claim: the opened record recomputed the on-ledger nullifier 4fee305491cd2ceaf54a9187752f9233c15180c7e573b8db5698fdfaab0aae2a == 4fee305491cd2ceaf54a9187752f9233c15180c7e573b8db5698fdfaab0aae2a
 
-  90 checks passed; the chain matches the evidence.
+=== newer than this evidence (not failures) ===
+  +    counts.acks                                5 recorded, 6 on chain (+1 newer than this evidence) — cli/evidence/sponsored-preview-2026-10-16T11-34-09Z.json (acknowledge)
+  +    counts.ackNullifiers                       5 recorded, 6 on chain (+1 newer than this evidence) — cli/evidence/sponsored-preview-2026-10-16T11-34-09Z.json (acknowledge)
+  +    counts.peers                               0 recorded, 1 on chain (+1 newer than this evidence) — cli/evidence/federation-preview-2026-10-16T12-36-40Z.json (registerPeer)
+  +    peer[2d8f8f23…ccbd]                        on chain, recorded by cli/evidence/federation-preview-2026-10-16T12-36-40Z.json, cli/deployments/preview-b.json
+
+  119 checks passed, 4 informational; everything the evidence records is still on chain and unchanged.
+```
+
+The four informational lines are the point of the monotonic rule: the acknowledgment came
+from the zero-DUST sponsorship proof and the peer entry from the cross-registry run, both of
+them later than this evidence and both of them recorded in this repository. Nothing the
+scenario wrote down has changed.
+
+### Registry B
+
+Harbour has no scenario of its own, so there is no snapshot to compare against. What can
+still be checked is that the contract exists and holds the configuration its own ceremony
+sealed into it at deploy time:
+
+```bash
+npm run -w cli verify -- --network preview --instance b --deployment-only
+```
+
+```
+=== verifying preview-b (deployment only) ===
+  contract  2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd
+  indexer   https://indexer.preview.midnight.network/api/v4/graphql
+  mode      deployment-only — this registry has no scenario evidence, so what is checked
+            is that the contract exists and holds the configuration its ceremony sealed
+
+=== checks ===
+  ok   config.disclosurePk                        {"x":"370942517254458575659453193525904800728765624148632276187349448799
+  ok   config.auditorPk                           {"x":"358449248802071441446966421400021188133664871845608718864840420009
+  ok   config.keyholderPks                        [{"x":"50701050671105279726907568593799950082042000224470160362030818883
+  ok   config.settlementColor                     00000000000000000000…
+  ok   claim: the threshold is 2 of 3             2 of 3
+
+=== also on chain (informational) ===
+  +    ledger counts                              {"debtors":2,"financiers":2,"acks":2,"ackNullifiers":2,"pledges":2,"records":2,"certificates":0,"requests":0,"shares":0,"peers":1,"cases":0}
+  +    peer[74fe0bf9…0fad]                        declared by this registry
+
+  5 checks passed, 2 informational; the contract holds the configuration its ceremony sealed.
 ```
 
 ## What this does not prove

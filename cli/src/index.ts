@@ -33,9 +33,13 @@ const USAGE = `stock-and-foil cli
       cli/evidence/<network>-<timestamp>.json. Resumable: completed steps are skipped.
       --peer declares another registry as a peer; without it that step is skipped.
 
-  verify --network <id> [--evidence <path>]
-      Re-reads the contract through the indexer and asserts it matches the newest evidence file.
-      Needs no wallet and no proving keys. Exits non-zero on any mismatch.
+  verify --network <id> [--instance <name>] [--evidence <path>] [--exact] [--deployment-only]
+      Re-reads the contract through the indexer and checks the newest evidence file against it.
+      Needs no wallet and no proving keys. Monotonic by default: everything the evidence
+      recorded must still be on chain and unchanged, and a ledger map that shrank is a failure,
+      but the chain having more than the evidence saw is reported, not failed — a public ledger
+      keeps moving after a snapshot. --exact restores strict equality for regression runs.
+      --deployment-only checks a registry that has no scenario of its own, such as a peer.
 
   balance --network <id> [--mnemonic-file <path>] [--watch <seconds>] [--no-sync]
       Prints the wallet's NIGHT and DUST, the addresses to fund, and what to do if there is no
