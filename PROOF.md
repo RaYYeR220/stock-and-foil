@@ -199,6 +199,103 @@ afterwards and is still zero, because it never paid.
 ## Two registries, and the question a lender puts to both
 
 <!-- BEGIN GENERATED preview-federation -->
+
+The standing objection to an encumbrance registry is that it only works once every competing
+financier has joined the same one — a consortium sale a startup cannot make. This is the
+answer, run on a public testnet with two genuinely separate deployments rather than argued.
+
+A pledge marker is `H("pledge", fingerprint)` and the fingerprint is a function of the
+invoice and its parties alone: no registry identity, no operator key, no deployment salt. So
+the same receivable has the same marker in every Stock & Foil registry, and one lender can
+put the encumbrance question to all of them without any of them federating, sharing state or
+agreeing to anything.
+
+| Role | Registry | Contract | Operator id |
+|---|---|---|---|
+| A | Stock & Foil (`preview`) | [`74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad`](https://preview.midnightexplorer.com/contracts/74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad) | `79f27d5f98c12637...` |
+| B | Harbour (`preview-b`) | [`2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd`](https://preview.midnightexplorer.com/contracts/2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd) | `54f28d2d58b2cd59...` |
+
+Two separate ceremonies, two operators, two sets of keyholders, two deployments. Neither can
+read the other's private state, and neither was told anything about the other's book.
+
+### The marker is the same in both
+
+| | |
+|---|---|
+| Invoice | #2002 |
+| Marker on A's ledger | `f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca` |
+| Marker on B's ledger | `f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca` |
+| Identical | **yes** |
+
+These are the keys the two ledgers actually store the entry under, read back from each
+contract, not one hash computed twice in one process. Two independently deployed contracts,
+each having run the circuit inside its own proof, arrived at the same 32 bytes from the same
+invoice and the same parties. That is the whole mechanism; everything below follows from it.
+
+### What happened
+
+| # | Step | Registry | Circuit | Transaction | Block |
+|---|---|---|---|---|---|
+| 1 | Stock & Foil declares Harbour a peer | A (Stock & Foil) | `registerPeer` | refused `DUPLICATE_PEER`, none submitted | - |
+| 2 | Harbour declares Stock & Foil a peer | B (Harbour) | `registerPeer` | refused `DUPLICATE_PEER`, none submitted | - |
+| 3 | Harbour admits the same debtor after its own KYB | B (Harbour) | `admitDebtor` | [`925a1256bc46...`](https://preview.midnightexplorer.com/transactions/925a1256bc462c4da176f679da7eb12cf37b149946b36d7c16da23b799637f41) | 1322264 |
+| 4 | Harbour admits a lender that banks only with it | B (Harbour) | `admitFinancier` | [`ee5941d2e3f4...`](https://preview.midnightexplorer.com/transactions/ee5941d2e3f42a7b55860a38576ba79e4953acfca13f13f67ead096c95604ae6) | 1322267 |
+| 5 | The Harbour lender is offered the receivable and asks every registry it knows | B (Harbour) | `checkEncumbranceAcross (off chain)` | none (off chain) | - |
+| 6 | The debtor acknowledges invoice #2002 in Harbour too | B (Harbour) | `acknowledge` | [`fbe5f7f95f3e...`](https://preview.midnightexplorer.com/transactions/fbe5f7f95f3e582d6352784330b0f5e84d5267841b3f563571d5d1591f658d6a) | 1322271 |
+| 7 | The seller offers the already-pledged receivable in Harbour | B (Harbour) | `offer` | [`de94a8f076d1...`](https://preview.midnightexplorer.com/transactions/de94a8f076d158c35c93cb9626b2859e4d4a844699b5d9536f3facb3bc89bf0d) | 1322275 |
+| 8 | A second offer of the same receivable inside Harbour is refused | B (Harbour) | `offer` | refused `ALREADY_ENCUMBERED`, none submitted | - |
+| 9 | The same question once Harbour has taken the offer too | B (Harbour) | `checkEncumbranceAcross (off chain)` | none (off chain) | - |
+| 10 | The same check on a receivable nobody has pledged | B (Harbour) | `checkEncumbranceAcross (off chain)` | none (off chain) | - |
+
+- **Stock & Foil declares Harbour a peer** — already declared by an earlier run
+
+- **Harbour declares Stock & Foil a peer** — already declared by an earlier run
+
+- **Harbour admits the same debtor after its own KYB** — the same real-world debtor, admitted independently by a second operator
+
+- **The Harbour lender is offered the receivable and asks every registry it knows** — here (Harbour) FREE — its own book has never seen this receivable; 74fe0bf972...: ENCUMBERED. encumberedAnywhere=true, complete=true. Only the peer could answer, and the lender declines on one bit: encumbered. Not the holder, not the amount, not since when.
+
+- **The debtor acknowledges invoice #2002 in Harbour too** — same invoice, same parties, same salt — so the same fingerprint and the same marker
+
+- **The seller offers the already-pledged receivable in Harbour** — ACCEPTED, and that is the finding: Harbour's ledger has never heard of the pledge in Stock & Foil, so its contract cannot refuse this. Nothing inside a single registry can. What catches it is the next step.
+
+- **A second offer of the same receivable inside Harbour is refused** — This receivable is already pledged to a financier.
+
+- **The same question once Harbour has taken the offer too** — here (Harbour) ENCUMBERED; 74fe0bf972...: ENCUMBERED. Both books now show it, which is the state a second lender would walk into — and exactly the double pledge the check above would have prevented.
+
+- **The same check on a receivable nobody has pledged** — marker bfc2fda848f76b7069... is FREE in both registries, encumberedAnywhere=false. The check says no when the answer is no.
+
+### The answers a lender gets
+
+**Invoice #2002, pledged in Stock & Foil — asked before Harbour had seen it** — marker `f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca`
+
+| Registry | Answer | |
+|---|---|---|
+| **B** Harbour (`2d8f8f23b311b959...`) | FREE | the lender's own registry |
+| **A** Stock & Foil (`74fe0bf972edc0c6...`) | ENCUMBERED | a declared peer |
+
+Verdict: **ENCUMBERED somewhere**, answer complete (every registry answered).
+
+**Invoice #2002, asked again once Harbour had taken it too** — marker `f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca`
+
+| Registry | Answer | |
+|---|---|---|
+| **B** Harbour (`2d8f8f23b311b959...`) | ENCUMBERED | the lender's own registry |
+| **A** Stock & Foil (`74fe0bf972edc0c6...`) | ENCUMBERED | a declared peer |
+
+Verdict: **ENCUMBERED somewhere**, answer complete (every registry answered).
+
+**Invoice #772002, pledged nowhere** — marker `bfc2fda848f76b7069dff5d73f378c75a4b727c879b1ffdaa8f0f162bf1ab044`
+
+| Registry | Answer | |
+|---|---|---|
+| **B** Harbour (`2d8f8f23b311b959...`) | FREE | the lender's own registry |
+| **A** Stock & Foil (`74fe0bf972edc0c6...`) | FREE | a declared peer |
+
+Verdict: **FREE everywhere asked**, answer complete (every registry answered).
+
+Evidence: [`cli/evidence/federation-preview-2026-10-16T12-36-40Z.json`](./cli/evidence/federation-preview-2026-10-16T12-36-40Z.json).
+
 <!-- END GENERATED preview-federation -->
 
 ## Registry B: the second, independent deployment

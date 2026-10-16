@@ -1,0 +1,209 @@
+{
+  "project": "Stock & Foil",
+  "kind": "cross-registry-encumbrance-check",
+  "network": "preview",
+  "compactVersion": "0.31.1",
+  "at": "2026-10-16T12:36:40.217Z",
+  "explorer": {
+    "tx": "https://preview.midnightexplorer.com/transactions/{txHash}",
+    "contract": "https://preview.midnightexplorer.com/contracts/{address}",
+    "block": "https://preview.midnightexplorer.com/blocks/{height}",
+    "subscanBlock": "https://midnight-preview.subscan.io/block/{height}"
+  },
+  "claim": "Two independent registries, two ceremonies, two operators. The same receivable has the same pledge marker in both, because a marker is a function of the invoice and its parties alone. Asked before the second registry had ever seen the receivable, its own book answered FREE and only the peer answered ENCUMBERED, so the cross-registry question is what carried the information. The second registry then accepted the same receivable, because its ledger cannot see across and no contract can; the transaction showing that is recorded here. What stops the double pledge is the lender's check, which returns one bit per registry and nothing else.",
+  "registries": [
+    {
+      "role": "A",
+      "name": "Stock & Foil",
+      "scope": "preview",
+      "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+      "operatorId": "79f27d5f98c126378f1a27a4c86bc5b932b04a902b5a7af0b41ce1ab0f8a41db"
+    },
+    {
+      "role": "B",
+      "name": "Harbour",
+      "scope": "preview-b",
+      "contractAddress": "2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd",
+      "operatorId": "54f28d2d58b2cd591149ffc5c1f508186cc6d5508b013ed6e11264f6313c5e43"
+    }
+  ],
+  "marker": {
+    "nullifier": "f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca",
+    "invoiceNo": "2002",
+    "computedInA": "f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca",
+    "computedInB": "f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca",
+    "identical": true
+  },
+  "steps": [
+    {
+      "id": "register-peer-a",
+      "label": "Stock & Foil declares Harbour a peer",
+      "circuit": "registerPeer",
+      "registry": "A (Stock & Foil)",
+      "persona": "operator A",
+      "refused": "DUPLICATE_PEER",
+      "note": "already declared by an earlier run",
+      "durationMs": 1281
+    },
+    {
+      "id": "register-peer-b",
+      "label": "Harbour declares Stock & Foil a peer",
+      "circuit": "registerPeer",
+      "registry": "B (Harbour)",
+      "persona": "operator B",
+      "refused": "DUPLICATE_PEER",
+      "note": "already declared by an earlier run",
+      "durationMs": 753
+    },
+    {
+      "id": "admit-debtor-b",
+      "label": "Harbour admits the same debtor after its own KYB",
+      "circuit": "admitDebtor",
+      "registry": "B (Harbour)",
+      "persona": "operator B",
+      "txId": "00f80a820bd11b3c98aa23fb23cb51fe279cadea0356eaed6b80b809014cbfb5e5",
+      "blockHeight": 1322264,
+      "note": "the same real-world debtor, admitted independently by a second operator",
+      "durationMs": 21514,
+      "txHash": "925a1256bc462c4da176f679da7eb12cf37b149946b36d7c16da23b799637f41"
+    },
+    {
+      "id": "admit-lender-b",
+      "label": "Harbour admits a lender that banks only with it",
+      "circuit": "admitFinancier",
+      "registry": "B (Harbour)",
+      "persona": "operator B",
+      "txId": "00eb855c4ecac04b12cbb24ed44f1f8775d9eabce5293e555d82a15ccab8930b30",
+      "blockHeight": 1322267,
+      "durationMs": 19018,
+      "txHash": "ee5941d2e3f42a7b55860a38576ba79e4953acfca13f13f67ead096c95604ae6"
+    },
+    {
+      "id": "check-across-before-anything",
+      "label": "The Harbour lender is offered the receivable and asks every registry it knows",
+      "circuit": "checkEncumbranceAcross (off chain)",
+      "registry": "B (Harbour)",
+      "persona": "lender",
+      "note": "here (Harbour) FREE \u2014 its own book has never seen this receivable; 74fe0bf972...: ENCUMBERED. encumberedAnywhere=true, complete=true. Only the peer could answer, and the lender declines on one bit: encumbered. Not the holder, not the amount, not since when.",
+      "durationMs": 290
+    },
+    {
+      "id": "acknowledge-b",
+      "label": "The debtor acknowledges invoice #2002 in Harbour too",
+      "circuit": "acknowledge",
+      "registry": "B (Harbour)",
+      "persona": "debtor",
+      "txId": "0012a47ff3af91386a83bff522d5ccd6bc6400efe29c3b277e7562662b52df0eb8",
+      "blockHeight": 1322271,
+      "note": "same invoice, same parties, same salt \u2014 so the same fingerprint and the same marker",
+      "durationMs": 22920,
+      "txHash": "fbe5f7f95f3e582d6352784330b0f5e84d5267841b3f563571d5d1591f658d6a"
+    },
+    {
+      "id": "offer-b",
+      "label": "The seller offers the already-pledged receivable in Harbour",
+      "circuit": "offer",
+      "registry": "B (Harbour)",
+      "persona": "seller",
+      "txId": "0061d8c358e0ae540d808f10d27d0b79a53c160bb2d3c9d67561c9cffa702626d7",
+      "blockHeight": 1322275,
+      "note": "ACCEPTED, and that is the finding: Harbour's ledger has never heard of the pledge in Stock & Foil, so its contract cannot refuse this. Nothing inside a single registry can. What catches it is the next step.",
+      "durationMs": 24310,
+      "txHash": "de94a8f076d158c35c93cb9626b2859e4d4a844699b5d9536f3facb3bc89bf0d"
+    },
+    {
+      "id": "double-pledge-within-b",
+      "label": "A second offer of the same receivable inside Harbour is refused",
+      "circuit": "offer",
+      "registry": "B (Harbour)",
+      "persona": "seller",
+      "refused": "ALREADY_ENCUMBERED",
+      "note": "This receivable is already pledged to a financier.",
+      "durationMs": 340
+    },
+    {
+      "id": "check-across-after-b-took-it",
+      "label": "The same question once Harbour has taken the offer too",
+      "circuit": "checkEncumbranceAcross (off chain)",
+      "registry": "B (Harbour)",
+      "persona": "lender",
+      "note": "here (Harbour) ENCUMBERED; 74fe0bf972...: ENCUMBERED. Both books now show it, which is the state a second lender would walk into \u2014 and exactly the double pledge the check above would have prevented.",
+      "durationMs": 276
+    },
+    {
+      "id": "check-across-free",
+      "label": "The same check on a receivable nobody has pledged",
+      "circuit": "checkEncumbranceAcross (off chain)",
+      "registry": "B (Harbour)",
+      "persona": "lender",
+      "note": "marker bfc2fda848f76b7069... is FREE in both registries, encumberedAnywhere=false. The check says no when the answer is no.",
+      "durationMs": 96
+    }
+  ],
+  "verdicts": [
+    {
+      "subject": "Invoice #2002, pledged in Stock & Foil \u2014 asked before Harbour had seen it",
+      "nullifier": "f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca",
+      "here": {
+        "contractAddress": "2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd",
+        "encumbrance": "FREE",
+        "unreachable": false
+      },
+      "peers": [
+        {
+          "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+          "encumbrance": "ENCUMBERED",
+          "unreachable": false
+        }
+      ],
+      "encumberedAnywhere": true,
+      "complete": true
+    },
+    {
+      "subject": "Invoice #2002, asked again once Harbour had taken it too",
+      "nullifier": "f563d3877ef55c73c2c2f23e36260d4b552218890b9b86a66c0f1dd5f1b069ca",
+      "here": {
+        "contractAddress": "2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd",
+        "encumbrance": "ENCUMBERED",
+        "unreachable": false
+      },
+      "peers": [
+        {
+          "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+          "encumbrance": "ENCUMBERED",
+          "unreachable": false
+        }
+      ],
+      "encumberedAnywhere": true,
+      "complete": true
+    },
+    {
+      "subject": "Invoice #772002, pledged nowhere",
+      "nullifier": "bfc2fda848f76b7069dff5d73f378c75a4b727c879b1ffdaa8f0f162bf1ab044",
+      "here": {
+        "contractAddress": "2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd",
+        "encumbrance": "FREE",
+        "unreachable": false
+      },
+      "peers": [
+        {
+          "contractAddress": "74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad",
+          "encumbrance": "FREE",
+          "unreachable": false
+        }
+      ],
+      "encumberedAnywhere": false,
+      "complete": true
+    }
+  ],
+  "deploymentAnchors": {
+    "a": {
+      "identifier": "004a032125dbea06ee8864a26d85f7a20bbf8b7fe39646447fc7d87303ac116405",
+      "txHash": "c61e4a58e6f76cbe637816c0b471c0a6cb2e488749ad7351da6200230c3e286d"
+    },
+    "b": {
+      "identifier": "00e8b4c0719b9c606e5a7c373eb58c137a4af1dcda75b986bbe64bd6fede71fec7",
+      "txHash": "c61851ae250e68523dc675eb620351a3fd24749c151ab25fb29926d9d853797a"
+    }
+  }
+}
