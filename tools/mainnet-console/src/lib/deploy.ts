@@ -79,6 +79,9 @@ export interface DeployResult {
   backend: NetworkBackend;
   deployment: DeploymentFile;
   writtenTo: string;
+  /** Set when a deployment record already existed, so this one went to a suffixed name. */
+  supersedes?: string;
+  note?: string;
 }
 
 /**
@@ -193,6 +196,24 @@ export async function runStagedDeploy(options: RunDeployOptions): Promise<Deploy
     compactVersion: COMPACT_VERSION,
     explorer: explorerFor('mainnet'),
   };
-  const { written } = await writeDeployment(deployment);
-  return { backend, deployment, writtenTo: written };
+  // The server validates the record and refuses to write an incomplete one — which, after
+  // eleven transactions that cannot be replayed, has to fail loudly and recoverably rather
+  // than quietly. Everything needed to rebuild it is already in the run state.
+  try {
+    const result = await writeDeployment(deployment);
+    return {
+      backend,
+      deployment,
+      writtenTo: result.written,
+      supersedes: result.supersedes,
+      note: result.note,
+    };
+  } catch (cause) {
+    throw new ConsoleStop(
+      `the registry is deployed at ${backend.contractAddress}, but the deployment record was not ` +
+        `written: ${cause instanceof Error ? cause.message : String(cause)}. Nothing on chain is ` +
+        'lost — cli/.secrets/mainnet-console.json holds every transaction id. Fix the cause and ' +
+        'press the button again; the deployment itself will be skipped.',
+    );
+  }
 }

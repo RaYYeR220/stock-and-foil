@@ -30,6 +30,7 @@ import type { PrivateStateId, PrivateStateProvider } from '@midnight-ntwrk/midni
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
 import { pointFromJson, type KeysFile } from '../../../../cli/src/records.js';
 import { getPrivateState, putPrivateState } from './api.js';
+import { withoutSessionQuery, withSessionQuery } from './session-token.js';
 import { ConsoleStop } from './state.js';
 import { addressCodecs, readWallet, type OneAmConnectedAPI, type WalletReading } from './wallet.js';
 
@@ -163,6 +164,8 @@ export interface ConsoleSession {
   /** Every transaction id the adapter submitted this session, in order. */
   submitted: string[];
   zkBaseUrl: string;
+  /** The indexer URL with the console's session secret removed, for display and logs. */
+  publicIndexerUrl: string;
 }
 
 export interface OpenSessionOptions {
@@ -215,14 +218,17 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
   };
 
   const origin = globalThis.location.origin;
-  const wsOrigin = origin.replace(/^http/, 'ws');
+  // The console's session secret rides in the query string on these two, because the SDK's
+  // `indexerQuery` builds its own `fetch` and a browser `WebSocket` cannot set a header at
+  // all. Without it the dev server refuses to proxy, which is what keeps another tab in this
+  // browser away from our Blockfrost quota. `publicIndexerUrl` is the version to show.
   const endpoints: NetworkEndpoints = {
     // Blockfrost, through the dev server, which holds the project token.
-    indexerHttpUrl: `${origin}/bf`,
-    indexerWsUrl: `${wsOrigin}/bf/ws`,
+    indexerHttpUrl: withSessionQuery(`${origin}/bf`),
+    indexerWsUrl: withSessionQuery(`${origin}/bf/ws`).replace(/^http/, 'ws'),
     // Nothing in this console dials the node: midnight-js reads through the indexer and the
     // wallet submits. It is overridden anyway so that `resolveEndpoints` needs no token here.
-    nodeUrl: `${wsOrigin}/bf/rpc`,
+    nodeUrl: `${origin.replace(/^http/, 'ws')}/bf/rpc`,
     // Where proving actually happens, for the record. No local proof server is contacted.
     proofServerUrl: config.proverServerUri ?? 'https://api.1am.xyz',
   };
@@ -250,6 +256,7 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
     endpoints,
     submitted,
     zkBaseUrl: ZK_BASE_URL,
+    publicIndexerUrl: withoutSessionQuery(endpoints.indexerHttpUrl),
   };
 }
 

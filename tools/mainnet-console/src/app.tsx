@@ -218,6 +218,7 @@ export default function App(): JSX.Element {
       setDeployment(result.deployment);
       setNextDeployTx(null);
       say(`deployed ${result.deployment.contractAddress}; wrote ${result.writtenTo}`, 'good');
+      if (result.note) say(result.note, 'bad');
       await refresh();
     });
 
@@ -261,7 +262,7 @@ export default function App(): JSX.Element {
       if (!backend || !deployment || !stateRef.current.lifecycle) {
         throw new ConsoleStop('the evidence needs the deployment record and at least one lifecycle step.');
       }
-      const { file, writtenTo } = await writeRunEvidence({
+      const { file, writtenTo, supersedes } = await writeRunEvidence({
         session: session!,
         backend,
         deployment,
@@ -274,6 +275,9 @@ export default function App(): JSX.Element {
           'Now run: npm run -w cli verify -- --network mainnet',
         'good',
       );
+      if (supersedes) {
+        say(`${supersedes} already existed and was left untouched; reconcile the two by hand.`, 'bad');
+      }
     });
 
   // ----------------------------------------------------------------------------------- view
@@ -343,7 +347,7 @@ export default function App(): JSX.Element {
             <dt>Proving and balancing</dt>
             <dd className="mono">{session.proverServerUri}</dd>
             <dt>Reads</dt>
-            <dd className="mono">{session.endpoints.indexerHttpUrl} → Blockfrost (token held by the dev server)</dd>
+            <dd className="mono">{session.publicIndexerUrl} → Blockfrost (token held by the dev server)</dd>
           </dl>
         ) : (
           <p className="fine">Not connected. Connecting reads the wallet; it signs nothing.</p>

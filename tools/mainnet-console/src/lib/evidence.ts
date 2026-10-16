@@ -89,8 +89,12 @@ export async function buildEvidence(input: EvidenceInput): Promise<EvidenceFile>
 }
 
 /** Builds the evidence and writes it to `cli/evidence/mainnet-<timestamp>.json`. */
-export async function writeRunEvidence(input: EvidenceInput): Promise<{ file: EvidenceFile; writtenTo: string }> {
+export async function writeRunEvidence(
+  input: EvidenceInput,
+): Promise<{ file: EvidenceFile; writtenTo: string; supersedes?: string }> {
   const file = await buildEvidence(input);
-  const { written } = await writeEvidence(file);
-  return { file, writtenTo: written };
+  // The server checks the shape and will not overwrite an existing file; a refusal here means
+  // nothing was written, and the run state still holds everything needed to try again.
+  const result = await writeEvidence(file);
+  return { file, writtenTo: result.written, supersedes: result.supersedes };
 }

@@ -14,10 +14,17 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
-import { blockfrostMainnetToken, findRepoRoot, redact } from './server/env.js';
+import {
+  blockfrostMainnetToken,
+  findRepoRoot,
+  newSessionToken,
+  redact,
+  SESSION_QUERY,
+} from './server/env.js';
 import { mainnetConsoleBackend } from './server/plugin.js';
 
 const BLOCKFROST_MAINNET = 'https://midnight-mainnet.blockfrost.io';
+const PORT = 5174;
 
 export default defineConfig(({ command }) => {
   if (command === 'build') {
@@ -32,21 +39,35 @@ export default defineConfig(({ command }) => {
   const { token } = blockfrostMainnetToken(repoRoot);
 
   /**
+   * A fresh secret for this run of the server.
+   *
+   * It is minted here so that the proxy below and the plugin's guard share one value, and it
+   * reaches the page only through the plugin's `transformIndexHtml`. Nothing in `src/` holds
+   * it, and it is gone when this process is.
+   */
+  const sessionToken = newSessionToken();
+
+  /**
    * `/bf` and `/bf/ws` carry the page's indexer traffic to Blockfrost with the project token
    * attached **here**, in Node. The browser only ever sees a same-origin path, so the token is
    * not in the bundle, not in `define`, not in devtools and not in a HAR the operator might
    * paste into an issue. Midnight's own mainnet indexer answers 410, so this is the read path.
+   *
+   * Two things come off the inbound URL on the way out: the console's session secret, which is
+   * ours and no business of Blockfrost's, and anything else a caller appended. Requests only
+   * get this far after `refuse()` in server/guard.ts has accepted them.
    */
   const withToken = (path: string): string => {
     const [base = '/bf', query = ''] = path.split('?');
     const params = new URLSearchParams(query);
+    params.delete(SESSION_QUERY);
     if (token) params.set('project_id', token);
     const search = params.toString();
     return `/api/v0${base.slice('/bf'.length)}${search ? `?${search}` : ''}`;
   };
 
   return {
-    plugins: [react(), wasm(), mainnetConsoleBackend({ repoRoot })],
+    plugins: [react(), wasm(), mainnetConsoleBackend({ repoRoot, sessionToken, port: PORT })],
     publicDir: false,
     resolve: {
       // The wallet-sdk address format decodes Bech32m into Node Buffers.
@@ -59,9 +80,18 @@ export default defineConfig(({ command }) => {
     },
     worker: { format: 'es' as const },
     server: {
+      // Loopback only, and only under its own names. `allowedHosts` makes a request arriving
+      // with any other `Host` a 403 before a plugin sees it — the DNS-rebinding case, where a
+      // name the attacker controls resolves to 127.0.0.1.
       host: '127.0.0.1',
-      port: 5174,
+      port: PORT,
       strictPort: true,
+      allowedHosts: ['127.0.0.1', 'localhost'],
+      // No CORS headers on anything except the static proving material, which opts in by
+      // hand. Without this a page on another loopback port — another dev server, say — could
+      // read the answers to requests it forged.
+      cors: false,
+      origin: `http://127.0.0.1:${PORT}`,
       // The SDK and the compiled contract are read from sibling workspaces, so the whole
       // repository is on the allow list — and the two things in it that must never be served
       // as files are taken back off. The console reads the ceremony keys through
@@ -71,6 +101,9 @@ export default defineConfig(({ command }) => {
         deny: ['**/.env', '**/.env.*', '**/.secrets/**', '**/*.{crt,pem,key}', '**/.git/**'],
       },
       proxy: {
+        // Guarded by server/guard.ts, which runs as plugin middleware ahead of this proxy for
+        // HTTP and as an `upgrade` listener ahead of it for WebSockets. Without that guard
+        // this entry is a confused deputy: it attaches our credential to whatever arrives.
         '/bf': {
           target: BLOCKFROST_MAINNET,
           changeOrigin: true,
@@ -79,9 +112,11 @@ export default defineConfig(({ command }) => {
           rewrite: withToken,
           headers: token ? { project_id: token } : undefined,
           configure: (proxy) => {
-            // http-proxy puts the outbound URL in its errors, and that URL carries the token.
+            // http-proxy puts the outbound URL in its errors, and that URL carries both secrets.
             proxy.on('error', (error) => {
-              console.error(`[mainnet-console] blockfrost proxy: ${redact(error.message, token)}`);
+              console.error(
+                `[mainnet-console] blockfrost proxy: ${redact(error.message, token, sessionToken)}`,
+              );
             });
           },
         },

@@ -128,7 +128,7 @@ export async function checkIndexerFromPage(session: ConsoleSession): Promise<Che
     return ok(
       'indexer-page',
       'Indexer reachable from this page',
-      `chain time ${new Date(Number(seconds) * 1000).toISOString()} via ${session.endpoints.indexerHttpUrl} ` +
+      `chain time ${new Date(Number(seconds) * 1000).toISOString()} via ${session.publicIndexerUrl} ` +
         '(the dev server attaches the Blockfrost token; this page never holds it).',
     );
   } catch (cause) {

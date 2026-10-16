@@ -5,15 +5,28 @@
 import type { DeploymentFile, EvidenceFile, KeysFile } from '../../../../cli/src/records.js';
 import type { Check, ServerPreflight } from '../../server/preflight.js';
 import { decode, encode } from './codec.js';
+import { consoleSessionToken, SESSION_HEADER } from './session-token.js';
 import type { ConsoleState } from './state.js';
 
 export type { Check, ServerPreflight };
 
+/**
+ * One call to the dev server.
+ *
+ * Two headers matter. The session secret is what distinguishes this page from any other page
+ * in the same browser that can also reach `http://127.0.0.1:5174`; `Content-Type: application/json`
+ * is required on writes and is deliberately not a CORS "simple" type, so a cross-origin form
+ * post cannot imitate one even if it somehow learned the secret.
+ */
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = { [SESSION_HEADER]: consoleSessionToken() };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
   const response = await fetch(path, {
     method,
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: 'omit',
+    cache: 'no-store',
   });
   const text = await response.text();
   const parsed = text === '' ? null : (JSON.parse(text) as unknown);
@@ -64,8 +77,16 @@ export const putPrivateState = (file: PrivateStateFile): Promise<{ written: stri
 export const getDeployment = (): Promise<DeploymentFile | null> =>
   call<DeploymentFile | null>('GET', '/__console/deployment');
 
-export const writeDeployment = (file: DeploymentFile): Promise<{ written: string }> =>
+/** The server never overwrites one of these, so it may answer with a different name. */
+export interface WriteResult {
+  written: string;
+  /** Set when a file of the preferred name already existed and was left alone. */
+  supersedes?: string;
+  note?: string;
+}
+
+export const writeDeployment = (file: DeploymentFile): Promise<WriteResult> =>
   call('POST', '/__console/deployment', file);
 
-export const writeEvidence = (file: EvidenceFile): Promise<{ written: string }> =>
+export const writeEvidence = (file: EvidenceFile): Promise<WriteResult> =>
   call('POST', '/__console/evidence', file);

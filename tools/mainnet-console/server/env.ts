@@ -9,6 +9,7 @@
 // printed. The only two places it may live are `BLOCKFROST_PROJECT_ID_MAINNET` in the
 // operator's environment and an untracked `.env.local` at the repository root (`.env.*` is in
 // `.gitignore`).
+import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
@@ -92,13 +93,37 @@ export function blockfrostMainnetToken(repoRoot: string): TokenLookup {
   return { source: 'absent', prefixOk: false };
 }
 
+// ------------------------------------------------------------------------------ per-run secret
+
+/**
+ * How the console's own traffic is authenticated.
+ *
+ * A dev server on loopback is reachable by every other page the operator has open and by every
+ * process on the machine. That is not hypothetical for `/bf`: it attaches our Blockfrost
+ * credential to whatever arrives, so without this an unrelated tab could read mainnet on our
+ * project and spend the quota. A secret minted when the server starts, handed to the page by
+ * the plugin at serve time and required on every request, makes the endpoints unguessable.
+ *
+ * The names themselves live in `../src/lib/session-token.ts`, which the page imports too.
+ */
+export { SESSION_HEADER, SESSION_QUERY } from '../src/lib/session-token.js';
+import { SESSION_QUERY } from '../src/lib/session-token.js';
+
+/** A fresh secret per server start. It is never written to disk and dies with the process. */
+export const newSessionToken = (): string => randomBytes(32).toString('hex');
+
 /**
  * Removes the token from anything about to be printed.
  *
  * The dev server's own proxy errors carry the outbound URL, and that URL carries the token,
  * so every log line this plugin emits goes through here first.
  */
-export const redact = (text: string, token?: string): string => {
-  const withoutQuery = text.replace(/project_id=[^&\s"']+/gi, 'project_id=REDACTED');
-  return token ? withoutQuery.split(token).join('REDACTED') : withoutQuery;
+export const redact = (text: string, ...secrets: ReadonlyArray<string | undefined>): string => {
+  let out = text
+    .replace(/project_id=[^&\s"']+/gi, 'project_id=REDACTED')
+    .replace(new RegExp(`${SESSION_QUERY}=[^&\s"']+`, 'gi'), `${SESSION_QUERY}=REDACTED`);
+  for (const secret of secrets) {
+    if (secret) out = out.split(secret).join('REDACTED');
+  }
+  return out;
 };
