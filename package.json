@@ -16,13 +16,17 @@
   },
   "scripts": {
     "compile": "npm run -w contract compile",
-    "test": "npm run -w contract test && npm run -w sdk test",
-    "build": "npm run -w sdk build && npm run -w cli build && npm run -w web build",
+    "test": "npm run -w contract test && npm run -w sdk test && npm run -w sponsor test",
+    "build": "npm run -w sdk build && npm run -w cli build && npm run -w sponsor build && npm run -w web build",
     "ceremony": "npm run -w cli ceremony --",
     "deploy": "npm run -w cli deploy --",
     "scenario": "npm run -w cli scenario --",
     "verify": "npm run -w cli verify --",
-    "verify:onchain": "npm run -w cli verify -- --network preview"
+    "verify:onchain": "npm run -w cli verify -- --network preview",
+    "balance": "npm run -w cli balance --",
+    "estimate": "npm run -w cli estimate --",
+    "sponsored": "npm run -w cli sponsored --",
+    "sponsor": "npm run -w sponsor start"
   },
   "overrides": {
     "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",

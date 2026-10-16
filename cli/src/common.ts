@@ -12,14 +12,23 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import {
+  CHAIN_NETWORKS as SDK_CHAIN_NETWORKS,
   fromHex,
+  formatDust,
   hex,
   NATIVE_TOKEN_COLOR,
+  NETWORK_DESCRIPTORS,
+  redactEndpoint,
+  resolveEndpoints,
+  resolveTransactions,
+  SPECK_PER_DUST,
   type ChainNetwork,
+  type NetworkEndpoints,
   type Point,
   type PublicLedgerView,
   type RegistryConstructorArgs,
   type StockAndFoilPrivateState,
+  type TxAnchor,
 } from '@stockandfoil/sdk';
 
 /** Compact toolchain the committed artifacts were produced with. */
@@ -28,7 +37,9 @@ export const COMPACT_VERSION = '0.31.1';
 /** Threshold of the disclosure key: two of three keyholders. */
 export const THRESHOLD = 2;
 
-export const CHAIN_NETWORKS: readonly ChainNetwork[] = ['undeployed', 'preview', 'preprod'];
+export const CHAIN_NETWORKS: readonly ChainNetwork[] = SDK_CHAIN_NETWORKS;
+
+export { formatDust, redactEndpoint, resolveTransactions, SPECK_PER_DUST, type TxAnchor };
 
 /** A message the user can act on; the entry point prints it without a stack trace. */
 export class UsageError extends Error {
@@ -127,6 +138,51 @@ export function requireNetwork(args: Args): ChainNetwork {
     throw new UsageError(`unknown network "${value}"; expected one of ${CHAIN_NETWORKS.join(', ')}`);
   }
   return value as ChainNetwork;
+}
+
+// ------------------------------------------------------------------------------ endpoints
+
+/**
+ * The Blockfrost project token for this invocation, if one was given on the command line.
+ *
+ * Nothing else reads it. `cliEndpoints` passes `process.env` alongside, so the usual path is
+ * `BLOCKFROST_PROJECT_ID_PREPROD` / `BLOCKFROST_PROJECT_ID_MAINNET` in the environment and no
+ * flag at all — a token on a command line ends up in the shell history.
+ */
+export const blockfrostTokenFlag = (args: Args): string | undefined => flagValue(args, 'blockfrost-token');
+
+/**
+ * Where to connect for this network, with the Blockfrost token resolved.
+ *
+ * Raises `MissingBlockfrostTokenError` for `preprod` and `mainnet` when no token is available,
+ * with a message naming the environment variable and the flag. That failure arrives in under a
+ * millisecond instead of as a 403 twenty minutes into a wallet sync.
+ */
+export const cliEndpoints = (args: Args, network: ChainNetwork): NetworkEndpoints =>
+  resolveEndpoints(network, {
+    blockfrostToken: blockfrostTokenFlag(args),
+    env: process.env,
+    allowPrefixMismatch: flagSet(args, 'allow-token-prefix-mismatch'),
+    overrides: {
+      indexerHttpUrl: flagValue(args, 'indexer-url'),
+      nodeUrl: flagValue(args, 'node-url'),
+      proofServerUrl: flagValue(args, 'proof-server-url') ?? process.env.MN_PROOF_SERVER_URL,
+    },
+  });
+
+/**
+ * Mainnet spends real value, so a command that can submit a transaction refuses to run against
+ * it without being told twice. `--yes-mainnet` is the second time.
+ */
+export function guardRealValueNetwork(args: Args, network: ChainNetwork, what: string): void {
+  if (!NETWORK_DESCRIPTORS[network].isRealValue) return;
+  if (flagSet(args, 'yes-mainnet')) return;
+  throw new UsageError(
+    `${what} on mainnet spends real DUST and cannot be undone.
+` +
+      `Run \`npm run -w cli estimate -- --network mainnet\` first, then repeat this command with ` +
+      `--yes-mainnet when the number is acceptable.`,
+  );
 }
 
 // -------------------------------------------------------------------------------------- output
@@ -291,9 +347,43 @@ export const EXPLORERS: Record<ChainNetwork, ExplorerTemplates | undefined> = {
     block: 'https://preprod.midnightexplorer.com/blocks/{height}',
     subscanBlock: 'https://midnight-preprod.subscan.io/block/{height}',
   },
+  // Mainnet drops the sub-domain on both explorers. Route shapes checked 2026-10-16: a
+  // contract page and a block page both answer 200, and Subscan lives at midnight.subscan.io.
+  mainnet: {
+    tx: 'https://midnightexplorer.com/transactions/{txHash}',
+    contract: 'https://midnightexplorer.com/contracts/{address}',
+    block: 'https://midnightexplorer.com/blocks/{height}',
+    subscanBlock: 'https://midnight.subscan.io/block/{height}',
+  },
 };
 
 export const explorerFor = (network: ChainNetwork): ExplorerTemplates | undefined => EXPLORERS[network];
+
+// ------------------------------------------------------------------------------ network facts
+
+/** Where funds come from on each network, in one sentence each, for the `balance` command. */
+export const NETWORK_FACTS: Record<ChainNetwork, { dustHint: string }> = {
+  undeployed: {
+    dustHint: 'A local devnet funds itself from the genesis accounts; see infra/bin/fund-local-night.mts.',
+  },
+  preview: {
+    dustHint:
+      'Ask the faucet at https://midnight-tmnight-preview.nethermind.dev/ for tNIGHT, then register ' +
+      'it for DUST generation; preview generates within minutes.',
+  },
+  preprod: {
+    dustHint:
+      'Ask the faucet at https://midnight-tmnight-preprod.nethermind.dev/ for tNIGHT, then register ' +
+      'it for DUST generation. A cold preprod wallet also takes about 78 minutes to sync.',
+  },
+  mainnet: {
+    dustHint:
+      'There is no mainnet faucet. Register cNIGHT against this DUST address with the cNgD dApp at ' +
+      'https://midnight-dust-mainnet.nethermind.io/ ; the registration finalizes on Cardano and ' +
+      'reaches a Midnight node in about 12 hours, after which DUST accrues to roughly 5 per NIGHT ' +
+      'over about a week.',
+  },
+};
 
 // ------------------------------------------------------------------------------------- deployment
 
@@ -472,60 +562,12 @@ export function serializeLedgerView(view: PublicLedgerView): LedgerViewJson {
 }
 
 // --------------------------------------------------------------------------- explorer anchors
-
-/**
- * What a transaction is called on chain.
- *
- * midnight-js hands back a transaction *identifier* — the 33-byte value a contract call is keyed
- * by — while block explorers index by the transaction *hash*. The indexer knows both, so the
- * evidence carries both and PROOF.md can link straight to an explorer.
- */
-export interface TxAnchor {
-  identifier: string;
-  txHash?: string;
-  blockHeight?: number;
-  blockHash?: string;
-  blockTimestamp?: string;
-}
-
-interface IndexerTx {
-  hash?: string;
-  block?: { height?: number; hash?: string; timestamp?: number };
-}
-
-/** Resolves identifiers to on-chain anchors in one aliased GraphQL query. */
-export async function resolveTransactions(
-  indexerHttpUrl: string,
-  identifiers: readonly string[],
-): Promise<Map<string, TxAnchor>> {
-  const unique = [...new Set(identifiers)];
-  const anchors = new Map<string, TxAnchor>(unique.map((identifier) => [identifier, { identifier }]));
-  if (unique.length === 0) return anchors;
-
-  const query = `{ ${unique
-    .map((id, i) => `t${i}: transactions(offset: {identifier: "${id}"}) { hash block { height hash timestamp } }`)
-    .join(' ')} }`;
-  const response = await fetch(indexerHttpUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-  if (!response.ok) return anchors;
-  const body = (await response.json()) as { data?: Record<string, IndexerTx[]> };
-  unique.forEach((identifier, i) => {
-    const tx = body.data?.[`t${i}`]?.[0];
-    if (!tx) return;
-    anchors.set(identifier, {
-      identifier,
-      txHash: tx.hash,
-      blockHeight: tx.block?.height,
-      blockHash: tx.block?.hash,
-      blockTimestamp:
-        tx.block?.timestamp === undefined ? undefined : new Date(tx.block.timestamp).toISOString(),
-    });
-  });
-  return anchors;
-}
+//
+// `TxAnchor` and `resolveTransactions` moved into the SDK (`sdk/src/backend/indexer.ts`) when
+// the indexer turned `Transaction` into an interface: `transactionResult` and the fee now need
+// an inline `... on RegularTransaction` fragment, the fee field is spelled differently on
+// preview (`fee`) and on the Blockfrost-served networks (`fees { paidFees }`), and the sponsor
+// service needs the same reads. They are re-exported above so the call sites here are unchanged.
 
 // -------------------------------------------------------------------------------- evidence file
 
@@ -543,6 +585,10 @@ export interface StepRecord {
   durationMs: number;
   at: string;
   note?: string;
+  /** DUST this step actually paid, in SPECK, as the indexer reports it. */
+  feeSpeck?: string;
+  /** Set when a sponsor paid the fee instead of the run's own wallet. */
+  sponsored?: boolean;
 }
 
 export interface DisclosureEvidence {
@@ -560,6 +606,30 @@ export interface DisclosureEvidence {
   verified: boolean;
   openedInvoice: { invoiceNo: string; amount: string; dueDate: string };
   holderTagMatchesLedger: boolean;
+}
+
+/**
+ * What a sponsored run proves: a wallet that holds no DUST transacted anyway.
+ *
+ * The zero-DUST claim is recorded as a reading taken from the acting wallet *at the moment it
+ * submitted*, not as an assertion. `actingWalletDustSpeck` is what that wallet held; if it is
+ * not 0 the claim is not made.
+ */
+export interface SponsorshipEvidence {
+  endpoint: string;
+  /** Bech32m unshielded address of the wallet that proved, balanced, signed and bound. */
+  actingWallet: string;
+  /** DUST the acting wallet held, in SPECK. The whole point is that this is "0". */
+  actingWalletDustSpeck: string;
+  /** DUST the acting wallet held after the run; still zero, because it never paid. */
+  actingWalletDustSpeckAfter?: string;
+  /** Bech32m unshielded address of the wallet that paid. */
+  sponsorWallet?: string;
+  sponsorDustSpeckBefore?: string;
+  sponsorDustSpeckAfter?: string;
+  steps: Array<{ id: string; circuit: string; txId: string; txHash?: string; feeSpeck?: string }>;
+  totalSponsoredFeeSpeck?: string;
+  totalSponsoredFeeDust?: string;
 }
 
 export interface EvidenceFile {
@@ -584,7 +654,12 @@ export interface EvidenceFile {
     firstBlockHeight?: number;
     lastBlockHeight?: number;
     totalDurationMs: number;
+    /** DUST the whole run cost, in SPECK, summed from what the indexer reports per transaction. */
+    totalFeeSpeck?: string;
+    totalFeeDust?: string;
   };
+  /** Present when any step was submitted by a fee sponsor rather than by the run's own wallet. */
+  sponsorship?: SponsorshipEvidence;
   disclosure?: DisclosureEvidence;
   finalState: LedgerViewJson;
 }

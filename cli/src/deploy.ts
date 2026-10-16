@@ -12,10 +12,11 @@
 import { existsSync } from 'node:fs';
 import {
   createProviders,
-  NETWORKS,
   NetworkBackend,
+  sponsoredWalletAdapter,
   VERIFIER_KEYS_PER_TX,
   type ChainNetwork,
+  type NetworkEndpoints,
   type RegistryProviders,
   type WalletAdapter,
 } from '@stockandfoil/sdk';
@@ -27,17 +28,21 @@ import {
   type HeadlessWallet,
 } from '@stockandfoil/sdk/node';
 import {
+  blockfrostTokenFlag,
+  cliEndpoints,
   COMPACT_VERSION,
   deploymentPath,
   explorerFor,
   flagSet,
   flagValue,
+  guardRealValueNetwork,
   heading,
   loadMnemonic,
   loadRegistryKeys,
   note,
   privateStatePassword,
   privateStatePath,
+  redactEndpoint,
   requireNetwork,
   resolveTransactions,
   say,
@@ -60,7 +65,25 @@ export interface WalletSession {
   keys: RegistryKeyMaterial;
   /** Directory the proving keys and ZKIR were read from. */
   assets: string;
+  /** Resolved endpoints, Blockfrost token included. Redact before printing. */
+  endpoints: NetworkEndpoints;
   close(): Promise<void>;
+}
+
+export interface OpenWalletOptions {
+  /**
+   * Route submission through a DUST sponsor at this URL. The wallet then balances only the
+   * shielded and unshielded sides and needs no DUST of its own.
+   */
+  sponsorUrl?: string;
+  /** Bearer token the sponsor's allowlist expects, if it is configured with API keys. */
+  sponsorApiKey?: string;
+  /** Mnemonic to unlock instead of the one `--mnemonic-file` / `MIDNIGHT_MNEMONIC` names. */
+  mnemonic?: string;
+  /** Do not wait for the wallet to hold DUST. Required for a sponsored, zero-DUST wallet. */
+  requireDust?: boolean;
+  /** Called once the wallet is open, before any transaction is built. */
+  onReady?: (wallet: HeadlessWallet) => Promise<void> | void;
 }
 
 /**
@@ -70,27 +93,53 @@ export interface WalletSession {
  * way to report the six maintenance transactions: they are submitted deep inside midnight-js's
  * maintenance interface, which does not hand their ids back.
  */
-export async function openWallet(args: Args, network: ChainNetwork): Promise<WalletSession> {
+export async function openWallet(
+  args: Args,
+  network: ChainNetwork,
+  options: OpenWalletOptions = {},
+): Promise<WalletSession> {
   const assets = zkAssetsPath(args);
   const keys = loadRegistryKeys(network);
-  const mnemonic = loadMnemonic(args);
+  const mnemonic = options.mnemonic ?? loadMnemonic(args);
+  const sponsorUrl = options.sponsorUrl ?? flagValue(args, 'sponsor');
+  const endpoints = cliEndpoints(args, network);
 
   installWebSocket();
   // A public network is synced from genesis on every invocation — preview took about fifteen
   // minutes at ~236k blocks — so the default here is generous rather than the SDK's ten minutes.
   const syncTimeoutMs = Number(flagValue(args, 'sync-timeout-minutes') ?? 45) * 60_000;
   note(
-    `unlocking the fee-paying wallet and syncing against ${network}; ` +
+    `unlocking the fee-paying wallet and syncing against ${network} ` +
+      `(indexer ${redactEndpoint(endpoints.indexerHttpUrl)}); ` +
       `a public network syncs from genesis, which takes ~15 minutes (timeout ${syncTimeoutMs / 60_000} min)`,
   );
-  const wallet = await createHeadlessWallet({ seedHex: seedHexOf(mnemonic), network, syncTimeoutMs });
+  const wallet = await createHeadlessWallet({
+    seedHex: seedHexOf(mnemonic),
+    network,
+    endpoints,
+    syncTimeoutMs,
+    // A sponsored wallet balances only shielded and unshielded, and holds no DUST on purpose.
+    payDustFees: sponsorUrl === undefined,
+    requireDust: options.requireDust ?? sponsorUrl === undefined,
+  });
   note(`wallet ready: ${wallet.address}`);
+  await options.onReady?.(wallet);
 
   const submitted: string[] = [];
+  const base: WalletAdapter =
+    sponsorUrl === undefined
+      ? wallet.adapter
+      : sponsoredWalletAdapter(wallet.adapter, {
+          endpoint: sponsorUrl,
+          apiKey: options.sponsorApiKey ?? flagValue(args, 'sponsor-api-key') ?? process.env.SPONSOR_API_KEY,
+          caller: `cli:${network}`,
+          onSponsored: (result) =>
+            note(`sponsor paid ${result.feeSpeck ?? '?'} SPECK for ${result.circuits.join(', ')}`),
+        });
   const recording: WalletAdapter = {
-    ...wallet.adapter,
+    ...base,
     async submitTx(tx) {
-      const txId = await wallet.adapter.submitTx(tx);
+      const txId = await base.submitTx(tx);
       submitted.push(txId);
       return txId;
     },
@@ -99,6 +148,7 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
   const providers = createProviders({
     network,
     wallet: recording,
+    endpoints,
     zkConfigProvider: nodeZkConfigProvider(assets),
     privateStateProvider: levelPrivateState({
       path: privateStatePath(network),
@@ -108,11 +158,12 @@ export async function openWallet(args: Args, network: ChainNetwork): Promise<Wal
     webSocket: globalThis.WebSocket,
   });
 
-  return { wallet, providers, submitted, keys, assets, close: () => wallet.close() };
+  return { wallet, providers, submitted, keys, assets, endpoints, close: () => wallet.close() };
 }
 
 export async function deploy(args: Args): Promise<number> {
   const network = requireNetwork(args);
+  guardRealValueNetwork(args, network, 'deploying the registry');
   const path = deploymentPath(network);
   if (existsSync(path) && !flagSet(args, 'force')) {
     throw new UsageError(`${path} already exists; pass --force to deploy a second registry over it`);
@@ -146,7 +197,7 @@ export async function deploy(args: Args): Promise<number> {
 
     // Explorers key transactions by hash, midnight-js reports identifiers. Resolving them here
     // makes the deployment file linkable on its own, without reading an evidence file next to it.
-    const anchors = await resolveTransactions(NETWORKS[network].indexerHttpUrl, [deployTx, ...maintenanceIds]);
+    const anchors = await resolveTransactions(session.endpoints.indexerHttpUrl, [deployTx, ...maintenanceIds]);
     const maintenanceTxs = maintenanceCircuits.map((circuit, i) => ({
       circuit,
       txId: maintenanceIds[i]!,
@@ -194,13 +245,17 @@ export async function connectDeployed(
   args: Args,
   network: ChainNetwork,
   contractAddress: string,
+  options: OpenWalletOptions = {},
 ): Promise<{ session: WalletSession; backend: NetworkBackend }> {
-  const session = await openWallet(args, network);
+  const session = await openWallet(args, network, options);
   const backend = await NetworkBackend.connect({
     network,
     providers: session.providers,
     compiledAssetsPath: session.assets,
     contractAddress,
+    endpoints: session.endpoints,
+    blockfrostToken: blockfrostTokenFlag(args),
+    env: process.env,
   });
   return { session, backend };
 }

@@ -31,7 +31,6 @@ import {
   generatePersona,
   hex,
   isRefusal,
-  NETWORKS,
   randomBytes32,
   type ChainNetwork,
   type Invoice,
@@ -48,6 +47,8 @@ import {
   fileStamp,
   flagSet,
   flagValue,
+  formatDust,
+  guardRealValueNetwork,
   heading,
   loadDeployment,
   money,
@@ -177,6 +178,7 @@ async function expectRefusal(code: RefusalCode, thunk: () => Promise<unknown>): 
 
 export async function scenario(args: Args): Promise<number> {
   const network = requireNetwork(args);
+  guardRealValueNetwork(args, network, 'replaying the scenario');
   const deployment = loadDeployment(network);
   const statePath = runStatePath(network);
 
@@ -597,7 +599,7 @@ export async function scenario(args: Args): Promise<number> {
     // to the other, so the evidence carries both for every transaction including the deployment.
     const deployIds = [deployment.deployTx, ...deployment.maintenanceTxs.map((t) => t.txId)];
     const stepIds = state.steps.map((s) => s.txId).filter((id): id is string => id !== undefined);
-    const anchors = await resolveTransactions(NETWORKS[network].indexerHttpUrl, [...deployIds, ...stepIds]);
+    const anchors = await resolveTransactions(session.endpoints.indexerHttpUrl, [...deployIds, ...stepIds]);
     const records = state.steps.map((step) => {
       const anchor = step.txId === undefined ? undefined : anchors.get(step.txId);
       return anchor === undefined
@@ -608,8 +610,12 @@ export async function scenario(args: Args): Promise<number> {
             blockHeight: anchor.blockHeight ?? step.blockHeight,
             blockHash: anchor.blockHash,
             blockTimestamp: anchor.blockTimestamp,
+            feeSpeck: anchor.feeSpeck?.toString(),
           };
     });
+    // What the run cost, read back from the chain rather than asserted. A step whose fee the
+    // indexer does not expose contributes nothing, so this is a floor, not an estimate.
+    const totalFeeSpeck = records.reduce((sum, s) => sum + BigInt(s.feeSpeck ?? '0'), 0n);
     const heights = records.map((s) => s.blockHeight).filter((h): h is number => h !== undefined);
     const evidence: EvidenceFile = {
       project: 'Stock & Foil',
@@ -636,6 +642,8 @@ export async function scenario(args: Args): Promise<number> {
         firstBlockHeight: heights.length > 0 ? Math.min(...heights) : undefined,
         lastBlockHeight: heights.length > 0 ? Math.max(...heights) : undefined,
         totalDurationMs: records.reduce((sum, s) => sum + s.durationMs, 0),
+        totalFeeSpeck: totalFeeSpeck.toString(),
+        totalFeeDust: formatDust(totalFeeSpeck),
       },
       disclosure: state.disclosure,
       finalState,
@@ -648,6 +656,7 @@ export async function scenario(args: Args): Promise<number> {
     say(`  refusals       ${evidence.summary.refusals.length}`);
     for (const refusal of evidence.summary.refusals) say(`    ${refusal.code.padEnd(20)} ${refusal.label}`);
     say(`  blocks         ${evidence.summary.firstBlockHeight} .. ${evidence.summary.lastBlockHeight}`);
+    say(`  dust paid      ${totalFeeSpeck} SPECK (${formatDust(totalFeeSpeck)} DUST)`);
     say(`  ledger counts  ${JSON.stringify(finalState.counts)}`);
     say(`  disclosure     ${state.disclosure?.verified ? 'opened and self-verified' : 'not verified'}`);
     say(`\nevidence written to ${evidencePath}`);

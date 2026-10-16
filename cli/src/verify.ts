@@ -11,15 +11,17 @@
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { setNetworkId, type NetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { ledger } from '@stockandfoil/contract';
-import { NETWORKS, toPublicLedgerView } from '@stockandfoil/sdk';
+import { toPublicLedgerView } from '@stockandfoil/sdk';
 import { WebSocket } from 'ws';
 import {
+  cliEndpoints,
   fail,
   flagValue,
   heading,
   loadDeployment,
   newestEvidencePath,
   readJson,
+  redactEndpoint,
   requireNetwork,
   say,
   serializeLedgerView,
@@ -105,11 +107,16 @@ export async function verify(args: Args): Promise<number> {
   setNetworkId(network as NetworkId);
   const globals = globalThis as { WebSocket?: unknown };
   globals.WebSocket ??= WebSocket;
-  const endpoints = NETWORKS[network];
+  // On preprod and mainnet this needs BLOCKFROST_PROJECT_ID_<NETWORK> in the environment, or
+  // --blockfrost-token. Everything else about `verify` is unchanged: no wallet, no proving keys.
+  const endpoints = cliEndpoints(args, network);
   const provider = indexerPublicDataProvider(endpoints.indexerHttpUrl, endpoints.indexerWsUrl, WebSocket as never);
   const state = await provider.queryContractState(deployment.contractAddress);
   if (!state) {
-    fail(`no contract state at ${deployment.contractAddress} on ${network} (indexer ${endpoints.indexerHttpUrl})`);
+    fail(
+      `no contract state at ${deployment.contractAddress} on ${network} ` +
+        `(indexer ${redactEndpoint(endpoints.indexerHttpUrl)})`,
+    );
     return 1;
   }
   const chain: LedgerViewJson = serializeLedgerView(toPublicLedgerView(ledger(state.data)));

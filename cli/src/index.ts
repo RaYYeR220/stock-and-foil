@@ -8,6 +8,11 @@
 //   npm run -w cli scenario -- --network preview
 //   npm run -w cli verify   -- --network preview
 //
+// On preprod and mainnet every command needs a Blockfrost project token, because Midnight
+// retired its own endpoints for those two networks: export BLOCKFROST_PROJECT_ID_PREPROD or
+// BLOCKFROST_PROJECT_ID_MAINNET, or pass --blockfrost-token. A missing token fails immediately
+// with a message naming both, rather than hanging or arriving as a 403 mid-deploy.
+//
 // Commands are imported lazily so that `verify` — the one a judge runs — never loads the wallet
 // SDK, the proof client or the compiled proving keys.
 import { fail, parseArgs, say, UsageError, type Args } from './common.js';
@@ -30,6 +35,24 @@ const USAGE = `stock-and-foil cli
       Re-reads the contract through the indexer and asserts it matches the newest evidence file.
       Needs no wallet and no proving keys. Exits non-zero on any mismatch.
 
+  balance --network <id> [--mnemonic-file <path>] [--watch <seconds>] [--no-sync]
+      Prints the wallet's NIGHT and DUST, the addresses to fund, and what to do if there is no
+      DUST yet. Never waits for DUST: a wallet with none is the normal case here.
+
+  estimate --network <id> [--reference <id>] [--evidence <path>] [--margin-percent <n>] [--offline]
+      What a full deploy + scenario will cost in DUST, before anything is spent. Reads a
+      previous run's transactions back as raw ledger bytes and re-prices them against the
+      target network. Submits nothing; --offline does not even open a wallet.
+
+  sponsored --network <id> --sponsor <url> [--acting-mnemonic-file <path>]
+      Proof that a party holding zero DUST can use the registry: a wallet whose balance is read
+      as 0 first proves, balances and binds a real call, and a sponsor pays the fee and submits.
+
+Networks: undeployed, preview, preprod, mainnet.
+Common flags: --blockfrost-token <id>, --indexer-url, --node-url, --proof-server-url,
+--sync-timeout-minutes <n>, --zk-assets <dir>. Mainnet also needs --yes-mainnet on any command
+that submits.
+
 The fee-paying wallet's 24-word mnemonic comes from MIDNIGHT_MNEMONIC or --mnemonic-file.
 `;
 
@@ -50,6 +73,18 @@ async function run(args: Args): Promise<number> {
     case 'verify': {
       const { verify } = await import('./verify.js');
       return verify(args);
+    }
+    case 'balance': {
+      const { balance } = await import('./balance.js');
+      return balance(args);
+    }
+    case 'estimate': {
+      const { estimate } = await import('./estimate.js');
+      return estimate(args);
+    }
+    case 'sponsored': {
+      const { sponsored } = await import('./sponsored.js');
+      return sponsored(args);
     }
     case '':
     case 'help':
