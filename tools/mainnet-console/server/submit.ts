@@ -62,6 +62,8 @@ export interface SubmitDiagnostics {
   /** A runtime dispatch error, when the transaction made it into a block and then failed. */
   dispatchError?: string;
   elapsedMs: number;
+  /** What the node said these bytes cost, in SPECK, before they were submitted. */
+  quotedSpeck?: string;
 }
 
 /**
@@ -171,6 +173,17 @@ export async function submitMidnightTransaction(
     );
   }
 
+  // The node's own verdict on these exact bytes, before they go anywhere. It costs one
+  // round trip on a connection we already hold, and an undecodable transaction comes back as
+  // an error here rather than as a silent invalidation thirteen blocks later.
+  const quoted = await transactionCost(hex, rpcUrl).catch(() => ({}) as { speck?: bigint; error?: string });
+  if (quoted.error !== undefined) {
+    throw new SubmissionRejected(
+      `the node would not even price this transaction: ${quoted.error}. That is its verdict on the ` +
+        'bytes themselves, reached without submitting them.',
+    );
+  }
+
   const started = Date.now();
   const submittable = call(hex);
   const extrinsicHash = submittable.hash.toHex();
@@ -179,6 +192,7 @@ export async function submitMidnightTransaction(
     bytes: hex.length / 2 - 1,
     statuses: [],
     elapsedMs: 0,
+    quotedSpeck: quoted.speck?.toString(),
   };
   logger?.info(`[mainnet-console] submitting ${diagnostics.bytes} bytes as extrinsic ${extrinsicHash}`);
 
@@ -287,6 +301,33 @@ export async function submitMidnightTransaction(
         });
       });
   });
+}
+
+/**
+ * What the node itself says a transaction costs, in SPECK.
+ *
+ * `midnightRuntimeApi.getTransactionCost` is the runtime's own answer for exact bytes under
+ * mainnet's live parameters. It is not the same as `Transaction.fees(LedgerParameters)`
+ * computed locally, and the difference is not small: against the ledger's *baseline*
+ * parameters our deploy prices at 4.61 DUST, against mainnet's *live* parameters the node says
+ * 0.000717 DUST. Mainnet does not run the baseline set, and nothing but the node knows what it
+ * does run, so nothing but the node should be asked.
+ *
+ * It returns a `Result`, so an undecodable or malformed transaction comes back as an error
+ * rather than a number — which makes this a cheap dry run on the exact bytes, before anything
+ * is submitted.
+ */
+export async function transactionCost(txHex: string, rpcUrl: string): Promise<{ speck?: bigint; error?: string }> {
+  const hex = txHex.startsWith('0x') ? txHex : `0x${txHex}`;
+  const api = (await connect(rpcUrl)) as unknown as {
+    call: { midnightRuntimeApi?: { getTransactionCost?(bytes: string): Promise<unknown> } };
+  };
+  const fn = api.call.midnightRuntimeApi?.getTransactionCost;
+  if (typeof fn !== 'function') return { error: 'this node does not expose getTransactionCost' };
+  const result = (await fn(hex)) as { isOk?: boolean; asOk?: { toString(): string }; asErr?: { toString(): string }; toString(): string };
+  if (result.isOk === false) return { error: result.asErr?.toString() ?? result.toString() };
+  const value = result.asOk?.toString() ?? result.toString();
+  return /^\d+$/.test(value) ? { speck: BigInt(value) } : { error: value };
 }
 
 export interface NodeFacts {

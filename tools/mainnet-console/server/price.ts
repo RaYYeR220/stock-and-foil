@@ -1,29 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// What the deployment costs, before anything is signed.
+// What the deployment costs, before anything is signed — asked of the node, not of a model.
 //
-// The first two mainnet attempts both ended with the transaction never landing, and the reason
-// turned out to be the one number nobody had: the price. Preview charges 1 SPECK per
-// transaction, which `docs/MAINNET.md` already warned "is a guide to nothing except that the
-// code works", and that figure quietly stood in for an estimate it was never capable of being.
+// The first version of this file priced locally with `Transaction.fees(LedgerParameters)` and
+// `LedgerParameters.initialParameters()`, because no RPC appeared to serve the live set. It
+// produced 4.61 DUST for the deploy and 15.70 for all eleven, and on that basis the console
+// started refusing to run against a wallet holding 1 DUST.
 //
-// This prices the real thing. The committed preview deployment is the same eleven
-// transactions, with real verifier keys and real transcripts, and the indexer serves their raw
-// bytes; `Transaction.fees()` is the ledger's own cost function. It is the method
-// `cli/src/estimate.ts` uses, minus the wallet — `estimate` opens one on the target network to
-// read its live parameters, and there is no mainnet wallet here.
+// That was wrong by about four orders of magnitude, and the mistake is worth naming precisely:
+// `initialParameters()` is the ledger's *baseline*, mainnet does not run it, and the guess that
+// live parameters could only be more expensive than the baseline was an assumption dressed up
+// as a caveat. The runtime does serve the live set, through
+// `midnightRuntimeApi.getLedgerParameters`, and it serves something better still —
+// `getTransactionCost`, the node's own price for exact bytes. Against those, the same deploy
+// costs **0.000717 DUST** and all eleven **0.002008 DUST**.
 //
-// The honest limit, stated wherever the number is shown: this is the ledger's **baseline**
-// parameter set, not mainnet's live one. There is no RPC that serves the live parameters —
-// they live inside the ledger state and the node exposes only its root hash. Live fees float
-// with block fullness, and they float *upward* from this floor, so a shortfall measured here
-// is a shortfall, while a surplus is not a guarantee.
-//
-// Nothing is imported from `@stockandfoil/sdk` here, and that is deliberate rather than
-// stylistic: this module is reached from the Vite config, whose bundler leaves bare specifiers
-// external, and the SDK is TypeScript source that Node cannot then load. The two helpers it
-// would have supplied are four lines each, and the query is the one `fetchRawTransactions`
-// sends. (`cli/src/records.ts` solves the same problem by being type-only.)
+// So the number now comes from the node. The committed preview deployment still supplies the
+// bytes, because it is the same eleven transactions with real verifier keys and real
+// transcripts; only the pricing moved. If the node cannot be asked, this reports that it does
+// not know, which is the honest answer and the one that does not block a deployment.
+
+import { transactionCost } from './submit.js';
 
 const PREVIEW_INDEXER = 'https://indexer.preview.midnight.network/api/v4/graphql';
 
@@ -92,15 +89,15 @@ let cached: Promise<PricedDeployment> | undefined;
  * Prices the staged deployment. Cached: the bytes are ~100 kB and the answer does not move
  * within a run of the server.
  */
-export function priceDeployment(repoRoot: string): Promise<PricedDeployment> {
-  cached ??= computePrice(repoRoot).catch((error: unknown) => {
+export function priceDeployment(repoRoot: string, rpcUrl: string): Promise<PricedDeployment> {
+  cached ??= computePrice(repoRoot, rpcUrl).catch((error: unknown) => {
     cached = undefined; // a transient indexer failure should not poison the rest of the session
     throw error;
   });
   return cached;
 }
 
-async function computePrice(repoRoot: string): Promise<PricedDeployment> {
+async function computePrice(repoRoot: string, rpcUrl: string): Promise<PricedDeployment> {
   const { readFileSync } = await import('node:fs');
   const { join } = await import('node:path');
   const deployment = JSON.parse(
@@ -110,10 +107,6 @@ async function computePrice(repoRoot: string): Promise<PricedDeployment> {
   const ids = [deployment.deployTx, ...deployment.maintenanceTxs.map((t) => t.txId)].filter(Boolean);
   const raws = await fetchRaw(PREVIEW_INDEXER, ids);
 
-  const { Transaction } = await import('@midnight-ntwrk/midnight-js-protocol/ledger');
-  const { LedgerParameters } = await import('@midnight-ntwrk/ledger-v8');
-  const params = LedgerParameters.initialParameters();
-
   let totalSpeck = 0n;
   let deploySpeck = 0n;
   let deployBytes = 0;
@@ -122,10 +115,11 @@ async function computePrice(repoRoot: string): Promise<PricedDeployment> {
     const raw = raws.get(id);
     if (raw === undefined) continue;
     const bytes = fromHex(raw.startsWith('0x') ? raw.slice(2) : raw);
-    const tx = Transaction.deserialize('signature', 'proof', 'binding', bytes) as unknown as {
-      fees(p: unknown): bigint;
-    };
-    const fee = tx.fees(params);
+    const quoted = await transactionCost(raw, rpcUrl);
+    if (quoted.speck === undefined) {
+      throw new Error(`the node would not price transaction ${index + 1}: ${quoted.error ?? 'no reason given'}`);
+    }
+    const fee = quoted.speck;
     totalSpeck += fee;
     priced += 1;
     if (index === 0) {

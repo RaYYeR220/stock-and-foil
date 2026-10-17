@@ -252,20 +252,25 @@ which an explorer indexes — and a submission that is accepted but never seen i
 the run and says so, rather than going quiet. Do not retry one of those without looking it up
 first: retrying a transaction that did land deploys a second registry.
 
-**What a mainnet deployment actually costs.** Priced from the committed preview deployment's
-real bytes through the ledger's own cost function (`Transaction.fees`, baseline parameters):
+**What a mainnet deployment actually costs**, quoted by mainnet's own runtime
+(`midnightRuntimeApi.getTransactionCost`) for the committed preview deployment's real bytes:
 
 | | |
 |---|---|
-| deploy transaction (constructor + 6 verifier keys, 17,507 bytes) | **4.612120 DUST** |
-| each verifier-key maintenance transaction | ~1.08-1.12 DUST |
-| **all eleven** | **15.703470 DUST** |
+| deploy transaction (constructor + 6 verifier keys, 17,507 bytes) | **0.000717 DUST** |
+| each verifier-key maintenance transaction | 0.000129 DUST |
+| **all eleven** | **0.002008 DUST** |
 
-Preview charged **1 SPECK** for each of those same transactions, which is fifteen orders of
-magnitude out and is why section 2 says preview is a guide to nothing except that the code
-works. The console prices this at preflight and refuses to start if the signer cannot cover
-the first transaction. The number is a floor: live parameters are not served by any RPC and
-float upward from the baseline with block fullness.
+A tenth of a cent. The console asks the node for this at preflight and shows it against what the
+wallet holds.
+
+Do **not** price this locally against `LedgerParameters.initialParameters()`. That is the
+ledger's baseline set, mainnet does not run it, and it gives 4.61 DUST for the deploy and 15.70
+for all eleven — four orders of magnitude out, and in the expensive direction, which is the
+direction that stops a deployment that would have worked. The live set is served by
+`midnightRuntimeApi.getLedgerParameters`, and the node's own `getTransactionCost` is better
+still because it needs no local model at all. Mainnet runs ledger **8.1.1**, runtime
+`midnight 1000300`, 6-second blocks.
 
 **If 1AM's sponsor declines** — policy, rate limit, an empty pool — the console stops on the
 spot, shows their message verbatim and says it was their refusal. The fallbacks, in order of
