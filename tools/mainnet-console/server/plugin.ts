@@ -329,6 +329,21 @@ export function mainnetConsoleBackend(options: ConsoleBackendOptions): Plugin {
                 );
                 return sendJson(res, 200, result);
               } catch (cause) {
+                // Keep the bytes. Three attempts have now failed at this hop and each time the
+                // only copy of the balanced transaction died with the tab, so every diagnosis
+                // had to start by asking the operator to produce another one. A failed submit
+                // is exactly when the payload is worth having: it can be re-submitted without
+                // re-proving, picked apart offline, or handed to the wallet's authors as a
+                // reproduction.
+                try {
+                  const failedPath = join(p.secrets, `mainnet-failed-tx-${fileStamp()}.hex`);
+                  mkdirSync(p.secrets, { recursive: true });
+                  writeFileSync(failedPath, `${body.tx}
+`, 'utf8');
+                  server.config.logger.warn(`[mainnet-console] balanced transaction kept at ${failedPath}`);
+                } catch {
+                  // never let bookkeeping mask the submission failure itself
+                }
                 // Three outcomes, kept apart, because the operator's next move differs.
                 if (cause instanceof SubmissionUnseen) {
                   return sendJson(res, 504, {

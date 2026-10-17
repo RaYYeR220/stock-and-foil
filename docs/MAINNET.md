@@ -272,6 +272,39 @@ direction that stops a deployment that would have worked. The live set is served
 still because it needs no local model at all. Mainnet runs ledger **8.1.1**, runtime
 `midnight 1000300`, 6-second blocks.
 
+### Where this stopped, and why it is not ours to fix
+
+Three attempts, all identical in shape. The transaction is proved, balanced, bound, priced and
+submitted; the node accepts it (`Ready` then `Broadcast` within the same second); and about
+75 seconds later the pool's revalidation marks it `Invalid`. Nothing reaches a block, nothing
+is spent. Confirmed absent from the chain by hash and by identifier each time.
+
+What that shape excludes, with evidence:
+
+| Excluded | How |
+|---|---|
+| Fees | The node's own `getTransactionCost` quotes **0.002008 DUST** for all eleven transactions against **1.000000 DUST** held — 500x margin. Quoted again for the exact bytes immediately before each submit. |
+| Block limits | `normalizeFullness` under mainnet's **live** parameters accepts both the 17.5 kB deploy and a key insert. |
+| Anything static — encoding, binding, segments, how the bytes reach `author_submitExtrinsic` | A malformed payload is refused **synchronously** with `1010: Invalid Transaction` (verified with a deliberately broken control). Ours passes that gate and reaches `Broadcast`. A transaction that is valid on arrival and invalid later is invalid *because the state it depends on changed*. |
+
+The state it depends on is the DUST input and its spend proof, and both are chosen and computed
+by the wallet's sponsorship service, from a pool that is simultaneously paying for other
+people's transactions. A spend whose UTXO is consumed by another sponsored transaction — or
+whose proof is tied to a generation state that moves — is accepted on arrival and invalid at the
+next revalidation. That is the observed behaviour, it is deterministic across three attempts,
+and it is on the far side of the boundary: we supply the transaction, they supply the DUST.
+
+We could not get the node to name it. Both channels that would are closed on the public
+endpoint: `system_dryRun` answers `-32601: RPC call is unsafe to be called externally`, and
+`TaggedTransactionQueue_validate_transaction` through `state_call` traps the runtime
+(`wasm unreachable`) rather than returning a `TransactionValidityError` — for a deliberately
+broken payload and for a structurally valid one alike. A node run with `--rpc-methods unsafe`
+would settle it in one call.
+
+When a submit fails the console now keeps the balanced transaction at
+`cli/.secrets/mainnet-failed-tx-<timestamp>.hex`, which is the reproduction to hand to the
+wallet's authors, and is also re-submittable without re-proving.
+
 **If 1AM's sponsor declines** — policy, rate limit, an empty pool — the console stops on the
 spot, shows their message verbatim and says it was their refusal. The fallbacks, in order of
 how much they cost: wait and press the same button again (the run resumes where it stopped);
