@@ -44,6 +44,14 @@ the session secret out of the HTML, exactly as it could read `.env.local` direct
 dev server can prevent that. That is the reason for the rule at the top of this section: the
 window in which any of this is reachable should be the window in which you are deploying.
 
+## Who submits
+
+1AM proves and balances with DUST from its pool. The console submits the balanced bytes itself,
+through Blockfrost's node, because the indexer 1AM reports was decommissioned and the wallet
+cannot observe what became of a transaction it sent. Submission is an unsigned
+`midnight.sendMnTransaction` extrinsic, so it needs no Substrate account and no second source
+of fees; the project token stays in the dev server, as it does for reads.
+
 ## Why it lives here and not in `web/`
 
 Vercel builds the `web` workspace. A second Vite entry or a `import.meta.env.DEV` route there is

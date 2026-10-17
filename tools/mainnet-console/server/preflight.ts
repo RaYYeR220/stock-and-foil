@@ -12,6 +12,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FROZEN_CIRCUITS, FROZEN_VERSIONS } from '../src/lib/frozen.js';
 import { blockfrostMainnetToken, redact, TOKEN_ENV_VAR, TOKEN_PREFIX } from './env.js';
+import { nodeAcceptsMidnightTransactions } from './submit.js';
 
 export type CheckStatus = 'ok' | 'warn' | 'fail';
 
@@ -290,6 +291,49 @@ async function checkIndexer(token: string | undefined, facts: ServerPreflight['f
   }
 }
 
+/**
+ * The submit path, checked before anything needs it.
+ *
+ * The first mainnet attempt proved and balanced a transaction and then lost it, because
+ * submission went through the wallet and the wallet could not say what happened. Submission is
+ * ours now, so it is something this machine can check: that the node answers, that it is a
+ * Midnight node, and that it exposes the unsigned extrinsic that carries a ledger transaction.
+ * Connecting here also warms the connection the eleven deployment transactions will reuse.
+ */
+async function checkSubmitPath(token: string | undefined): Promise<Check> {
+  if (!token) {
+    return fail('submit', 'Submitting to the chain', 'not attempted: there is no project token.');
+  }
+  const started = Date.now();
+  try {
+    const node = await nodeAcceptsMidnightTransactions(
+      `wss://rpc.midnight-mainnet.blockfrost.io?project_id=${encodeURIComponent(token)}`,
+    );
+    if (!node.sendMnTransaction) {
+      return fail(
+        'submit',
+        'Submitting to the chain',
+        `${node.chain} does not expose midnight.sendMnTransaction, so this is not a node that can ` +
+          'carry a Midnight transaction.',
+      );
+    }
+    return ok(
+      'submit',
+      'Submitting to the chain',
+      `${node.chain}, runtime ${node.runtime}, ${node.peers} peers, ${node.syncing ? 'SYNCING' : 'synced'}; ` +
+        `midnight.sendMnTransaction available (${Date.now() - started} ms). The console submits here ` +
+        "itself rather than through the wallet, whose own indexer was decommissioned and cannot " +
+        'report what became of a transaction.',
+    );
+  } catch (cause) {
+    return fail(
+      'submit',
+      'Submitting to the chain',
+      `the node could not be reached: ${redact(cause instanceof Error ? cause.message : String(cause), token)}`,
+    );
+  }
+}
+
 /** Everything this machine can establish before the wallet is involved. */
 export async function serverPreflight(repoRoot: string, deep = false): Promise<ServerPreflight> {
   const p = paths(repoRoot);
@@ -336,6 +380,7 @@ export async function serverPreflight(repoRoot: string, deep = false): Promise<S
   const checks: Check[] = [
     tokenCheck,
     await checkIndexer(lookup.token, facts),
+    await checkSubmitPath(lookup.token),
     checkContractInfo(repoRoot, facts),
     await checkStagedZk(repoRoot, deep),
     checkCeremonyKeys(repoRoot, facts),

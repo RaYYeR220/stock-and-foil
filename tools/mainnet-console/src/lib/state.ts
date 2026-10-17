@@ -64,7 +64,7 @@ export interface RunFailure {
   at: string;
   stepId: string;
   /** Who said no. */
-  by: 'contract' | 'operator' | 'wallet' | 'sponsor' | 'network' | 'console';
+  by: 'contract' | 'operator' | 'wallet' | 'sponsor' | 'network' | 'console' | 'unseen';
   /** The upstream text, verbatim, not a summary of it. */
   message: string;
   /** The refusal code, when the contract is the one refusing. */
@@ -151,6 +151,11 @@ export function attribute(error: unknown, stepId: string): RunFailure {
   if (refusal?.name === 'AddressDecodeError') return { at, stepId, by: 'console', message };
   // The wallet answered, but with something unusable. Not a refusal, and not the network.
   if (refusal?.name === 'WalletResponseError') return { at, stepId, by: 'wallet', message };
+  // Accepted by the node and never seen in a block. The one outcome where doing nothing is
+  // safer than doing something, so it gets its own party rather than being filed under
+  // "network" with everything else that went quiet.
+  if (refusal?.name === 'SubmissionUnseenError') return { at, stepId, by: 'unseen', message };
+  if (refusal?.name === 'SubmissionRejectedError') return { at, stepId, by: 'network', message };
   if (refusal?.name === 'Refusal' && typeof refusal.code === 'string') {
     return { at, stepId, by: 'contract', message, code: refusal.code };
   }
@@ -190,5 +195,11 @@ export const whoRefused = (failure: RunFailure): string =>
       'it returned the wrong thing, which is a different problem with a different remedy.',
     sponsor: "1AM's sponsor refused to pay for this transaction. It is their refusal, not the contract's.",
     network: 'The network or the indexer failed. Nothing is known to have been submitted.',
+    unseen:
+      'A transaction went to the node and was never seen in a block. Do NOT press the button ' +
+      'again yet: look both names up on the chain first, because retrying one that did land ' +
+      'deploys a second registry. The log line above this failure has the identifier and the ' +
+      'ledger hash; `npm run -w cli verify -- --network mainnet` and midnightexplorer.com take ' +
+      'them. If neither finds it after a few blocks, it is safe to resume.',
     console: 'The console stopped before asking the wallet to sign anything.',
   })[failure.by];

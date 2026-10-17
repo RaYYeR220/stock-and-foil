@@ -74,6 +74,58 @@ export const putPrivateState = (file: PrivateStateFile): Promise<{ written: stri
     signingKeys: encode(file.signingKeys),
   });
 
+/** What the dev server reports after putting a transaction on chain. */
+export interface SubmitResult {
+  extrinsicHash: string;
+  blockHash: string;
+  status: 'in-block';
+}
+
+/**
+ * A submission whose fate is unknown: accepted by the node, never seen in a block.
+ *
+ * Carried as its own error type because it is the one outcome where retrying is dangerous.
+ */
+export class SubmissionUnseenError extends Error {
+  readonly unseen = true;
+  constructor(
+    message: string,
+    readonly extrinsicHash?: string,
+  ) {
+    super(message);
+    this.name = 'SubmissionUnseenError';
+  }
+}
+
+/** The node refused it. Nothing happened; a retry is safe. */
+export class SubmissionRejectedError extends Error {
+  readonly rejected = true;
+  constructor(message: string) {
+    super(message);
+    this.name = 'SubmissionRejectedError';
+  }
+}
+
+export async function submitTransaction(txHex: string): Promise<SubmitResult> {
+  const response = await fetch('/__console/submit', {
+    method: 'POST',
+    headers: { [SESSION_HEADER]: consoleSessionToken(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tx: txHex }),
+    credentials: 'omit',
+    cache: 'no-store',
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { error?: string; unseen?: boolean; rejected?: boolean; extrinsicHash?: string }
+    | SubmitResult
+    | null;
+  if (response.ok) return body as SubmitResult;
+  const failure = body as { error?: string; unseen?: boolean; rejected?: boolean; extrinsicHash?: string } | null;
+  const message = failure?.error ?? `${response.status} ${response.statusText}`;
+  if (failure?.unseen) throw new SubmissionUnseenError(message, failure.extrinsicHash);
+  if (failure?.rejected) throw new SubmissionRejectedError(message);
+  throw new Error(`POST /__console/submit: ${message}`);
+}
+
 export const getDeployment = (): Promise<DeploymentFile | null> =>
   call<DeploymentFile | null>('GET', '/__console/deployment');
 

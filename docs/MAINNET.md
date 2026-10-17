@@ -234,6 +234,24 @@ file up, as you would `cli/.secrets/mainnet-private-state/`: without it the cont
 be maintained again.** Nothing is ever retried automatically, and a failure names which of the
 four parties refused — the contract, you, 1AM's sponsor, or the network.
 
+**Who does what, after the first attempt failed.** 1AM proves the transaction and balances it
+with DUST from its pool — the parts only it can do, and it does them correctly: what it hands
+back deserializes as signed, proven and bound. It does not submit. Its `getConfiguration()`
+reports `indexer.mainnet.midnight.network`, which was decommissioned and answers 410, so the
+wallet can put a transaction on the wire and then has no way to learn what became of it; the
+first mainnet attempt ended exactly there, with the wallet reporting "timed out" and the chain
+never having heard of the transaction. The console therefore submits the balanced bytes itself,
+from the dev server, as an unsigned `midnight.sendMnTransaction` extrinsic through Blockfrost's
+node — no Substrate account and no second source of fees, because the ledger transaction
+authenticates and pays for itself — and waits for a block. Same bytes, same DUST, same binding;
+only the courier changes. The preflight checks that path before the first prompt.
+
+**If a submission is ever lost again**, the console prints both names before the bytes go out —
+the identifier, which the indexer and `verify` key a contract call by, and the ledger hash,
+which an explorer indexes — and a submission that is accepted but never seen in a block stops
+the run and says so, rather than going quiet. Do not retry one of those without looking it up
+first: retrying a transaction that did land deploys a second registry.
+
 **If 1AM's sponsor declines** — policy, rate limit, an empty pool — the console stops on the
 spot, shows their message verbatim and says it was their refusal. The fallbacks, in order of
 how much they cost: wait and press the same button again (the run resumes where it stopped);

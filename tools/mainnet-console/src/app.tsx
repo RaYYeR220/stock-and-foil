@@ -168,7 +168,12 @@ export default function App(): JSX.Element {
       }
       const opened = await openSession({
         initial,
-        onSubmitted: (txId) => say(`submitted ${txId}`, 'good'),
+        // Both names, before it goes out. If anything is ever lost again, these are the two
+        // strings that find it — the identifier for the indexer, the ledger hash for an explorer.
+        onSubmitting: ({ txId, ledgerHash }) =>
+          say(`submitting — identifier ${txId}, ledger hash ${ledgerHash}`),
+        onSubmitted: (txId, r) =>
+          say(`in block ${r.blockHash.slice(0, 18)}… (extrinsic ${r.extrinsicHash.slice(0, 18)}…) — ${txId}`, 'good'),
       });
       setSession(opened);
       say(

@@ -31,7 +31,7 @@ import { createProofProvider } from '@midnight-ntwrk/midnight-js-types';
 import type { PrivateStateId, PrivateStateProvider } from '@midnight-ntwrk/midnight-js-types';
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
 import { pointFromJson, type KeysFile } from '../../../../cli/src/records.js';
-import { getPrivateState, putPrivateState } from './api.js';
+import { getPrivateState, putPrivateState, submitTransaction } from './api.js';
 import { withoutSessionQuery, withSessionQuery } from './session-token.js';
 import { ConsoleStop } from './state.js';
 import { readWallet, type OneAmConnectedAPI, type WalletReading } from './wallet.js';
@@ -180,8 +180,17 @@ export interface ConsoleSession {
 
 export interface OpenSessionOptions {
   initial: { name?: string; apiVersion?: string; connect(networkId: string): Promise<OneAmConnectedAPI> };
-  /** Called with every transaction id as it is submitted, so the UI can show it live. */
-  onSubmitted?: (txId: string) => void;
+  /**
+   * Called with both names of a transaction *before* it goes out.
+   *
+   * Both, because they are different things and a search needs the right one: the identifier
+   * is what midnight-js and the indexer key a contract call by, the ledger hash is what an
+   * explorer indexes. If a submission is ever lost again, these two lines are what makes it
+   * findable instead of gone.
+   */
+  onSubmitting?: (names: { txId: string; ledgerHash: string }) => void;
+  /** Called once it is in a block. */
+  onSubmitted?: (txId: string, result: { extrinsicHash: string; blockHash: string; ledgerHash: string }) => void;
 }
 
 export class WalletNetworkMismatch extends ConsoleStop {
@@ -222,10 +231,29 @@ export async function openSession(options: OpenSessionOptions): Promise<ConsoleS
   const submitted: string[] = [];
   const wallet: WalletAdapter = {
     ...base,
+    /**
+     * The last hop, taken away from the wallet.
+     *
+     * 1AM proves and balances — the parts only it can do, and it does them correctly: the
+     * transaction it hands back deserializes as signed, proven and bound. What it cannot
+     * currently do is tell us what became of it, because the indexer its `getConfiguration()`
+     * reports was decommissioned and answers 410. The first mainnet attempt ended there:
+     * `submitTransaction` resolved, 1AM's history later said "timed out", and the chain had
+     * never heard of the transaction.
+     *
+     * So the bytes go to the dev server instead, which puts them on chain through Blockfrost's
+     * node as an unsigned `midnight.sendMnTransaction` extrinsic and waits for a block. Same
+     * bytes, same DUST, same binding — only the courier changes.
+     */
     async submitTx(tx) {
-      const txId = await base.submitTx(tx);
+      const txId = (tx.identifiers()[0] ?? String(tx.transactionHash())) as Awaited<
+        ReturnType<WalletAdapter['submitTx']>
+      >;
+      const ledgerHash = String(tx.transactionHash());
+      options.onSubmitting?.({ txId, ledgerHash });
+      const result = await submitTransaction(hex(tx.serialize()));
       submitted.push(txId);
-      options.onSubmitted?.(txId);
+      options.onSubmitted?.(txId, { ...result, ledgerHash });
       return txId;
     },
   };

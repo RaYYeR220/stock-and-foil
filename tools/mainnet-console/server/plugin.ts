@@ -27,9 +27,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { extname, join, normalize, relative, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 import { fileStamp, toJsonText } from '../../../cli/src/records.js';
-import { blockfrostMainnetToken, findRepoRoot, redact, SESSION_HEADER } from './env.js';
+import { blockfrostMainnetToken, findRepoRoot, redact, SESSION_HEADER, TOKEN_ENV_VAR } from './env.js';
 import { refuse, sendRefusal, sessionTokenOf } from './guard.js';
 import { paths, serverPreflight } from './preflight.js';
+import { closeSubmitter, SubmissionRejected, SubmissionUnseen, submitMidnightTransaction } from './submit.js';
 import { assertDeployment, assertEvidence, InvalidRecord } from './validate.js';
 
 /**
@@ -169,7 +170,11 @@ export interface ConsoleBackendOptions {
   port: number;
 }
 
+/** Blockfrost's Substrate RPC for mainnet. The project token is appended here, never in the page. */
+const BLOCKFROST_RPC = 'wss://rpc.midnight-mainnet.blockfrost.io';
+
 const WRITES = new Set([
+  'POST /__console/submit',
   'POST /__console/keys',
   'PUT /__console/state',
   'PUT /__console/private-state',
@@ -301,6 +306,43 @@ export function mainnetConsoleBackend(options: ConsoleBackendOptions): Plugin {
                   : undefined,
               });
             }
+            // Submission, which the wallet cannot currently do. 1AM proves and balances; the
+            // bytes it hands back go on chain from here, through Blockfrost's node, and the
+            // node's verdict comes back verbatim instead of as a silent timeout.
+            case 'POST /__console/submit': {
+              const body = (await readBody(req)) as { tx?: unknown };
+              if (typeof body.tx !== 'string' || body.tx === '') {
+                return sendJson(res, 400, { error: 'send {"tx": "<hex of the balanced transaction>"}' });
+              }
+              if (!token) {
+                return sendJson(res, 503, {
+                  error:
+                    'there is no Blockfrost project token, so this server cannot reach the node to ' +
+                    `submit. See ${TOKEN_ENV_VAR} in docs/MAINNET.md.`,
+                });
+              }
+              const rpcUrl = `${BLOCKFROST_RPC}?project_id=${encodeURIComponent(token)}`;
+              try {
+                const result = await submitMidnightTransaction(body.tx, rpcUrl, server.config.logger);
+                server.config.logger.info(
+                  `[mainnet-console] in block ${result.blockHash} as ${result.extrinsicHash}`,
+                );
+                return sendJson(res, 200, result);
+              } catch (cause) {
+                // Three outcomes, kept apart, because the operator's next move differs.
+                if (cause instanceof SubmissionUnseen) {
+                  return sendJson(res, 504, {
+                    error: scrub(cause.message),
+                    unseen: true,
+                    extrinsicHash: cause.extrinsicHash,
+                  });
+                }
+                if (cause instanceof SubmissionRejected) {
+                  return sendJson(res, 502, { error: scrub(cause.message), rejected: true });
+                }
+                throw cause;
+              }
+            }
             case 'POST /__console/evidence': {
               const body = await readBody(req);
               assertEvidence(body);
@@ -318,11 +360,18 @@ export function mainnetConsoleBackend(options: ConsoleBackendOptions): Plugin {
         }
       });
 
+      // The node connection is shared across a deployment's eleven submissions; close it with
+      // the server so Ctrl-C does not leave a socket open.
+      server.httpServer?.on('close', () => {
+        void closeSubmitter();
+      });
+
       server.config.logger.info(
         `\n  mainnet console — local only, never built, never published\n` +
           `  repository  ${repoRoot}\n` +
           `  blockfrost  ${token ? 'held by this dev server, not by the page' : 'ABSENT — see docs/MAINNET.md'}\n` +
           `  session     a fresh secret per run, handed to the page in its HTML\n` +
+          `  submitting  from here through Blockfrost's node, not through the wallet\n` +
           `  open        http://127.0.0.1:${port}/   (stop this server when the deploy is done)\n`,
       );
     },
