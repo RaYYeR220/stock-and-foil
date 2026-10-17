@@ -222,6 +222,22 @@ export async function createHeadlessWallet(options: HeadlessWalletOptions): Prom
     },
     shielded: (cfg: any) => ShieldedWallet(cfg).startWithSecretKeys(shieldedSecretKeys),
     unshielded: (cfg: any) => UnshieldedWallet(cfg).startWithPublicKey(PublicKey.fromKeyStore(keystore)),
+    // `initialParameters()` is the ledger's *baseline* set, and using it to price a transaction
+    // is a trap — mainnet's live cost model is thousands of times cheaper, which is why
+    // `estimate` asks the chain instead (see cli/src/nodecost.ts). The DUST half is not that
+    // trap. Checked against mainnet's live parameters on 2026-10-17, via
+    // `midnightRuntimeApi.getLedgerParameters`, the dust block is **byte-identical** to the
+    // baseline:
+    //
+    //   nightDustRatio 5000000000 - 5 DUST per NIGHT, as docs/MAINNET.md states
+    //   generationDecayRate 8267
+    //   dustGracePeriodSeconds 10800 - three hours
+    //   timeToCapSeconds 604815 - about a week, as the same doc states
+    //
+    // What differs between live and baseline is the transaction cost model, not the DUST
+    // subsystem. So generation, decay and cap are reasoned about correctly here, and nothing we
+    // claim about DUST balances depends on the difference. Re-check with the same runtime call
+    // if a network ever changes its dust parameters.
     dust: (cfg: any) =>
       DustWallet(cfg).startWithSecretKey(dustSecretKey, ledgerApi.LedgerParameters.initialParameters().dust),
   } as any);
