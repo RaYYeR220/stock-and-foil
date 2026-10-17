@@ -11,9 +11,22 @@
 //      preview, by default. Its evidence file names every transaction it produced.
 //   2. The indexer serves each of those transactions' `raw` bytes. They are the real, proven,
 //      balanced transactions, with real verifier keys and real transcripts — not a model of one.
-//   3. Those exact bytes are priced against the *target* network's wallet with the ledger's own
-//      cost function (`WalletFacade.calculateTransactionFee`, which is `Transaction.fees` under
-//      the target's ledger parameters). No scaling factor, no guessed constant.
+//   3. Those exact bytes are priced by **the target chain itself**, through
+//      `midnightRuntimeApi.getTransactionCost`. No wallet, no sync, no account: one WebSocket
+//      and a round trip per transaction. No scaling factor, no guessed constant, and no local
+//      model of parameters the chain may not be running.
+//
+// That last point is the whole reason this command was rewritten. It used to price locally with
+// `WalletFacade.calculateTransactionFee`, which is `Transaction.fees` against
+// `LedgerParameters.initialParameters()` — the ledger's *baseline* set, which no public network
+// runs. For our eleven deployment transactions that reads **15.70 DUST** where mainnet's own
+// runtime says **0.002008 DUST**: wrong by a factor of about **7,800**, in the expensive
+// direction. It cost most of a day and nearly sent someone to buy tokens they did not need.
+// The baseline figure is still available behind `--offline`, labelled as what it is, printed
+// beside the chain's answer whenever both exist, and never used as the estimate.
+//
+// If the target network has no reachable RPC this command says so and exits non-zero. It does
+// not fall back to the baseline figure, because that fallback is the original mistake.
 //
 // What this does not capture: the mainnet transactions will not be byte-identical. Different
 // keys, addresses, salts and timestamps move a transaction's size by a few bytes, and a contract
@@ -31,11 +44,14 @@ import {
   type ChainNetwork,
 } from '@stockandfoil/sdk';
 import { createHeadlessWallet } from '@stockandfoil/sdk/node';
+import { LedgerParameters } from '@midnight-ntwrk/ledger-v8';
+import { NodeUnreachable, openNodePricer } from './nodecost.js';
 import { Transaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { Binding, FinalizedTransaction, Proof, SignatureEnabled } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import {
   CHAIN_NETWORKS,
   cliEndpoints,
+  fail,
   fileStamp,
   flagSet,
   flagValue,
@@ -65,8 +81,15 @@ interface PricedTx {
   identifier: string;
   /** What it cost on the reference network, in SPECK, as that chain recorded it. */
   referenceFeeSpeck?: bigint;
-  /** What the same bytes cost under the target network's ledger parameters, in SPECK. */
+  /** What the target chain's own runtime says these bytes cost, in SPECK. The answer. */
   targetFeeSpeck?: bigint;
+  /**
+   * `Transaction.fees` against `LedgerParameters.initialParameters()`, in SPECK.
+   *
+   * Printed for comparison only. It is the ledger's baseline parameter set, which no public
+   * network runs, and it reads thousands of times too high. Never used as the estimate.
+   */
+  baselineFeeSpeck?: bigint;
   bytes?: number;
   problem?: string;
 }
@@ -130,60 +153,117 @@ export async function estimate(args: Args): Promise<number> {
 
   // ------------------------------------------------------------------ re-price on the target
   const offline = flagSet(args, 'offline');
-  if (!offline) {
-    const raws = await fetchRawTransactions(referenceEndpoints.indexerHttpUrl, priced.map((t) => t.identifier));
-    say(`  raw bytes read  ${raws.size} of ${priced.length} transactions`);
+  const raws = await fetchRawTransactions(referenceEndpoints.indexerHttpUrl, priced.map((t) => t.identifier));
+  say(`  raw bytes read  ${raws.size} of ${priced.length} transactions`);
 
-    const targetEndpoints = cliEndpoints(args, network);
-    say(`  target chain    ${network} (${redactEndpoint(targetEndpoints.indexerHttpUrl)})`);
-    say('  opening the target wallet to read its ledger parameters and DUST balance...');
-
-    const wallet = await createHeadlessWallet({
-      seedHex: seedHexOf(loadMnemonic(args)),
-      network,
-      endpoints: targetEndpoints,
-      syncTimeoutMs: Number(flagValue(args, 'sync-timeout-minutes') ?? 45) * 60_000,
-      requireDust: false,
-      requireSync: !flagSet(args, 'no-sync'),
-    });
+  // The baseline figure, computed locally. Shown for comparison, never used as the answer.
+  const baselineParams = LedgerParameters.initialParameters();
+  for (const tx of priced) {
+    const raw = raws.get(tx.identifier);
+    if (raw === undefined) {
+      tx.problem = 'the reference indexer has no raw bytes for this transaction';
+      continue;
+    }
     try {
-      for (const tx of priced) {
-        const raw = raws.get(tx.identifier);
-        if (raw === undefined) {
-          tx.problem = 'the reference indexer has no raw bytes for this transaction';
-          continue;
-        }
-        try {
-          const bytes = fromHex(raw.startsWith('0x') ? raw.slice(2) : raw);
-          tx.bytes = bytes.length;
-          const deserialized = Transaction.deserialize<SignatureEnabled, Proof, Binding>(
-            'signature',
-            'proof',
-            'binding',
-            bytes,
-          ) as FinalizedTransaction;
-          tx.targetFeeSpeck = await wallet.calculateFee(deserialized);
-        } catch (error) {
-          tx.problem = `could not price it: ${(error as Error).message}`;
-        }
-      }
-
-      const balances = await wallet.balances();
-      printReport(network, reference, priced, balances.dustSpeck, args);
-      const path = writeReport(network, reference, evidencePath, priced, balances.dustSpeck, args);
-      say(`\nwritten to ${path}`);
-      return balances.dustSpeck >= requiredSpeck(priced, args) ? 0 : 2;
-    } finally {
-      await wallet.close();
+      const bytes = fromHex(raw.startsWith('0x') ? raw.slice(2) : raw);
+      tx.bytes = bytes.length;
+      const deserialized = Transaction.deserialize<SignatureEnabled, Proof, Binding>(
+        'signature',
+        'proof',
+        'binding',
+        bytes,
+      ) as FinalizedTransaction;
+      tx.baselineFeeSpeck = (deserialized as unknown as { fees(p: unknown): bigint }).fees(baselineParams);
+    } catch (error) {
+      tx.problem = `could not read it: ${(error as Error).message}`;
     }
   }
 
-  printReport(network, reference, priced, undefined, args);
-  const path = writeReport(network, reference, evidencePath, priced, undefined, args);
-  say(`\nwritten to ${path}`);
-  say(`\nThis is the reference network's own prices. Re-run without --offline, with a ${network}`);
-  say('wallet, to price the same transactions under that network\'s ledger parameters.');
-  return 0;
+  if (offline) {
+    printReport(network, reference, priced, undefined, args, undefined);
+    const path = writeReport(network, reference, evidencePath, priced, undefined, args);
+    say(`
+written to ${path}`);
+    say('');
+    say(`  --offline: nothing was asked of ${network}. The only prices above are what ${reference}`);
+    say('  charged and the ledger BASELINE figure. The baseline is NOT what any live chain charges:');
+    say('  it read ~7,800x too high on our deployment (15.7 DUST against 0.002). Do not budget from it.');
+    say(`  Re-run without --offline to get ${network}'s own answer.`);
+    return 0;
+  }
+
+  // The answer: the target chain's own price for these exact bytes.
+  const targetEndpoints = cliEndpoints(args, network);
+  say(`  target chain    ${network} (${redactEndpoint(targetEndpoints.nodeUrl)})`);
+  let pricer;
+  try {
+    pricer = await openNodePricer(targetEndpoints.nodeUrl);
+  } catch (error) {
+    if (!(error instanceof NodeUnreachable)) throw error;
+    fail(`
+${error.message}`);
+    fail('');
+    fail(`Nothing was priced. The estimate is NOT falling back to the local baseline figure,`);
+    fail('because that figure is the ledger’s baseline parameter set, which no public network');
+    fail(`runs — on our deployment it read ~7,800x too high (15.7 DUST against 0.002). Fix the RPC and re-run, or pass`);
+    fail('--offline to see the reference prices and the baseline figure, clearly labelled.');
+    return 2;
+  }
+  say(`  priced by       ${pricer.chain}, through its own midnightRuntimeApi.getTransactionCost`);
+
+  try {
+    for (const tx of priced) {
+      const raw = raws.get(tx.identifier);
+      if (raw === undefined) continue;
+      const quote = await pricer.quote(raw);
+      if (quote.speck === undefined) tx.problem = `the chain would not price it: ${quote.error ?? 'no reason given'}`;
+      else tx.targetFeeSpeck = quote.speck;
+    }
+  } finally {
+    await pricer.close();
+  }
+
+  // The wallet is now needed only for the balance, so an estimate works without one.
+  const dustSpeck = await readWalletDust(args, network, targetEndpoints);
+  printReport(network, reference, priced, dustSpeck, args, pricer.chain);
+  const path = writeReport(network, reference, evidencePath, priced, dustSpeck, args);
+  say(`
+written to ${path}`);
+  if (dustSpeck === undefined) return 0;
+  return dustSpeck >= requiredSpeck(priced, args) ? 0 : 2;
+}
+
+/**
+ * The target wallet's DUST, when a mnemonic is available.
+ *
+ * Opening a wallet means syncing it, which on a public network is many minutes, so this is
+ * skipped entirely unless the caller supplied a mnemonic. Pricing no longer needs it: that is
+ * what made this command runnable by someone who holds no keys at all.
+ */
+async function readWalletDust(
+  args: Args,
+  network: ChainNetwork,
+  endpoints: ReturnType<typeof cliEndpoints>,
+): Promise<bigint | undefined> {
+  const hasMnemonic = flagValue(args, 'mnemonic-file') !== undefined || process.env.MIDNIGHT_MNEMONIC;
+  if (!hasMnemonic) {
+    say('  wallet          none given, so the balance is not checked (pass --mnemonic-file to compare)');
+    return undefined;
+  }
+  say('  opening the target wallet to read its DUST balance...');
+  const wallet = await createHeadlessWallet({
+    seedHex: seedHexOf(loadMnemonic(args)),
+    network,
+    endpoints,
+    syncTimeoutMs: Number(flagValue(args, 'sync-timeout-minutes') ?? 45) * 60_000,
+    requireDust: false,
+    requireSync: !flagSet(args, 'no-sync'),
+  });
+  try {
+    return (await wallet.balances()).dustSpeck;
+  } finally {
+    await wallet.close();
+  }
 }
 
 const marginPercent = (args: Args): number => Number(flagValue(args, 'margin-percent') ?? DEFAULT_MARGIN_PERCENT);
@@ -199,24 +279,39 @@ function printReport(
   priced: readonly PricedTx[],
   dustSpeck: bigint | undefined,
   args: Args,
+  chain: string | undefined,
 ): void {
   heading('per transaction, in SPECK');
-  say(`  ${'circuit'.padEnd(26)} ${'bytes'.padStart(8)} ${`${reference} paid`.padStart(16)} ${`${network} price`.padStart(16)}`);
+  say(
+    `  ${'circuit'.padEnd(24)} ${'bytes'.padStart(7)} ${`${reference} paid`.padStart(14)} ` +
+      `${'BASELINE (not live)'.padStart(18)} ${(chain ? `${network} says` : `${network} price`).padStart(16)}`,
+  );
   for (const tx of priced) {
     const ref = tx.referenceFeeSpeck === undefined ? '-' : tx.referenceFeeSpeck.toString();
+    const base = tx.baselineFeeSpeck === undefined ? '-' : tx.baselineFeeSpeck.toString();
     const target = tx.targetFeeSpeck === undefined ? (tx.problem ? '!' : '-') : tx.targetFeeSpeck.toString();
-    say(`  ${tx.circuit.slice(0, 26).padEnd(26)} ${String(tx.bytes ?? '-').padStart(8)} ${ref.padStart(16)} ${target.padStart(16)}`);
+    say(
+      `  ${tx.circuit.slice(0, 24).padEnd(24)} ${String(tx.bytes ?? '-').padStart(7)} ${ref.padStart(14)} ` +
+        `${base.padStart(18)} ${target.padStart(16)}`,
+    );
   }
   for (const tx of priced.filter((t) => t.problem)) say(`  ! ${tx.circuit}: ${tx.problem}`);
 
   const referenceTotal = sum(priced.map((t) => t.referenceFeeSpeck));
+  const baselineTotal = sum(priced.map((t) => t.baselineFeeSpeck));
   const targetTotal = sum(priced.map((t) => t.targetFeeSpeck));
   const required = requiredSpeck(priced, args);
 
   heading('totals');
   say(`  ${reference} actually paid        ${referenceTotal} SPECK (${formatDust(referenceTotal)} DUST)`);
+  if (baselineTotal > 0n) {
+    say(`  ledger BASELINE (not live)  ${baselineTotal} SPECK (${formatDust(baselineTotal)} DUST)`);
+  }
   if (targetTotal > 0n) {
-    say(`  priced on ${network.padEnd(20)} ${targetTotal} SPECK (${formatDust(targetTotal)} DUST)`);
+    say(`  ${(chain ?? network).slice(0, 24).padEnd(26)}${targetTotal} SPECK (${formatDust(targetTotal)} DUST)`);
+    if (baselineTotal > 0n && targetTotal > 0n) {
+      say(`  the baseline is ${(Number(baselineTotal) / Number(targetTotal)).toFixed(0)}x the chain's own price`);
+    }
   }
   say(`  with a ${marginPercent(args)}% margin${' '.repeat(Math.max(0, 15 - String(marginPercent(args)).length))} ${required} SPECK (${formatDust(required)} DUST)`);
 
@@ -235,15 +330,15 @@ function printReport(
   say('');
   say('  Two caveats, stated rather than hidden.');
   say('');
-  say('  These are the reference run\'s exact transactions re-priced, not the transactions that');
+  say("  These are the reference run's exact transactions re-priced, not the transactions that");
   say('  will actually be built. Keys, addresses, salts and a larger contract state move the');
   say(`  real cost by a few percent, which is what the ${marginPercent(args)}% margin is for.`);
   say('');
-  say('  The price is the target network\'s ledger parameters plus this wallet\'s configured fee');
-  say('  overhead (additionalFeeOverhead, 1000 SPECK per transaction). On a network whose own');
-  say('  parameters price a transaction at 1 SPECK the overhead dominates and the per-transaction');
-  say('  figures look flat; that is the wallet being cautious, not the estimate failing. Read the');
-  say('  total as an upper bound on what a run will draw from the balance.');
+  say('  The BASELINE column is NOT an estimate and is printed only so nobody mistakes it for');
+  say("  one. It is Transaction.fees against LedgerParameters.initialParameters(), the ledger's");
+  say('  baseline parameter set, which no public network runs. It reads thousands of times the');
+  say("  chain's own price: ~7,800x on our deployment (15.7 DUST against 0.002), and that is the");
+  say('  mistake this command exists to stop. The answer is the column the chain supplied.');
   say('');
   say('  1 DUST = 10^15 SPECK.');
 }
@@ -258,6 +353,7 @@ function writeReport(
 ): string {
   const path = join(EVIDENCE_DIR, `estimate-${network}-${fileStamp()}.json`);
   const referenceTotal = sum(priced.map((t) => t.referenceFeeSpeck));
+  const baselineTotal = sum(priced.map((t) => t.baselineFeeSpeck));
   const targetTotal = sum(priced.map((t) => t.targetFeeSpeck));
   const required = requiredSpeck(priced, args);
   writeJson(path, {
@@ -268,10 +364,10 @@ function writeReport(
     referenceEvidence: evidencePath,
     method:
       'Each transaction of the reference run was read back from the reference indexer as raw ' +
-      'ledger bytes and re-priced with the target wallet\'s own cost function. Nothing was built, ' +
-      'proven or submitted. The price is the target ledger parameters plus the wallet\'s '  +
-      'configured additionalFeeOverhead of 1000 SPECK per transaction, so it is an upper '  +
-      'bound rather than a prediction.',
+      'ledger bytes and priced by the target node via midnightRuntimeApi.getTransactionCost ' +
+      '(targetFeeSpeck; absent under --offline). baselineFeeSpeck is Transaction.fees against ' +
+      'LedgerParameters.initialParameters(), a baseline set no public network runs, recorded for ' +
+      'comparison only and never the estimate. Nothing was built, proven or submitted.',
     estimatedAt: new Date().toISOString(),
     marginPercent: marginPercent(args),
     transactions: priced.map((t) => ({
@@ -280,11 +376,13 @@ function writeReport(
       identifier: t.identifier,
       bytes: t.bytes,
       referenceFeeSpeck: t.referenceFeeSpeck?.toString(),
+      baselineFeeSpeck: t.baselineFeeSpeck?.toString(),
       targetFeeSpeck: t.targetFeeSpeck?.toString(),
       problem: t.problem,
     })),
     totals: {
       referenceFeeSpeck: referenceTotal.toString(),
+      baselineFeeSpeck: baselineTotal.toString(),
       targetFeeSpeck: targetTotal.toString(),
       requiredWithMarginSpeck: required.toString(),
       requiredWithMarginDust: formatDust(required),
