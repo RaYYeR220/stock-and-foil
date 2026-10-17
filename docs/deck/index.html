@@ -1298,7 +1298,7 @@ noted by name. No wallet.</i></pre>
         <li><span><b>Timing correlates.</b> An observer can link an acknowledgment to a later offer by when each happened.</span></li>
         <li><span><b>Sealing rests on Poseidon.</b> The platform does not promise the hash stays stable across upgrades, which is why every record carries a version.</span></li>
         <!-- MAINNET LINE — if the mainnet deployment lands, this is the only line to change. -->
-        <li><span><b>Preview, not mainnet.</b> Permissionless mainnet deployment opened on 28 September 2026: the gate is open and this registry is not through it yet. Two registries run on Midnight preview, a public testnet anyone can query. <i>--network mainnet</i> works, and the remaining gate is DUST.</span></li>
+        <li><span><b>Preview, not mainnet.</b> Two registries run on Midnight preview, a public testnet anyone can query. We attempted mainnet three times through a sponsoring wallet: each transaction was proved, balanced and accepted by the node, and each was invalidated in its pool 75 seconds later. Nothing landed, nothing was spent, and the cause we could not exclude is on the sponsor's side of the line — slide 17.</span></li>
         <li><span><b>Not audited.</b> An internal security review, with findings accepted on the record — one of them, F-08, is what case-scoped disclosure answers. No external audit.</span></li>
       </ul>
     </div>
@@ -1315,9 +1315,9 @@ noted by name. No wallet.</i></pre>
     <div class="opener" style="display:grid;grid-template-columns:calc(7*var(--col) + 6*40px) 1fr;gap:60px;align-items:end;margin-bottom:16px">
       <div>
         <h2 class="title" data-ghost="What you told us,&#10;and what we did.">What you told us,<br>and what we did.</h2>
-        <p class="dek" style="margin-top:12px">Three notes came back from Wave 1. Two are answered here; the third is not done, and says so.</p>
+        <p class="dek" style="margin-top:12px">Three notes came back from Wave 1. Two are answered here; the third we tried, and this is how far it got.</p>
       </div>
-      <p class="src" style="padding-bottom:6px">Every change since the Wave 1 submission, item by item,<br>with what it is and why, is at <b style="font-family:var(--mono);font-size:13.5px">/whats-new</b> on the site —<br>nine shipped, one still being built.</p>
+      <p class="src" style="padding-bottom:6px">Every change since the Wave 1 submission, item by item,<br>with what it is and why, is at <b style="font-family:var(--mono);font-size:13.5px">/whats-new</b> on the site —<br>ten of them, this one included.</p>
     </div>
     <hr class="dotrule">
     <div class="grid g3 stretch" style="gap:26px">
@@ -1338,11 +1338,11 @@ noted by name. No wallet.</i></pre>
       </article>
 
       <article class="card flag" style="display:flex;flex-direction:column;padding:21px 23px">
-        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:11px">Business Development<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i>not done</p>
+        <p class="n" style="font-family:var(--mono);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;margin-bottom:11px">Business Development<i style="flex:1;height:2px;background:var(--pink);mix-blend-mode:multiply"></i>attempted, not landed</p>
         <blockquote class="said"><i>“Since you'll soon be able to freely deploy contracts to the mainnet, please be sure to deploy your product there.”</i></blockquote>
         <h3 style="font-size:22px;margin-top:16px">Not on mainnet. Here is exactly why</h3>
-        <p class="body" style="font-size:16.5px;margin-top:8px">The gate opened on 28 September 2026, and the stale sentence claiming otherwise is gone from our docs. What is left is DUST: there is no faucet and fees come from registered NIGHT, so a NIGHT registration is in flight. Every command already takes <i>--network mainnet</i>, prices the whole deploy against mainnet's own ledger parameters before a penny is spent, and refuses to submit without <i>--yes-mainnet</i>.</p>
-        <p class="src" style="margin-top:auto;padding-top:14px">docs/MAINNET.md · the runbook and the failure modes</p>
+        <p class="body" style="font-size:16.5px;margin-top:8px">Three attempts, through a wallet that pays the DUST fee from its own pool, ours being on Cardano with no route there. Each was proved, balanced and taken by the node, then marked <i>Invalid</i> 75 seconds later. Nothing landed, nothing was spent. The node prices all eleven at <b>0.002008 DUST</b> against the <b>1.000000</b> held, so fees are out, and so are block limits and every static cause. The sponsor's DUST input moved under us.</p>
+        <p class="src" style="margin-top:auto;padding-top:14px">docs/MAINNET.md §3b · the measurements and the exclusions</p>
       </article>
     </div>
 
@@ -1360,7 +1360,7 @@ noted by name. No wallet.</i></pre>
           <li><span><b>Screens rebuilt to read in one still frame.</b></span></li>
           <li><span><b>A business model, adoption path and outreach list.</b></span></li>
         </ul>
-        <p class="note" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--hair);font-size:17px"><b>Next, in order:</b> mainnet the moment DUST lands · an external audit, the gate before any lender pays · one pilot · then an operator who is not us.</p>
+        <p class="note" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--hair);font-size:17px"><b>Next, in order:</b> mainnet, on a steadier sponsor or DUST of our own · an external audit, the gate before any lender pays · one pilot · then an operator who is not us.</p>
       </div>
       <div style="display:flex;flex-direction:column">
         <article class="card">
