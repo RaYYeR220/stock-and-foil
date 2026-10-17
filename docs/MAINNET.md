@@ -279,6 +279,12 @@ submitted; the node accepts it (`Ready` then `Broadcast` within the same second)
 75 seconds later the pool's revalidation marks it `Invalid`. Nothing reaches a block, nothing
 is spent. Confirmed absent from the chain by hash and by identifier each time.
 
+To be exact about what was watched: the first attempt went out through 1AM's own
+`submitTransaction` and its result was unobservable from the wallet — "timed out" — so for that
+one only the absence is ours to assert. The verdict above is what the node reported for the
+second and third, submitted through our own RPC, and the second carried no reason on the status
+channel until `e6b7838` recorded both channels.
+
 What that shape excludes, with evidence:
 
 | Excluded | How |

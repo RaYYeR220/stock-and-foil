@@ -13,7 +13,7 @@ proves nothing to a stranger.
 | `preview` | public Midnight testnet | **two** registries deployed; full scenario and a zero-DUST sponsored transaction on the first, a cross-registry check across both, verified |
 | `undeployed` | local devnet (node, indexer, proof server in Docker) | deployed, full scenario, verified |
 | `preprod` | public Midnight testnet | **not deployed** - see [Preprod](#preprod-not-deployed) |
-| `mainnet` | Midnight mainnet | **not deployed** - see [Mainnet](#mainnet-ready-not-deployed) |
+| `mainnet` | Midnight mainnet | **not deployed** - three attempts, nothing spent, nothing on chain; see [Mainnet](#mainnet-attempted-not-deployed) |
 
 Compact toolchain `0.31.1`, compact-runtime `0.16.0`, midnight-js `4.1.1`, ledger-v8 `8.1.3`,
 proof server `8.1.3`. Nothing here has been audited by anyone but us.
@@ -358,32 +358,106 @@ The commands are unchanged: `ceremony`, `deploy`, `scenario` and `verify` all ta
 `--network preprod`, and read the token from `BLOCKFROST_PROJECT_ID_PREPROD` or
 `--blockfrost-token`.
 
-## Mainnet: ready, not deployed
+## Mainnet: attempted, not deployed
 
 Mainnet contract deployment has been permissionless since 2026-09-28; the request process was
 retired by [MIP PR #375](https://github.com/midnightntwrk/midnight-improvement-proposals/pull/375),
 merged 2026-10-09. The docs site still says otherwise and has an unmerged fix open, so the MIP is
-the authority, not the guide.
+the authority, not the guide. The Wave 1 reviewer told the field to deploy there, so we tried.
 
-Everything needed to deploy is in this repository and nothing has been deployed. The remaining
-gate is DUST: there is no mainnet faucet, fees are paid in DUST, and DUST comes from registering
-NIGHT — a registration that takes about twelve hours to finalize on Cardano and reach a Midnight
-node, after which it accrues over about a week. A registration of ~200 NIGHT against the DUST
-address `mn_dust1wdp945q3qkfsnwlgdvucltpu5w8wqf75yk7whtxdex0ffd2exrlr7j4vkp3` is in flight.
+**Three attempts, on 2026-10-17. Nothing reached the chain and nothing was spent.** Fees on
+mainnet are paid in DUST, DUST is generated from cNIGHT held on Cardano, and we have no route to
+Cardano — so the attempts went through the [1AM](https://1am.xyz/developers) wallet, whose
+ProofStation proves and balances a transaction out of its own funded pool ("zero dust, zero NIGHT
+for fees"), driven by the local operator console in
+[`tools/mainnet-console`](./tools/mainnet-console/README.md). Each attempt reached the first of
+the eleven staged deployment transactions, was proved and balanced correctly, and was submitted.
 
-What is ready:
+| # | Submitted by | What came back | On chain |
+|---|---|---|---|
+| 1 | 1AM's own `submitTransaction` | resolved, then the wallet's history said **"timed out"** | no |
+| 2 | our own Blockfrost RPC ([`b68c0bb`](https://github.com/RaYYeR220/stock-and-foil/commit/b68c0bb)) | node accepted it, then **`Invalid`** about thirteen 6-second blocks later, with no reason carried on that channel | no |
+| 3 | the same, with both channels recorded and the bytes priced by the node first ([`6d27166`](https://github.com/RaYYeR220/stock-and-foil/commit/6d27166)) | `Ready@0s` → `Broadcast@0s` → **`Invalid@75s`** | no |
+
+Attempt 1 is why the courier changed: 1AM's `getConfiguration()` reports
+`indexer.mainnet.midnight.network`, which Midnight decommissioned on 2026-09-30 and which answers
+`410`. The wallet can put bytes on the wire and then has no way to learn what became of them, and
+"timed out" is what that looks like from inside it. Submission moved to our own Blockfrost RPC —
+same bytes, same DUST, same binding, only the courier changes — to get the node's verdict.
+
+The console prints both names before the bytes leave — the identifier the indexer keys a contract
+call by, and the ledger hash an explorer indexes — and writes them into its run state under
+`cli/.secrets/`, which is gitignored and stays on the operator's machine, so they are not quoted
+here. What is checkable is the absence, and the query is the same one for any identifier:
+
+```bash
+curl -s "https://midnight-mainnet.blockfrost.io/api/v0?project_id=$BLOCKFROST_PROJECT_ID_MAINNET" \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ transactions(offset: {identifier: \"<identifier>\"}) { raw } }"}'
+# => {"data":{"transactions":[]}}
+```
+
+and the same answer by hash on [midnightexplorer.com](https://midnightexplorer.com). No contract
+was created, no DUST left the signer, and the balance it started with is the balance it has.
+
+### What the shape excludes, and how
+
+| Excluded | Method |
+|---|---|
+| **Fees** | The node's own `midnightRuntimeApi.getTransactionCost` prices all eleven transactions at **0.002008 DUST** (the 17.5 kB deploy at 0.000717, each key insert at 0.000129) against the **1.000000 DUST** the signer held — about 500x margin — and is asked again for the exact bytes immediately before each submit. An earlier internal estimate of 15.7 DUST was simply wrong: it priced against `LedgerParameters.initialParameters()`, the ledger's baseline set, which mainnet does not run, and it was off by roughly 7,800x in the expensive direction. |
+| **Block limits** | `normalizeFullness` under mainnet's **live** parameters accepts both the 17.5 kB deploy transaction and a verifier-key insert. |
+| **Everything static** — encoding, binding, segment structure, how the bytes reach `author_submitExtrinsic` | A deliberately malformed payload is refused **synchronously** by the node: `1010: Invalid Transaction: Custom error: 1`. Ours passes that gate and reaches `Broadcast`. |
+
+A transaction that is valid on arrival and invalid later is invalid *because the state it depends
+on changed.* The only such state here is the DUST input and its spend proof, and both are chosen
+and computed by the sponsoring service, from a pool that is concurrently paying for other
+people's transactions. A spend whose UTXO is consumed by another sponsored transaction, or whose
+proof is tied to a generation state that moves, is accepted on arrival and invalid at the next
+revalidation. That is the observed behaviour, it was the same all three times, and it is on the
+far side of the boundary: we supply the transaction, 1AM supplies the DUST. Their service does
+the hard part correctly — what it hands back deserializes as signed, proven and bound. It is the
+observation path that is dead, and their pool's concurrency that we collide with.
+
+We could not get the node to name a code. Both channels that would are closed on the public
+endpoint: `system_dryRun` answers `-32601: RPC call is unsafe to be called externally`, and
+`TaggedTransactionQueue_validate_transaction` through `state_call` traps the runtime
+(`wasm unreachable`) rather than returning a `TransactionValidityError` — for a deliberately
+broken payload and a structurally valid one alike. A node run with `--rpc-methods unsafe` would
+settle it in one call.
+
+The console now keeps the balanced transaction at `cli/.secrets/mainnet-failed-tx-<timestamp>.hex`
+whenever a submit fails (gitignored, like everything in that directory). It is re-submittable
+without re-proving, so whoever takes this up with the wallet's authors has a reproduction rather
+than a description.
+
+Three bugs of our own were found and fixed on the way, and they are part of this record: a
+key-decoding mismatch against `@midnight-ntwrk/wallet-sdk-address-format`, whose two shielded key
+classes carry only `static codec` while the address classes also carry the Bech32m symbol; an
+unbound `fetch` handed to `FetchZkConfigProvider`, which a browser rejects as an illegal
+invocation while Node accepts it; and a coin-public-key encoding that midnight-js converts when it
+builds a deploy or a call and passes through unconverted when it builds a verifier-key
+maintenance transaction — which is ten of our eleven, so it would have failed at transaction 2 of
+11, after the first had landed. The first of those also existed in the shipped Network-mode code
+of the web app and is fixed there too ([`f54b608`](https://github.com/RaYYeR220/stock-and-foil/commit/f54b608)).
+
+The route that does not depend on anyone else's pool is still open and still slow: register
+cNIGHT on Cardano against the DUST address
+`mn_dust1wdp945q3qkfsnwlgdvucltpu5w8wqf75yk7whtxdex0ffd2exrlr7j4vkp3`, wait about twelve hours
+for it to finalize and reach a Midnight node, then about a week for DUST to accrue. Nothing in
+this repository is waiting on code for that:
 
 - `--network mainnet` on `ceremony`, `deploy`, `scenario` and `verify`, with Blockfrost
   endpoints and explorer links for midnightexplorer.com and midnight.subscan.io.
 - `npm run -w cli balance -- --network mainnet --watch 60`, which never waits for DUST, to watch
-  the registration land.
+  a registration land.
 - `npm run -w cli estimate -- --network mainnet`, which prices a full deploy plus scenario
-  against mainnet's own ledger parameters **before anything is spent**, by reading a previous
-  run's transactions back from the indexer as raw ledger bytes and re-pricing those exact bytes.
-  Nothing is built, proven or submitted; `--offline` does not even open a wallet.
+  **before anything is spent**, by reading a previous run's transactions back from the indexer as
+  raw ledger bytes and re-pricing those exact bytes. Nothing is built, proven or submitted;
+  `--offline` does not even open a wallet.
 - A guard: every command that can submit refuses `--network mainnet` without `--yes-mainnet`.
 
-The runbook, with the exact commands and the failure modes, is [`docs/MAINNET.md`](./docs/MAINNET.md).
+The runbook, with the exact commands, the failure modes and the full account of where the
+browser-wallet route stops, is [`docs/MAINNET.md`](./docs/MAINNET.md) (§3b).
 
 ## Tests
 

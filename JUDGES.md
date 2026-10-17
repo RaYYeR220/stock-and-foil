@@ -85,3 +85,9 @@ the cross-registry run, both named in the output. `--exact` demands strict equal
 supplier can still acknowledge an invoice that does not exist; settlement is in an unshielded token,
 so amounts and addresses are public at payment time; two colluding keyholders could open a record
 off-chain; this is a public test network, not mainnet, and the code is not audited.
+
+**We do not claim a mainnet deployment.** We attempted one three times through a sponsoring wallet:
+every transaction was proved, balanced and accepted by the node, and every one was invalidated in
+its pool about 75 seconds later. Nothing is on chain and nothing was spent. What we measured, what
+that excludes and what is left is in
+[PROOF.md → Mainnet](./PROOF.md#mainnet-attempted-not-deployed).

@@ -159,6 +159,11 @@ Counts and the live evidence are in [PROOF.md](./PROOF.md).
   upgrades; records carry a version for that reason.
 - The registry is young: it has been exercised end to end on a public network and in a property
   model, not by a lender's back office.
+- **Not on mainnet.** Three deployment attempts were proved, balanced and accepted by a mainnet
+  node, and each was marked `Invalid` by the pool about 75 seconds later; nothing landed and
+  nothing was spent. Fees, block limits and every static cause are excluded — what remains is the
+  DUST input the sponsoring wallet supplies. [PROOF.md](./PROOF.md#mainnet-attempted-not-deployed)
+  and [docs/MAINNET.md](./docs/MAINNET.md).
 - Not audited.
 
 ## Roadmap
@@ -167,8 +172,13 @@ Counts and the live evidence are in [PROOF.md](./PROOF.md).
   cross-registry check that makes a consortium unnecessary; fee sponsorship, so a party holding no
   DUST can still transact; batch acceptance; case-scoped disclosure for an insolvency practitioner;
   four more circuits, sixteen in all. See [what changed](https://stock-and-foil.vercel.app/whats-new).
-- **Next:** mainnet, in-browser proving through 1AM, distributed key generation for the disclosure
-  key, and an ERP connector so invoices arrive signed rather than typed.
+- **Mainnet: attempted, blocked on the sponsoring wallet.** Three attempts through 1AM's
+  ProofStation were accepted by the node and then invalidated in its pool, with nothing spent and
+  nothing on chain; the cause we could not exclude is the DUST input that service supplies. The
+  measurements, the exclusions and the saved reproduction are in
+  [docs/MAINNET.md](./docs/MAINNET.md).
+- **Next:** in-browser proving through 1AM, distributed key generation for the disclosure key, and
+  an ERP connector so invoices arrive signed rather than typed.
 - **After that:** the ledger-9 migration for contract events and ECDSA-signed e-invoices, shielded
   settlement once contract custody lands, and an adapter for existing factoring platforms.
 
