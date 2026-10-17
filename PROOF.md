@@ -379,6 +379,17 @@ the eleven staged deployment transactions, was proved and balanced correctly, an
 | 2 | our own Blockfrost RPC ([`b68c0bb`](https://github.com/RaYYeR220/stock-and-foil/commit/b68c0bb)) | node accepted it, then **`Invalid`** about thirteen 6-second blocks later, with no reason carried on that channel | no |
 | 3 | the same, with both channels recorded and the bytes priced by the node first ([`6d27166`](https://github.com/RaYYeR220/stock-and-foil/commit/6d27166)) | `Ready@0s` → `Broadcast@0s` → **`Invalid@75s`** | no |
 
+The three transactions, as the console named them before the bytes left:
+
+| # | Transaction identifier | Ledger hash |
+|---|---|---|
+| 1 | `0010e3294b01acbccf36137054d0d0152b52f0aa8087cddf3e35cf4bb3a425072c` | `aac8257919f07f1db0cdec6962cc86481b93507e280ade3615a17bdef5ec064e` |
+| 2 | `00990fe1596df4abf0acbf9f7fd0dde2a900a1785e9d54a7216fb0445d03dc60da` | `0adf8a6736d6446b2fb8e883daa00606df042547c653191022ea16d461ad0914` |
+| 3 | — | `90dd1869605cf4583b661c3638f9c7bac5d72791535ac30715568bab17490f9b` (17,513 B) |
+
+Each was checked by identifier and by hash against mainnet at block 3,051,810 on 2026-10-17 and
+is absent from all of them.
+
 Attempt 1 is why the courier changed: 1AM's `getConfiguration()` reports
 `indexer.mainnet.midnight.network`, which Midnight decommissioned on 2026-09-30 and which answers
 `410`. The wallet can put bytes on the wire and then has no way to learn what became of them, and
@@ -387,8 +398,8 @@ same bytes, same DUST, same binding, only the courier changes — to get the nod
 
 The console prints both names before the bytes leave — the identifier the indexer keys a contract
 call by, and the ledger hash an explorer indexes — and writes them into its run state under
-`cli/.secrets/`, which is gitignored and stays on the operator's machine, so they are not quoted
-here. What is checkable is the absence, and the query is the same one for any identifier:
+`cli/.secrets/`, which is gitignored and stays on the operator's machine. What is checkable is
+the absence, and the query is the same one for any of them:
 
 ```bash
 curl -s "https://midnight-mainnet.blockfrost.io/api/v0?project_id=$BLOCKFROST_PROJECT_ID_MAINNET" \
