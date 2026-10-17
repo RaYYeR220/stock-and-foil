@@ -252,6 +252,21 @@ which an explorer indexes — and a submission that is accepted but never seen i
 the run and says so, rather than going quiet. Do not retry one of those without looking it up
 first: retrying a transaction that did land deploys a second registry.
 
+**What a mainnet deployment actually costs.** Priced from the committed preview deployment's
+real bytes through the ledger's own cost function (`Transaction.fees`, baseline parameters):
+
+| | |
+|---|---|
+| deploy transaction (constructor + 6 verifier keys, 17,507 bytes) | **4.612120 DUST** |
+| each verifier-key maintenance transaction | ~1.08-1.12 DUST |
+| **all eleven** | **15.703470 DUST** |
+
+Preview charged **1 SPECK** for each of those same transactions, which is fifteen orders of
+magnitude out and is why section 2 says preview is a guide to nothing except that the code
+works. The console prices this at preflight and refuses to start if the signer cannot cover
+the first transaction. The number is a floor: live parameters are not served by any RPC and
+float upward from the baseline with block fullness.
+
 **If 1AM's sponsor declines** — policy, rate limit, an empty pool — the console stops on the
 spot, shows their message verbatim and says it was their refusal. The fallbacks, in order of
 how much they cost: wait and press the same button again (the run resumes where it stopped);

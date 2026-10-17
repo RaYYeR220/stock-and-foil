@@ -13,7 +13,7 @@ import {
   formatDust,
   VERIFIER_KEYS_PER_TX,
 } from '@stockandfoil/sdk';
-import type { Check } from '../../server/preflight.js';
+import type { Check, ServerPreflight } from '../../server/preflight.js';
 import { DEPLOY_TOTAL, describeDeployTx } from './deploy.js';
 import { FROZEN_CIRCUITS, VERIFIER_KEYS_IN_DEPLOY_TX } from './frozen.js';
 import { LIFECYCLE_PLAN, LIFECYCLE_PROMPTS } from './lifecycle.js';
@@ -101,6 +101,63 @@ export async function checkZkOverHttp(zkBaseUrl: string): Promise<Check> {
       `the compiled material could not be read: ${describeError(cause)}`,
     );
   }
+}
+
+/**
+ * Can this wallet actually pay for the deployment?
+ *
+ * The question that two failed mainnet attempts came down to. The signer reported exactly
+ * 1.000000 DUST while the deployment prices at some multiple of that, and the only symptom
+ * was a transaction that sat in the pool for thirteen blocks and was then marked Invalid with
+ * no reason attached. It is arithmetic, and it belongs before the first prompt.
+ *
+ * It is a warning rather than a failure when the wallet holds nothing at all, because a
+ * sponsored flow is a real design in which the signer's own balance is beside the point — but
+ * a wallet that reports *some* DUST and not enough is the case that burned us, and that is a
+ * failure.
+ */
+export function checkAffordable(session: ConsoleSession, server: ServerPreflight): Check {
+  const total = server.facts.deploymentSpeck ? BigInt(server.facts.deploymentSpeck) : undefined;
+  const first = server.facts.deployTxSpeck ? BigInt(server.facts.deployTxSpeck) : undefined;
+  const held = session.reading.dustBalanceSpeck;
+  if (total === undefined || first === undefined) {
+    return warn('affordable', 'Can the wallet pay for it', 'the deployment could not be priced, so this is unknown.');
+  }
+  const dust = (speck: bigint): string => `${formatDust(speck)} DUST`;
+
+  if (held === 0n) {
+    return warn(
+      'affordable',
+      'Can the wallet pay for it',
+      `the deployment prices at ${dust(total)} and the signer holds none. That is the sponsored ` +
+        "case and may be fine — 1AM's pool pays — but nothing here can confirm the pool will " +
+        'cover it, and the chain will not say why if it does not.',
+    );
+  }
+  if (held < first) {
+    return fail(
+      'affordable',
+      'Can the wallet pay for it',
+      `the signer holds ${dust(held)} and the deploy transaction alone prices at ${dust(first)} — ` +
+        `${dust(total)} for all eleven. If the fee comes from this wallet's allowance rather than ` +
+        'the sponsor pool, the first transaction cannot pay for itself. This is what a transaction ' +
+        'that sits in the pool and is then marked Invalid looks like.',
+    );
+  }
+  if (held < total) {
+    return warn(
+      'affordable',
+      'Can the wallet pay for it',
+      `the signer holds ${dust(held)}, enough for the deploy transaction (${dust(first)}) but not ` +
+        `for all eleven (${dust(total)}). The run would stop part-way, with the contract on chain ` +
+        'and missing verifier keys.',
+    );
+  }
+  return ok(
+    'affordable',
+    'Can the wallet pay for it',
+    `the signer holds ${dust(held)} against a priced ${dust(total)} for all eleven transactions.`,
+  );
 }
 
 /** The wallet: present, on mainnet, with a proving provider and (expected) no DUST of its own. */
@@ -212,11 +269,12 @@ export interface DryRun {
  * transaction), reads the wallet, reads the chain, fetches a real proving key over HTTP, and
  * lists all twenty-one units of work with their reasons. Then it stops.
  */
-export async function dryRun(session: ConsoleSession, serverChecks: Check[]): Promise<DryRun> {
+export async function dryRun(session: ConsoleSession, server: ServerPreflight): Promise<DryRun> {
   const checks: Check[] = [
-    ...serverChecks,
+    ...server.checks,
     checkLoadedContract(),
     ...checkWallet(session),
+    checkAffordable(session, server),
     await checkZkOverHttp(session.zkBaseUrl),
     await checkIndexerFromPage(session),
     ok(

@@ -194,7 +194,7 @@ export default function App(): JSX.Element {
       if (!session) throw new ConsoleStop('connect the wallet first; the dry run reads it and stops there.');
       const preflight = await getPreflight(true);
       setServer(preflight);
-      const result = await dryRun(session, preflight.checks);
+      const result = await dryRun(session, preflight);
       setDry(result);
       say(
         `dry run: ${result.verdict}. ${result.planned.length} units of work, ${result.prompts} wallet ` +

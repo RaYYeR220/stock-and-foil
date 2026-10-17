@@ -69,6 +69,13 @@ export interface RunFailure {
   message: string;
   /** The refusal code, when the contract is the one refusing. */
   code?: string;
+  /**
+   * Everything the node said about a submission, kept raw.
+   *
+   * Written into cli/.secrets/mainnet-console.json so a failure can be read after the tab is
+   * closed, rather than existing only as a line that scrolled past.
+   */
+  submission?: unknown;
 }
 
 export interface ConsoleState {
@@ -154,8 +161,13 @@ export function attribute(error: unknown, stepId: string): RunFailure {
   // Accepted by the node and never seen in a block. The one outcome where doing nothing is
   // safer than doing something, so it gets its own party rather than being filed under
   // "network" with everything else that went quiet.
-  if (refusal?.name === 'SubmissionUnseenError') return { at, stepId, by: 'unseen', message };
-  if (refusal?.name === 'SubmissionRejectedError') return { at, stepId, by: 'network', message };
+  const diagnostics = (error as { diagnostics?: unknown })?.diagnostics;
+  if (refusal?.name === 'SubmissionUnseenError') {
+    return { at, stepId, by: 'unseen', message, submission: diagnostics };
+  }
+  if (refusal?.name === 'SubmissionRejectedError') {
+    return { at, stepId, by: 'network', message, submission: diagnostics };
+  }
   if (refusal?.name === 'Refusal' && typeof refusal.code === 'string') {
     return { at, stepId, by: 'contract', message, code: refusal.code };
   }

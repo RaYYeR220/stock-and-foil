@@ -40,6 +40,28 @@ export interface SubmitResult {
   /** Block it landed in. */
   blockHash: string;
   status: 'in-block';
+  diagnostics: SubmitDiagnostics;
+}
+
+/**
+ * Everything the node said, kept whole.
+ *
+ * The first version of this reduced a rejection to one sentence, and the sentence it chose —
+ * "the node reported the transaction Invalid" — threw away the part worth having. A
+ * `submitAndWatch` stream and a JSON-RPC error are different channels carrying different
+ * detail, so both are recorded, with timings, and the whole thing is handed back to the page
+ * and written into the run state.
+ */
+export interface SubmitDiagnostics {
+  extrinsicHash?: string;
+  bytes: number;
+  /** Every status the subscription emitted, with milliseconds since submission. */
+  statuses: Array<{ atMs: number; status: string; detail?: string }>;
+  /** A JSON-RPC error, decomposed rather than stringified. */
+  rpcError?: { code?: number; message: string; data?: unknown };
+  /** A runtime dispatch error, when the transaction made it into a block and then failed. */
+  dispatchError?: string;
+  elapsedMs: number;
 }
 
 /**
@@ -51,6 +73,7 @@ export interface SubmitResult {
  */
 export class SubmissionUnseen extends Error {
   readonly unseen = true;
+  diagnostics?: SubmitDiagnostics;
   constructor(
     readonly extrinsicHash: string | undefined,
     readonly waitedMs: number,
@@ -67,10 +90,22 @@ export class SubmissionUnseen extends Error {
 /** The node refused the transaction outright. Nothing happened, and a retry is safe. */
 export class SubmissionRejected extends Error {
   readonly rejected = true;
+  diagnostics?: SubmitDiagnostics;
   constructor(reason: string) {
     super(`the node refused the transaction: ${reason}`);
     this.name = 'SubmissionRejected';
   }
+}
+
+/** Pulls a JSON-RPC error apart instead of letting `String(err)` flatten it. */
+function describeRpcError(cause: unknown): { code?: number; message: string; data?: unknown } {
+  const e = cause as { code?: unknown; message?: unknown; data?: unknown } | null;
+  const message = typeof e?.message === 'string' ? e.message : String(cause);
+  return {
+    code: typeof e?.code === 'number' ? e.code : undefined,
+    message,
+    data: e?.data,
+  };
 }
 
 type PolkadotApi = {
@@ -139,25 +174,41 @@ export async function submitMidnightTransaction(
   const started = Date.now();
   const submittable = call(hex);
   const extrinsicHash = submittable.hash.toHex();
-  logger?.info(`[mainnet-console] submitting ${hex.length / 2 - 1} bytes as extrinsic ${extrinsicHash}`);
+  const diagnostics: SubmitDiagnostics = {
+    extrinsicHash,
+    bytes: hex.length / 2 - 1,
+    statuses: [],
+    elapsedMs: 0,
+  };
+  logger?.info(`[mainnet-console] submitting ${diagnostics.bytes} bytes as extrinsic ${extrinsicHash}`);
 
   return await new Promise<SubmitResult>((resolve, reject) => {
     let unsubscribe: (() => void) | undefined;
     let settled = false;
-    const finish = (fn: () => void): void => {
+    const note = (status: string, detail?: string): void => {
+      diagnostics.statuses.push({ atMs: Date.now() - started, status, detail });
+      logger?.info(`[mainnet-console]   ${Date.now() - started}ms ${status}${detail ? ` ${detail}` : ''}`);
+    };
+    const finish = (fn: (d: SubmitDiagnostics) => void): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      diagnostics.elapsedMs = Date.now() - started;
       try {
         unsubscribe?.();
       } catch {
         // the subscription may already be gone; the outcome is what matters
       }
-      fn();
+      fn(diagnostics);
     };
 
     const timer = setTimeout(
-      () => finish(() => reject(new SubmissionUnseen(extrinsicHash, Date.now() - started))),
+      () =>
+        finish((d) => {
+          const unseen = new SubmissionUnseen(extrinsicHash, d.elapsedMs);
+          unseen.diagnostics = d;
+          reject(unseen);
+        }),
       IN_BLOCK_TIMEOUT_MS,
     );
 
@@ -172,6 +223,7 @@ export async function submitMidnightTransaction(
             isUsurped?: boolean;
             isFinalityTimeout?: boolean;
             type?: string;
+            toString?(): string;
             asInBlock?: { toHex(): string };
             asFinalized?: { toHex(): string };
           };
@@ -179,17 +231,40 @@ export async function submitMidnightTransaction(
         };
         const status = r.status;
         if (!status) return;
+        // Every status, not just the terminal one. A transaction that sits at Ready for
+        // thirteen blocks and is then invalidated tells a different story from one refused
+        // on the spot, and only the sequence distinguishes them.
+        note(status.type ?? status.toString?.() ?? 'unknown');
+        if (r.dispatchError) diagnostics.dispatchError = r.dispatchError.toString();
+
         if (status.isInBlock || status.isFinalized) {
           const blockHash = (status.asInBlock ?? status.asFinalized)?.toHex() ?? '';
           if (r.dispatchError) {
-            finish(() => reject(new SubmissionRejected(`${r.dispatchError!.toString()} (in block ${blockHash})`)));
+            finish((d) => {
+              const rejected = new SubmissionRejected(
+                `${r.dispatchError!.toString()} (in block ${blockHash})`,
+              );
+              rejected.diagnostics = d;
+              reject(rejected);
+            });
             return;
           }
-          finish(() => resolve({ extrinsicHash, blockHash, status: 'in-block' }));
+          finish((d) => resolve({ extrinsicHash, blockHash, status: 'in-block', diagnostics: d }));
           return;
         }
         if (status.isInvalid || status.isDropped || status.isUsurped || status.isFinalityTimeout) {
-          finish(() => reject(new SubmissionRejected(`the node reported the transaction ${status.type ?? 'invalid'}`)));
+          finish((d) => {
+            const seen = d.statuses.map((x) => `${x.status}@${Math.round(x.atMs / 1000)}s`).join(' -> ');
+            const rejected = new SubmissionRejected(
+              `the node reported it ${status.type ?? 'invalid'} after ${Math.round(d.elapsedMs / 1000)}s ` +
+                `(${Math.round(d.elapsedMs / 6000)} blocks at 6s). Status sequence: ${seen}. ` +
+                'The node gives no reason with this status; a transaction that is accepted into the ' +
+                'pool and then invalidated is usually one the block builder will not take — most ' +
+                'often because the DUST attached does not cover what the chain charges.',
+            );
+            rejected.diagnostics = d;
+            reject(rejected);
+          });
         }
       })
       .then((unsub) => {
@@ -197,10 +272,19 @@ export async function submitMidnightTransaction(
         if (settled) unsub();
       })
       .catch((cause: unknown) => {
-        // This is where `1010: Invalid Transaction: …` arrives — the node's own verdict,
-        // carried through word for word rather than summarised.
-        const message = cause instanceof Error ? cause.message : String(cause);
-        finish(() => reject(new SubmissionRejected(message)));
+        // The other channel: a JSON-RPC error, e.g. `1010: Invalid Transaction: Custom error: 1`.
+        // Decomposed, so the code and any data survive instead of being flattened into prose.
+        const rpc = describeRpcError(cause);
+        diagnostics.rpcError = rpc;
+        note('RpcError', `code=${rpc.code ?? 'none'} ${rpc.message}`);
+        finish((d) => {
+          const rejected = new SubmissionRejected(
+            `${rpc.code !== undefined ? `${rpc.code}: ` : ''}${rpc.message}` +
+              `${rpc.data === undefined ? '' : ` | data: ${JSON.stringify(rpc.data).slice(0, 300)}`}`,
+          );
+          rejected.diagnostics = d;
+          reject(rejected);
+        });
       });
   });
 }

@@ -335,10 +335,15 @@ export function mainnetConsoleBackend(options: ConsoleBackendOptions): Plugin {
                     error: scrub(cause.message),
                     unseen: true,
                     extrinsicHash: cause.extrinsicHash,
+                    diagnostics: cause.diagnostics,
                   });
                 }
                 if (cause instanceof SubmissionRejected) {
-                  return sendJson(res, 502, { error: scrub(cause.message), rejected: true });
+                  return sendJson(res, 502, {
+                    error: scrub(cause.message),
+                    rejected: true,
+                    diagnostics: cause.diagnostics,
+                  });
                 }
                 throw cause;
               }

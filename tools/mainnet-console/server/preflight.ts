@@ -12,6 +12,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FROZEN_CIRCUITS, FROZEN_VERSIONS } from '../src/lib/frozen.js';
 import { blockfrostMainnetToken, redact, TOKEN_ENV_VAR, TOKEN_PREFIX } from './env.js';
+import { priceDeployment, toDust } from './price.js';
 import { nodeAcceptsMidnightTransactions } from './submit.js';
 
 export type CheckStatus = 'ok' | 'warn' | 'fail';
@@ -34,6 +35,9 @@ export interface ServerPreflight {
     compactVersion?: string;
     chainHeight?: number;
     chainTimeIso?: string;
+    /** What the eleven deployment transactions price at, in SPECK, under the ledger baseline. */
+    deploymentSpeck?: string;
+    deployTxSpeck?: string;
     keysFile?: { operatorId: string; threshold: number; createdAt: string };
     deploymentExists: boolean;
     deployedContractAddress?: string;
@@ -334,6 +338,38 @@ async function checkSubmitPath(token: string | undefined): Promise<Check> {
   }
 }
 
+/**
+ * The bill, before the first prompt.
+ *
+ * Two mainnet attempts were spent discovering this the slow way. The number is now read off
+ * the ledger's own cost function and shown next to what the wallet holds, so the next attempt
+ * starts from arithmetic rather than hope.
+ */
+async function checkPrice(repoRoot: string, facts: ServerPreflight['facts']): Promise<Check> {
+  try {
+    const priced = await priceDeployment(repoRoot);
+    facts.deploymentSpeck = priced.totalSpeck.toString();
+    facts.deployTxSpeck = priced.deploySpeck.toString();
+    return ok(
+      'price',
+      'What the deployment costs',
+      `${toDust(priced.totalSpeck)} DUST for all ${priced.transactions} transactions, of which ` +
+        `${toDust(priced.deploySpeck)} DUST is the deploy itself (${priced.deployBytes} bytes). Priced ` +
+        "from the committed preview deployment's real bytes through the ledger's own cost " +
+        'function, at its baseline parameters — mainnet’s live parameters are not served by ' +
+        'any RPC and float upward from this floor, so treat it as a minimum. Preview charged 1 ' +
+        'SPECK a transaction and is no guide at all.',
+    );
+  } catch (cause) {
+    return warn(
+      'price',
+      'What the deployment costs',
+      `could not be priced: ${cause instanceof Error ? cause.message : String(cause)}. The run can ` +
+        'proceed, but nothing here knows whether the wallet can pay for it.',
+    );
+  }
+}
+
 /** Everything this machine can establish before the wallet is involved. */
 export async function serverPreflight(repoRoot: string, deep = false): Promise<ServerPreflight> {
   const p = paths(repoRoot);
@@ -381,6 +417,7 @@ export async function serverPreflight(repoRoot: string, deep = false): Promise<S
     tokenCheck,
     await checkIndexer(lookup.token, facts),
     await checkSubmitPath(lookup.token),
+    await checkPrice(repoRoot, facts),
     checkContractInfo(repoRoot, facts),
     await checkStagedZk(repoRoot, deep),
     checkCeremonyKeys(repoRoot, facts),
