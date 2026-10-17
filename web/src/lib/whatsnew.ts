@@ -154,22 +154,28 @@ export const CHANGES: readonly Change[] = [
     ],
   },
 
-  // ── not shipped ────────────────────────────────────────────────────────────
-  //
-  // One entry, and it stays here until the deployment exists. To flip it: set `status` to
-  // 'shipped' and add `links` — the explorer page for the mainnet contract, and `/proof`. The
-  // changelog page needs no other change, and the counts in its standfirst follow from this file.
+  // The mainnet entry is `shipped` for the write-up and the three fixes it produced, not for a
+  // deployment: there is none, and nothing on this site may say otherwise. If the registry ever
+  // does land on mainnet, that is a new entry with the address and an explorer link — this one
+  // stays as the record of the attempt.
   {
     id: 'mainnet',
-    title: 'The registry on Midnight mainnet',
-    what: 'A mainnet deployment of the registry contract, with the address and an explorer link in the README and on the proof page, and a real lifecycle run against it.',
-    why: 'Permissionless mainnet deployment opened on 28 September 2026, the first day of this wave, and the Wave 1 reviewer asked the field to use it.',
+    title: 'Mainnet attempted: what we measured, and where it stopped',
+    what: 'Three attempts to deploy the registry to Midnight mainnet, through the 1AM wallet, whose ProofStation proves and balances a transaction out of its own funded pool — because mainnet fees are paid in DUST, DUST comes from NIGHT held on Cardano, and we have no route to Cardano. Each attempt was built, proved and balanced correctly; the node took each one into its pool and then marked it `Invalid` about 75 seconds later. Nothing reached a block, nothing was spent, and all three are absent from the chain by hash and by identifier. Fees are excluded by the node’s own cost API: 0.002008 DUST for all eleven deployment transactions against the 1.000000 DUST the signer held. Block limits are excluded against mainnet’s live parameters. Every static cause — encoding, binding, segment structure — is excluded because a deliberately malformed payload is refused synchronously by the node while ours passes that gate and fails later. What remains is the state the transaction depends on: the DUST input and its spend proof, both chosen by the sponsoring service from a pool that is concurrently paying for other people’s transactions. That is on the other side of the boundary from us. The balanced transaction is kept on disk, re-submittable without re-proving, so the wallet’s authors have a reproduction.',
+    why: 'Permissionless mainnet deployment opened on 28 September 2026, the first day of this wave, and the Wave 1 reviewer asked the field to use it. We are not deployed there, and the useful thing to publish is the measurement rather than the intention. The attempt also found three real bugs of our own — a key-decoding mismatch against the wallet address-format library, an unbound `fetch` that breaks in-browser proving, and a coin-public-key encoding that midnight-js converts on some paths and not others, which would have failed at transaction 2 of 11 after the first had landed. The first of those was in the shipped Network-mode code of this app and is fixed there too.',
     judge: {
       quote:
         'Since you’ll soon be able to freely deploy contracts to the mainnet, please be sure to deploy your product there.',
       source: 'Wave 1 review, Business Development',
     },
-    status: 'in-flight',
+    status: 'shipped',
+    links: [
+      { label: 'The attempts and what they exclude', to: '/proof' },
+      {
+        label: 'docs/MAINNET.md — the runbook and where it stops',
+        href: 'https://github.com/RaYYeR220/stock-and-foil/blob/main/docs/MAINNET.md',
+      },
+    ],
   },
 ];
 

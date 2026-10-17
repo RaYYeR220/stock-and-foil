@@ -75,7 +75,8 @@ export function WhatsNew() {
           <div className="pagehead">
             <p className="crumb">
               <i aria-hidden="true" />
-              {WAVE.label} changelog · {done.length} shipped, {open.length} still being built
+              {WAVE.label} changelog · {done.length} shipped
+              {open.length > 0 ? `, ${open.length} still being built` : ''}
             </p>
             <SectionOpener
               title={`What changed in ${WAVE.label}.`}

@@ -156,7 +156,7 @@ export function Proof() {
                   { label: 'Audited', value: 'no — nothing here has been audited' },
                   {
                     label: 'Mainnet',
-                    value: 'no — permissionless mainnet deployment opened on 28 Sept 2026 and this is not through it',
+                    value: 'no — three attempts, all invalidated in the node’s pool; nothing on chain, nothing spent',
                   },
                 ]}
               />
@@ -512,9 +512,13 @@ export function Proof() {
               </li>
               <li>
                 <span>
-                  Nothing is deployed to Midnight mainnet. Permissionless mainnet contract deployment went live on
-                  28 September 2026, so there is no longer a gate to point at — the registry simply is not there yet,
-                  and this page will say so until it is.
+                  Nothing is deployed to Midnight mainnet. We attempted it three times through a wallet that pays the
+                  DUST fee from its own pool: each transaction was proved, balanced and accepted by the node, and each
+                  was marked invalid in its pool about 75 seconds later. Nothing landed and nothing was spent. Fees
+                  (0.002008 DUST quoted by the node for all eleven transactions, against 1.000000 held), block limits
+                  and every static cause are excluded; what is left is the DUST input the sponsoring wallet supplies.
+                  The measurements are in PROOF.md and docs/MAINNET.md, and this page will say “not deployed” until it
+                  is.
                 </span>
               </li>
               <li>

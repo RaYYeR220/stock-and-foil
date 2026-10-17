@@ -194,14 +194,13 @@ test('the sponsorship section links the transaction a wallet with no DUST made',
   await expect(section).toContainText('No sponsor endpoint is hosted with this site');
 });
 
-test('the changelog separates what shipped from what did not, and quotes the review', async ({ page }) => {
+test('the changelog says what shipped, what did not, and quotes the review', async ({ page }) => {
   await page.goto('/whats-new');
   await expect(page.getByRole('heading', { level: 1, name: 'What changed in Wave 2.' })).toBeVisible();
 
   const shipped = page.locator('.change[data-status="shipped"]');
   const open = page.locator('.change[data-status="in-flight"]');
   expect(await shipped.count()).toBeGreaterThan(2);
-  expect(await open.count()).toBeGreaterThan(0);
 
   // Three items answer a Wave 1 note, quoted.
   expect(await page.locator('.judge').count()).toBeGreaterThanOrEqual(3);
@@ -216,13 +215,22 @@ test('the changelog separates what shipped from what did not, and quotes the rev
   ]) {
     await expect(shipped.filter({ hasText: title })).toHaveCount(1);
   }
-  // Mainnet is the one thing still outstanding, and it stays outstanding until it is not.
-  await expect(open).toHaveCount(1);
-  await expect(open).toContainText('The registry on Midnight mainnet');
+  // The mainnet entry records an attempt, and claims no deployment. If a deployment ever lands
+  // it is a new entry; this one must never start saying the registry is on mainnet.
+  const mainnet = shipped.filter({ hasText: 'Mainnet attempted' });
+  await expect(mainnet).toHaveCount(1);
+  await expect(mainnet).toContainText('Nothing reached a block, nothing was spent');
+  await expect(mainnet).toContainText('0.002008 DUST');
 
-  // Unshipped work says so, and is not linked to as though it existed.
-  await expect(page.getByRole('heading', { name: 'Declared, and not shipped.' })).toBeVisible();
-  await expect(open.first()).toContainText('Not shipped yet');
+  // Nothing is outstanding, so the unshipped section is absent rather than empty. While
+  // something is, it is printed there and says "Not shipped yet" on the item itself.
+  const declared = page.getByRole('heading', { name: 'Declared, and not shipped.' });
+  if ((await open.count()) > 0) {
+    await expect(declared).toBeVisible();
+    await expect(open.first()).toContainText('Not shipped yet');
+  } else {
+    await expect(declared).toHaveCount(0);
+  }
 
   // Every shipped item links to the thing itself.
   for (let i = 0; i < (await shipped.count()); i += 1) {
