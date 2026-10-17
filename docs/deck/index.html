@@ -281,7 +281,7 @@ blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font
           <ul class="dots" style="margin-top:11px;gap:9px">
             <li><span style="font-size:16.5px"><b>Two registries,</b> two operators, two ceremonies, both live on preview — and a lender's check across them <span class="lbl" style="font-family:var(--mono)">slide 07</span></span></li>
             <li><span style="font-size:16.5px"><b>A wallet holding zero DUST transacted,</b> so a buyer's clerk needs no token <span class="lbl" style="font-family:var(--mono)">slide 08</span></span></li>
-            <li><span style="font-size:16.5px"><b>Four new circuits, 12 → 16;</b> tests 177 → 362; CI on every push <span class="lbl" style="font-family:var(--mono)">slides 12–14</span></span></li>
+            <li><span style="font-size:16.5px"><b>Four new circuits, 12 → 16;</b> tests 177 → 388; CI on every push <span class="lbl" style="font-family:var(--mono)">slides 12–14</span></span></li>
             <li><span style="font-size:16.5px"><b>Who benefits, named</b> — and every Wave 1 note answered <span class="lbl" style="font-family:var(--mono)">slides 03, 17</span></span></li>
           </ul>
         </div>
@@ -295,7 +295,7 @@ blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font
     </figure>
     <p class="cap" style="display:flex;justify-content:space-between">
       <span>Stock, kept by the lender · Foil, kept by the buyer · notches cut from 0x31e5…46f7</span>
-      <span>Compact 0.31.1 · 16 circuits · 362 tests · stock-and-foil.vercel.app, no wallet needed</span>
+      <span>Compact 0.31.1 · 16 circuits · 388 tests · stock-and-foil.vercel.app, no wallet needed</span>
     </p>
   </div>
 </section>
@@ -1093,7 +1093,7 @@ blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font
 <section class="slide" id="s13" data-rh="13 · quality">
   <div class="sheet">
     <div class="opener">
-      <h2 class="title" data-ghost="362 tests, and the ones&#10;that are meant to fail.">362 tests, and the ones<br>that are meant to fail.</h2>
+      <h2 class="title" data-ghost="388 tests, and the ones&#10;that are meant to fail.">388 tests, and the ones<br>that are meant to fail.</h2>
       <p class="dek">Up from 177 in Wave 1. No Docker, no node, no proof server — and green on GitHub Actions on every push.</p>
     </div>
     <hr class="dotrule">
@@ -1101,11 +1101,11 @@ blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font
       <div class="card" style="height:100%;display:flex;flex-direction:column;padding:17px 21px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <h3 style="font-size:22px">Every suite, by name</h3>
-          <span class="lbl">21 files · 362 tests</span>
+          <span class="lbl">22 files · 388 tests</span>
         </div>
         <p class="barhead">contract · 139</p>
         <div class="bars mini" id="testBarsContract"></div>
-        <p class="barhead">sdk · 136</p>
+        <p class="barhead">sdk · 162</p>
         <div class="bars mini" id="testBarsSdk"></div>
         <p class="barhead">sponsor · 87</p>
         <div class="bars mini" id="testBarsSponsor"></div>
@@ -1188,7 +1188,7 @@ blockquote.said cite{display:block;font-family:var(--mono);font-size:12.5px;font
         <article class="card">
           <h3 style="font-size:22px">What a reviewer runs</h3>
           <pre class="cmd" style="margin-top:12px">npm test
-<i>362 tests, no Docker, no node,
+<i>388 tests, no Docker, no node,
 no proof server. Same on CI.</i>
 
 npm run verify:onchain
@@ -1355,7 +1355,7 @@ noted by name. No wallet.</i></pre>
         <ul class="dots grid g2" style="margin-top:9px;gap:6px 34px">
           <li><span><b>Four circuits, 12 → 16.</b> registerPeer, acceptBatch, openCase, approveCase.</span></li>
           <li><span><b>Fee sponsorship:</b> a wallet with 0 DUST transacted.</span></li>
-          <li><span><b>Tests 177 → 362,</b> and CI on every push.</span></li>
+          <li><span><b>Tests 177 → 388,</b> and CI on every push.</span></li>
           <li><span><b>A second ceremony and deployment,</b> 11 txs each.</span></li>
           <li><span><b>Screens rebuilt to read in one still frame.</b></span></li>
           <li><span><b>A business model, adoption path and outreach list.</b></span></li>
@@ -1458,9 +1458,10 @@ bars(D.getElementById('testBarsContract'), [
   ['property model', 1]
 ], '', 65);
 bars(D.getElementById('testBarsSdk'), [
-  ['the whole scenario', 27], ['indexer client', 23], ['network table', 22],
-  ['sponsorship client', 16], ['key material', 14], ['record codec', 12],
-  ['certificate audit', 9], ['scalar and sharing', 7], ['sandbox snapshot', 6]
+  ['the whole scenario', 27], ['wallet connector', 26, 1], ['indexer client', 23],
+  ['network table', 22], ['sponsorship client', 16], ['key material', 14],
+  ['record codec', 12], ['certificate audit', 9], ['scalar and sharing', 7],
+  ['sandbox snapshot', 6]
 ], '', 65);
 bars(D.getElementById('testBarsSponsor'), [
   ['the service, end to end', 26], ['allowlist and rate limit', 23],

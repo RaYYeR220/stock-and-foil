@@ -475,9 +475,9 @@ browser-wallet route stops, is [`docs/MAINNET.md`](./docs/MAINNET.md) (§3b).
 | Suite | Files | Tests | Notes |
 |---|---|---|---|
 | `contract/test/*` | 7 | **139** | lifecycle, one scenario per refusal code, fast-check model test, 2-of-3 disclosure with negative controls, deploy-time ceremony validation, public-transcript assertions, documented-limit reproductions |
-| `sdk/test/*` (default) | 9 | **136** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks, sandbox snapshot codec, the network table and its Blockfrost tokens, the indexer client, the sponsorship client |
+| `sdk/test/*` (default) | 10 | **162** | scalar field and secret sharing, key material, record codec, the whole scenario through the role clients on the simulator, certificate audit checks, sandbox snapshot codec, the network table and its Blockfrost tokens, the indexer client, the sponsorship client, the wallet-connector adapter against a fake 1AM wallet |
 | `sponsor/test/*` | 5 | **87** | the allowlist and the rate limit, the service end to end against a fake wallet, the budget under twenty parallel requests, the rate-limit bucket against a spoofed `X-Forwarded-For`, what the service is allowed to log, and the HTTP surface over a real socket |
-| **Total, `npm test`** | **21** | **362** | no Docker, no node, no proof server |
+| **Total, `npm test`** | **22** | **388** | no Docker, no node, no proof server |
 | `sdk/test/network.devnet.test.ts` | 1 | 4 | opt-in (`DEVNET=1`): staged deploy and a real lifecycle with real proofs against a local node; 276.6 s |
 
 ## Reproduce
@@ -489,7 +489,7 @@ clear.
 
 ```bash
 npm install
-npm test                               # 362 tests, no Docker needed
+npm test                               # 388 tests, no Docker needed
 npm run -w contract compile            # rebuild circuits and proving keys (needs Docker)
 ```
 
