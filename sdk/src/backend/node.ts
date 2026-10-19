@@ -36,6 +36,7 @@ import * as Rx from 'rxjs';
 import { WebSocket } from 'ws';
 import { userAddress, type UserAddress } from '../bytes.js';
 import { submitViaRpc } from './rpc-submit.js';
+import { redactEndpoint } from './endpoints.js';
 import {
   resolveEndpoints,
   type ChainNetwork,
@@ -194,7 +195,9 @@ function describeError(cause: unknown): string {
     if (m && !seen.includes(m)) seen.push(String(m));
     e = e.cause ?? e.error ?? undefined;
   }
-  return seen.length > 0 ? seen.join(' <- ') : String(cause);
+  const text = seen.length > 0 ? seen.join(' <- ') : String(cause);
+  // The SDK quotes the endpoint it failed on, and the project token lives in its query string.
+  return redactEndpoint(text);
 }
 
 /** A finalized transaction as the hex an extrinsic carries. */

@@ -14,6 +14,14 @@
  */
 
 /** What the node said, kept so the caller can report it rather than guess. */
+/**
+ * The project token rides in the RPC query string, so nothing this module logs or throws may
+ * carry a URL through unfiltered — polkadot's own errors quote the endpoint they failed on.
+ */
+function safe(text: string): string {
+  return text.replace(/project_id=[^&\s"']+/gi, 'project_id=REDACTED');
+}
+
 export interface RpcSubmitResult {
   extrinsicHash: string;
   bytes: number;
@@ -28,7 +36,7 @@ export class RpcSubmitError extends Error {
     message: string,
     readonly statuses: RpcSubmitResult['statuses'] = [],
   ) {
-    super(message);
+    super(safe(message));
     this.name = 'RpcSubmitError';
   }
 }
@@ -63,14 +71,14 @@ export async function submitViaRpc(
       statuses: [],
     };
     const started = Date.now();
-    log(`      submitting ${out.bytes} bytes as extrinsic ${out.extrinsicHash}`);
+    log(safe(`      submitting ${out.bytes} bytes as extrinsic ${out.extrinsicHash}`));
 
     return await new Promise<RpcSubmitResult>((resolve, reject) => {
       let unsubscribe: (() => void) | undefined;
       let settled = false;
       const note = (status: string, detail?: string): void => {
         out.statuses.push({ atMs: Date.now() - started, status, detail });
-        log(`      ${Date.now() - started}ms ${status}${detail ? ` ${detail}` : ''}`);
+        log(safe(`      ${Date.now() - started}ms ${status}${detail ? ` ${detail}` : ''}`));
       };
       const finish = (fn: () => void): void => {
         if (settled) return;
