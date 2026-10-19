@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "ceremony": "tsx src/index.ts ceremony",
+    "balance": "tsx src/index.ts balance",
     "deploy": "tsx src/index.ts deploy",
     "scenario": "tsx src/index.ts scenario",
     "estimate": "tsx src/index.ts estimate",

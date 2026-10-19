@@ -35,6 +35,7 @@ import type { StockAndFoilPrivateState } from '@stockandfoil/contract';
 import * as Rx from 'rxjs';
 import { WebSocket } from 'ws';
 import { userAddress, type UserAddress } from '../bytes.js';
+import { submitViaRpc } from './rpc-submit.js';
 import {
   resolveEndpoints,
   type ChainNetwork,
@@ -184,6 +185,23 @@ const formatUnits = (value: bigint, decimals: number): string => {
  * `payInvoice` calls `receiveUnshielded`, and a transaction with unshielded inputs is rejected
  * unless the recipe carries the payer's signature.
  */
+/** Every message in an error's cause chain, because the SDK's own wrappers carry none. */
+function describeError(cause: unknown): string {
+  const seen: string[] = [];
+  let e: any = cause;
+  for (let i = 0; i < 6 && e; i++) {
+    const m = typeof e === 'string' ? e : (e.message ?? e._tag ?? e.name);
+    if (m && !seen.includes(m)) seen.push(String(m));
+    e = e.cause ?? e.error ?? undefined;
+  }
+  return seen.length > 0 ? seen.join(' <- ') : String(cause);
+}
+
+/** A finalized transaction as the hex an extrinsic carries. */
+function hexOf(tx: { serialize: () => Uint8Array }): string {
+  return `0x${Buffer.from(tx.serialize()).toString('hex')}`;
+}
+
 export async function createHeadlessWallet(options: HeadlessWalletOptions): Promise<HeadlessWallet> {
   installWebSocket();
   const endpoints = resolveEndpoints(options.network, {
@@ -307,7 +325,24 @@ export async function createHeadlessWallet(options: HeadlessWalletOptions): Prom
       const signed = await wallet.signRecipe(recipe, (data: any) => keystore.signData(data));
       return wallet.finalizeRecipe(signed) as any;
     },
-    submitTx: (tx: any) => wallet.submitTransaction(tx) as any,
+    async submitTx(tx: any) {
+      try {
+        return (await wallet.submitTransaction(tx)) as any;
+      } catch (cause) {
+        // On a shared public RPC the wallet's submission path is not necessarily available:
+        // Blockfrost refuses the subscribing calls it watches the extrinsic with, and the SDK
+        // surfaces that as a bare `SubmissionError` with nothing in it. The bytes themselves are
+        // fine, so submit them as an ordinary extrinsic and read the node's own status stream.
+        const detail = describeError(cause);
+        process.stderr.write(`      wallet submission failed (${detail}); submitting over the node RPC instead
+`);
+        const result = await submitViaRpc(hexOf(tx), endpoints.nodeUrl, (line) => process.stderr.write(`${line}
+`));
+        process.stderr.write(`      in block ${result.block ?? '?'} as ${result.extrinsicHash}
+`);
+        return (tx.identifiers?.()?.[0] ?? String(tx.transactionHash?.() ?? result.extrinsicHash)) as any;
+      }
+    },
     async userAddress() {
       return payTo;
     },

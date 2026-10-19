@@ -138,6 +138,14 @@ export async function openWallet(
       ),
   });
   note(`wallet ready: ${wallet.address}`);
+  // What the fee is actually going to be paid from. A deploy that cannot pay should say so here,
+  // next to the balance, rather than thirty-seven minutes of syncing later as a submission error.
+  try {
+    const b = await wallet.balances();
+    note(`  NIGHT ${b.night}  DUST ${b.dust} (${b.dustCoins} coin(s))`);
+  } catch (cause) {
+    note(`  could not read balances: ${(cause as Error).message}`);
+  }
   await options.onReady?.(wallet);
 
   const submitted: string[] = [];
