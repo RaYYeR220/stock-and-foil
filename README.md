@@ -14,7 +14,7 @@ already split cannot be split again.
 | | |
 |---|---|
 | Live app, no wallet needed | **https://stock-and-foil.vercel.app** |
-| Three-minute walkthrough | https://youtu.be/rDnDGqp-ekE |
+| Walkthrough video | https://youtu.be/aHc4QGMr4ck |
 | Deployed contract (Midnight preview) | `74fe0bf972edc0c6c1edcec7fd41dfa09c52b1920511a29c416b3245918a0fad` |
 | A second, independent registry (Harbour) | `2d8f8f23b311b9596354b92c4ac01805a8921cc9bd54daa950e49877890cccbd` |
 | Ask both about one receivable, live in your browser | https://stock-and-foil.vercel.app/#check |
@@ -109,7 +109,7 @@ whom, not for how much, not since when.
 - **[What the chain sees](https://stock-and-foil.vercel.app/app/ledger)** · **[the workspaces](https://stock-and-foil.vercel.app/app/seller)** · **[the evidence](https://stock-and-foil.vercel.app/proof)** · **[the deck](https://stock-and-foil.vercel.app/deck)**
 - **On a public network:** [PROOF.md](./PROOF.md) has the deployed contract on Midnight preview,
   every transaction with explorer links, and the one command that re-verifies them.
-- **Three-minute walkthrough:** [youtu.be/rDnDGqp-ekE](https://youtu.be/rDnDGqp-ekE).
+- **Walkthrough video:** [youtu.be/aHc4QGMr4ck](https://youtu.be/aHc4QGMr4ck) — three and a half minutes, most of it live capture.
 - **In five minutes:** [JUDGES.md](./JUDGES.md).
 
 ```bash

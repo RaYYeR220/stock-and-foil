@@ -144,7 +144,7 @@ export function Footer() {
                 <a href="/deck">The deck</a> · <a href="/deck/stock-and-foil-deck.pdf">PDF</a>
               </li>
               <li>
-                <a href="https://youtu.be/rDnDGqp-ekE">Three-minute walkthrough</a>
+                <a href="https://youtu.be/aHc4QGMr4ck">Walkthrough video</a>
               </li>
             </ul>
           </div>
